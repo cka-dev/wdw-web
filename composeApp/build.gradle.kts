@@ -60,8 +60,19 @@ kotlin {
             implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.8.2")
 
             //Coil
-//            implementation("io.coil-kt.coil3:coil-compose:3.0.4")
-//            implementation("io.coil-kt.coil3:coil-network-ktor2:3.0.4")
+            implementation(libs.coil.compose)
+            implementation(libs.coil)
+            implementation(libs.coil.network.ktor)
+
+            //Kotlinx DateTime
+            implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
+
+            //Video Player
+//            implementation("io.github.khubaibkhan4:mediaplayer-kmp:2.0.4")
+//            implementation("network.chaintech:compose-multiplatform-media-player:1.0.25")
+//            implementation("com.github.Hamamas:Kotlin-Wasm-Html-Interop:1.0.1")
+//            implementation(project(":libraries:Kotlin-Wasm-Html-Interop-master"))
+
         }
     }
 

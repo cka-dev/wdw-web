@@ -5,7 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -154,6 +155,7 @@ fun HeroSection() {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MainContent() {
     Card(
@@ -162,37 +164,47 @@ fun MainContent() {
         )
     ) {
         HeroSection()
-        Row(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.Center
-
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            CardSection(
-                title = "Upcoming Events",
-                imageRes = null,
-                contentTitle = "Wine Tasting Extravaganza - March 20th",
-                contentText = "Join us for an evening of exquisite wines and delightful company."
-            )
+            item {
+                FlowRow (
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    CardSection(
+                        title = "Upcoming Events",
+                        imageRes = null,
+                        contentTitle = "Wine Tasting Extravaganza - March 20th",
+                        contentText = "Join us for an evening of exquisite wines and delightful company."
+                    )
 
-            Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
 
-            CardSection(
-                title = "Featured Wines",
-                imageRes = null,
-                contentTitle = "Château Margaux 2015",
-                contentText = "A rich and complex wine, perfect for any occasion."
-            )
+                    CardSection(
+                        title = "Featured Wines",
+                        imageRes = null,
+                        contentTitle = "Château Margaux 2015",
+                        contentText = "A rich and complex wine, perfect for any occasion."
+                    )
 
-            Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
 
-            CardSection(
-                title = "Member Spotlight",
-                imageRes = null,
-                contentTitle = "Jessica Parker",
-                contentText = "\"Being a part of this club has enriched my wine journey immensely.\""
-            )
+                    CardSection(
+                        title = "Member Spotlight",
+                        imageRes = null,
+                        contentTitle = "Jessica Parker",
+                        contentText = "\"Being a part of this club has enriched my wine journey immensely.\""
+                    )
+
+                }
+            }
         }
     }
 }

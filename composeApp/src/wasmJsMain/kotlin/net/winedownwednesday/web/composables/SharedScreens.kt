@@ -43,7 +43,7 @@ fun TopNavBar(
                     painter = painterResource(Res.drawable.wdw_logo_2_96),
                     contentDescription = "Wine Down Wednesday Logo",
                     modifier = Modifier.clickable {
-
+                        selectedPageState.value = WDWPages.HOME
                     }
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -52,7 +52,7 @@ fun TopNavBar(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier
                         .clickable {
-
+                            selectedPageState.value = WDWPages.HOME
                         }
                         .align(Alignment.CenterVertically)
                 )
@@ -105,6 +105,15 @@ fun TopNavBar(
                         .padding(horizontal = 8.dp)
                         .clickable {
                             selectedPageState.value = WDWPages.WINE
+                        }
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = "Member Login",
+                    modifier = Modifier
+                        .padding(horizontal = 8.dp)
+                        .clickable {
+                            println("Member login clicked")
                         }
                 )
             }

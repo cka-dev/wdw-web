@@ -57,10 +57,7 @@ fun MembersPage() {
 
     var selectedMember by remember { mutableStateOf<Member?>(null) }
     val viewModel: MembersPageViewModel = koinInject()
-    val members by viewModel.members.collectAsState()
     val memberSections by viewModel.allMemberSections.collectAsState()
-
-    println("Collected members: $members")
 
     Column(
         modifier = Modifier.fillMaxSize()
