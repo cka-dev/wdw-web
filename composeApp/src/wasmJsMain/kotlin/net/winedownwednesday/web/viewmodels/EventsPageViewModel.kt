@@ -45,7 +45,7 @@ class EventsPageViewModel(
                     fetchedEvents?.let { updateUpcomingPastEvents(it) }
                 }
             } catch (e: Exception) {
-                println("Error loading events: ${e.message}")
+                println("$TAG: Error loading events: ${e.message}")
             }
         }
     }

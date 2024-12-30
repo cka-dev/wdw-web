@@ -4,7 +4,9 @@ import net.winedownwednesday.web.data.network.KtorClientInstance
 import net.winedownwednesday.web.data.network.RemoteDataSource
 import net.winedownwednesday.web.data.repositories.AppRepository
 import net.winedownwednesday.web.viewmodels.AboutPageViewModel
+import net.winedownwednesday.web.viewmodels.AuthPageViewModel
 import net.winedownwednesday.web.viewmodels.EventsPageViewModel
+import net.winedownwednesday.web.viewmodels.HomePageViewModel
 import net.winedownwednesday.web.viewmodels.MembersPageViewModel
 import net.winedownwednesday.web.viewmodels.PodcastsPageViewModel
 import net.winedownwednesday.web.viewmodels.WinePageViewModel
@@ -47,6 +49,14 @@ val provideWinePageViewModel = module {
     viewModel { WinePageViewModel(get()) }
 }
 
+val provideAuthPageViewModel = module {
+    viewModel { AuthPageViewModel(get()) }
+}
+
+val provideHomePageViewModel = module {
+    viewModel { HomePageViewModel(get()) }
+}
+
 val appModule  =
     listOf(
         provideHttpClient,
@@ -56,5 +66,7 @@ val appModule  =
         provideEventsPageViewModel,
         providePodcastsPageViewModel,
         provideAboutPageViewModel,
-        provideWinePageViewModel
+        provideWinePageViewModel,
+        provideAuthPageViewModel,
+        provideHomePageViewModel
     )

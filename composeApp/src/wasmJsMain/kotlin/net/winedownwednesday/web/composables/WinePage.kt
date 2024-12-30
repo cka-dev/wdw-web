@@ -23,7 +23,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -60,8 +59,10 @@ fun WinePage() {
             modifier = Modifier
                 .fillMaxWidth(0.3f)
                 .fillMaxHeight()
+                .background(Color.Black)
         ) {
             SearchBar(
+                label = "Search our wine list",
                 query = searchQuery,
                 onQueryChange = { viewModel.setSearchQuery(it) }
             )
@@ -106,7 +107,7 @@ fun WinePage() {
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight()
-                .background(Color(0xFF141414)),
+                .background(Color.Black),
         ) {
             Card(
                 modifier = Modifier.padding(16.dp),
@@ -131,12 +132,6 @@ fun WinePage() {
             }
         }
     }
-
-//    AnimatedVisibility(showWineImageCardState.value){
-//        WineImageCard(
-//            wineImageUrl = imageCardUrlState.value
-//        )
-//    }
 }
 
 @Composable
@@ -145,7 +140,7 @@ fun WineListItem(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val bgColor = if (isSelected) Color(0xFF333333) else Color(0xFF2A2A2A)
+    val bgColor = if (isSelected) Color(0xFFFF7F33) else Color(0xFF2A2A2A)
 
     Card(
         modifier = Modifier
@@ -202,7 +197,7 @@ fun WineDetail(
         Text(
             text = wine.name,
             style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.primary
+            color = Color.White
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -212,7 +207,6 @@ fun WineDetail(
             contentDescription = "Wine Image",
             modifier = Modifier
                 .fillMaxWidth()
-//                .height(500.dp)
                 .clip(RoundedCornerShape(16.dp))
         )
 
@@ -243,21 +237,6 @@ fun WineDetail(
             )
         }
     }
-}
-
-@Composable
-fun SearchBar(
-    query: String,
-    onQueryChange: (String) -> Unit
-) {
-    TextField(
-        value = query,
-        onValueChange = { onQueryChange(it) },
-        label = { Text("Search our wine list") },
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-    )
 }
 
 @Composable

@@ -1,5 +1,6 @@
 package net.winedownwednesday.web.composables
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,18 +13,22 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import net.winedownwednesday.web.viewmodels.AuthPageViewModel
 import org.jetbrains.compose.resources.painterResource
+import org.koin.compose.koinInject
 import wdw_web.composeapp.generated.resources.Res
 import wdw_web.composeapp.generated.resources.ig_logo_96
 import wdw_web.composeapp.generated.resources.tiktok_logo_96
@@ -35,6 +40,9 @@ import wdw_web.composeapp.generated.resources.yt_logo_96
 fun TopNavBar(
     selectedPageState: MutableState<WDWPages>
  ) {
+    val viewModel: AuthPageViewModel = koinInject()
+
+    val showAuthPageCardState = viewModel.showAuthCard.collectAsState()
 
     Surface {
         TopAppBar(title = {
@@ -113,11 +121,23 @@ fun TopNavBar(
                     modifier = Modifier
                         .padding(horizontal = 8.dp)
                         .clickable {
-                            println("Member login clicked")
+                           viewModel.setShowAuthCardState(
+                               value = true
+                           )
                         }
                 )
             }
         })
+
+        AnimatedVisibility(showAuthPageCardState.value) {
+            UnderConstruction(
+                onDismissRequest = {
+                    viewModel.setShowAuthCardState(
+                        value = false
+                    )
+                }
+            )
+        }
     }
 }
 
@@ -211,4 +231,24 @@ fun FooterColumn(
             }
         }
     }
+}
+
+@Composable
+fun SearchBar(
+    label: String,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = { onQueryChange(it) },
+        label = { Text(
+            text = label,
+            color = Color.White
+        ) },
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    )
 }

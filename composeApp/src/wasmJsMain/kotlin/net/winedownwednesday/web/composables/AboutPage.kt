@@ -56,6 +56,7 @@ fun AboutPage() {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(vertical = 24.dp)
+                .background(Color.Black)
         ) {
             item {
                 Box(
@@ -142,15 +143,6 @@ fun AboutCard(section: AboutSection) {
             AboutImage(section.imageRes)
             Spacer(modifier = Modifier.width(16.dp))
             AboutText(section.title, section.body)
-//            if (section.imageOnLeft) {
-//                AboutImage(section.imageRes)
-//                Spacer(modifier = Modifier.width(16.dp))
-//                AboutText(section.title, section.body)
-//            } else {
-//                AboutText(section.title, section.body)
-//                Spacer(modifier = Modifier.width(16.dp))
-//                AboutImage(section.imageRes)
-//            }
         }
     }
 }

@@ -1,6 +1,5 @@
 package net.winedownwednesday.web.composables
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,8 +22,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,13 +46,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import net.winedownwednesday.web.data.Member
 import net.winedownwednesday.web.viewmodels.MembersPageViewModel
-import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.koinInject
-import wdw_web.composeapp.generated.resources.Res
-import wdw_web.composeapp.generated.resources.profile1
-import wdw_web.composeapp.generated.resources.profile2
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -63,7 +63,6 @@ fun MembersPage() {
         modifier = Modifier.fillMaxSize()
             .background(Color.Black),
     ) {
-        MemberHeroSection()
 
         LazyColumn(
             modifier = Modifier
@@ -72,6 +71,23 @@ fun MembersPage() {
                 .weight(1f),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            item {
+                Text(
+                    text = "Meet our Members",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "The people and the stories behind Wine Down.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center
+                )
+            }
+
             if (memberSections.isEmpty()) {
                 item {
                     Text(
@@ -132,20 +148,20 @@ fun MemberCard(
         elevation = CardDefaults.cardElevation(8.dp)
     ) {
         Column(
-            modifier = Modifier.padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-
-            Image(
-                painter = painterResource(
-                    Res.drawable.profile1
-                ),
-                contentDescription = "${member.name}'s photo",
+            AsyncImage(
+                model = member.profilePictureUrl,
+                contentDescription = "${member.name}' s profile photo",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape),
-                alignment = Alignment.Center
+                    .size(150.dp)
+                    .clip(CircleShape)
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
@@ -167,32 +183,42 @@ fun MemberDetailPopup(member: Member, onDismissRequest: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.6f))
+            .background(Color.Transparent)
             .clickable { onDismissRequest() }
     ) {
         Card(
             modifier = Modifier
                 .align(Alignment.Center)
-                .fillMaxWidth(0.8f)
+                .fillMaxWidth(0.4f)
                 .fillMaxHeight(0.8f)
                 .clickable(enabled = false) {},
             colors = CardDefaults.cardColors(containerColor = Color(0xFF282828)),
             elevation = CardDefaults.cardElevation(16.dp)
         ) {
+            IconButton(
+                onClick = { onDismissRequest() },
+                modifier = Modifier
+                    .padding(8.dp)
+                    .align(Alignment.End)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = Color.White
+                )
+            }
             Column(
                 modifier = Modifier
+                    .fillMaxSize()
                     .padding(16.dp)
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(rememberScrollState()),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Image(
-                        painter = painterResource(
-                            Res.drawable.profile2
-                        ),
-                        contentDescription = "${member.name}'s photo",
-                        contentScale = ContentScale.Crop,
+                    AsyncImage(
+                        model = member.profilePictureUrl,
+                        contentDescription = "${member.name}'s profile picture",
                         modifier = Modifier
-                            .size(100.dp)
+                            .size(180.dp)
                             .clip(RectangleShape)
                     )
                     Spacer(modifier = Modifier.width(16.dp))
@@ -220,12 +246,6 @@ fun MemberDetailPopup(member: Member, onDismissRequest: () -> Unit) {
                     member.favoriteWines.joinToString(separator = ", ")
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    "Click outside this card to close",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.LightGray
-                )
             }
         }
     }
@@ -237,7 +257,7 @@ fun MemberDetailRow(label: String, value: String) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.secondary
+            color = Color.White
         )
         Text(text = value, style = MaterialTheme.typography.bodyMedium)
     }

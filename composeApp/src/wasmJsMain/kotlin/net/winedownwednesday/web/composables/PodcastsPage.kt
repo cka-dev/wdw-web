@@ -24,9 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -39,6 +37,7 @@ import net.winedownwednesday.web.HtmlView
 import net.winedownwednesday.web.LocalLayerContainer
 import net.winedownwednesday.web.data.Episode
 import net.winedownwednesday.web.viewmodels.PodcastsPageViewModel
+import net.winedownwednesday.web.viewmodels.matchesQuery
 import org.koin.compose.koinInject
 
 
@@ -46,27 +45,33 @@ import org.koin.compose.koinInject
 fun PodcastsPage(
 ) {
     val viewModel: PodcastsPageViewModel = koinInject()
-
     val episodes by viewModel.episodes.collectAsState()
-
     val sortedEpisodes = remember(episodes) {
         episodes?.sortedByDescending { it.date }
     }
-
-    var selectedEpisode by remember {
-        mutableStateOf(sortedEpisodes?.firstOrNull())
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val filteredEpisodes = remember (sortedEpisodes, searchQuery){
+        sortedEpisodes?.filter { it.matchesQuery(searchQuery) }
     }
+    val selectedEpisode = viewModel.selectedEpisode.collectAsState()
 
     Row(
         modifier = Modifier
             .fillMaxSize()
+            .background(Color.Black)
     ) {
         Column(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight()
-                .background(Color.Transparent)
+                .background(Color.Black)
         ) {
+            SearchBar(
+                label = "Search Uncorked Conversations episodes",
+                query = searchQuery,
+                onQueryChange = { viewModel.setSearchQuery(it) }
+            )
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -83,12 +88,21 @@ fun PodcastsPage(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    sortedEpisodes?.let { episodes ->
+                    filteredEpisodes?.let { episodes ->
                         items(episodes) { episode ->
                             EpisodeListItem(
                                 episode = episode,
-                                isSelected = (episode == selectedEpisode),
-                                onClick = { selectedEpisode = episode }
+                                isSelected = (
+                                        if (selectedEpisode.value != null) {
+                                            episode == selectedEpisode.value
+                                        } else {
+                                            false
+                                        }),
+                                onClick = {
+                                    viewModel.setSelectedEpisode(
+                                        episode = episode
+                                    )
+                                }
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                         }
@@ -104,25 +118,26 @@ fun PodcastsPage(
                 modifier = Modifier
                     .weight(2f)
                     .fillMaxHeight()
-                    .background(Color(0xFF141414))
+                    .background(Color.Black)
             ) {
                 Card(
+                    modifier = Modifier.padding(16.dp),
                     elevation = CardDefaults.cardElevation(4.dp),
                 ) {
-                    if (selectedEpisode == null) {
+                    if (selectedEpisode.value == null) {
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "No episode selected",
+                                text = "Select an episode to see the details and watch",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = Color.LightGray
                             )
                         }
                     } else {
                         EpisodeVideoDetail(
-                            episode = selectedEpisode!!
+                            episode = selectedEpisode.value!!
                         )
                     }
                 }

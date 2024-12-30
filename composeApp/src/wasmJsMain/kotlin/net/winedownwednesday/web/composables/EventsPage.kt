@@ -98,7 +98,7 @@ fun WebEventsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(color = Color(0xFF141414))
+            .background(color = Color.Black)
     ) {
         Row(
             modifier = Modifier
@@ -145,9 +145,10 @@ fun WebEventsScreen(
             contentPadding = PaddingValues(16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
         ) {
-            if(!eventsToDisplay.isNullOrEmpty()) {
+            if (!eventsToDisplay.isNullOrEmpty()) {
                 items(eventsToDisplay) { event ->
                     EventCard(
                         event = event,
@@ -244,7 +245,8 @@ fun EventCard(
 
             Row(
                 horizontalArrangement = Arrangement.End,
-                modifier = Modifier.fillMaxWidth())
+                modifier = Modifier.fillMaxWidth()
+            )
             {
                 Button(
                     onClick = {
@@ -282,7 +284,7 @@ fun EventDetailPopup(
             color = MaterialTheme.colorScheme.surface,
             modifier = Modifier
                 .align(Alignment.Center)
-                .fillMaxWidth(0.9f)
+                .fillMaxWidth(0.4f)
                 .padding(16.dp)
         ) {
             EventDetailContent(event = selectedEvent, onCloseClick = onDismissRequest)
@@ -311,7 +313,7 @@ fun EventDetailContent(
             Text(
                 text = event.name,
                 style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.primary
+                color = Color.White
             )
             IconButton(onClick = onCloseClick) {
                 Icon(
@@ -360,8 +362,11 @@ fun EventDetailContent(
             EventDetailRow(label = "Additional Info", value = event.additionalInfo)
         }
 
-        if (event.registrationLink != null && stringToDate(event.date) > Clock.System.now().toLocalDateTime(
-                TimeZone.currentSystemDefault()).date) {
+        if (event.registrationLink != null && stringToDate(event.date) > Clock.System.now()
+                .toLocalDateTime(
+                    TimeZone.currentSystemDefault()
+                ).date
+        ) {
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
@@ -378,7 +383,7 @@ fun EventDetailContent(
             Text(
                 text = "Gallery",
                 style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.primary
+                color = Color.White
             )
             Spacer(modifier = Modifier.height(8.dp))
             MediaGallery(mediaItems = event.gallery)
@@ -396,7 +401,7 @@ fun EventDetailRow(
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.primary
+            color = Color.White
         )
         Text(
             text = value,
@@ -458,11 +463,11 @@ fun GalleryViewer(
         pageCount = { mediaItems.size }
     )
 
-    CompositionLocalProvider(LocalLayerContainer provides document.body!!){
+    CompositionLocalProvider(LocalLayerContainer provides document.body!!) {
         Dialog(onDismissRequest = onDismissRequest) {
             Card(
 
-            ){
+            ) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -483,9 +488,11 @@ fun GalleryViewer(
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
+
                             mediaItem.type == MediaType.VIDEO && !mediaItem.contentUrl.isNullOrEmpty() -> {
                                 KmpVideoPlayer(mediaItem.contentUrl)
                             }
+
                             else -> {
                                 Box(
                                     modifier = Modifier
@@ -562,11 +569,9 @@ fun MediaItemThumbnail(
             .clickable(onClick = onClick)
     ) {
         if (!mediaItem.thumbnailUrl.isNullOrEmpty()) {
-            Image(
-                painter = painterResourcePlaceholder(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
+            AsyncImage(
+                model = mediaItem.thumbnailUrl,
+                contentDescription = "${mediaItem.type}' event picture or video"
             )
         } else {
             Box(
@@ -602,12 +607,12 @@ fun KmpVideoPlayer(url: String) {
             modifier = Modifier.fillMaxWidth().height(300.dp),
             factory = {
                 val video = createElement("video")
-                video.setAttribute("controls","")
-                video.setAttribute("preload","auto")
-                video.setAttribute("data-setup","{}")
+                video.setAttribute("controls", "")
+                video.setAttribute("preload", "auto")
+                video.setAttribute("data-setup", "{}")
                 video.appendElement("source") {
                     setAttribute("src", url)
-                    setAttribute("type","video/mp4")
+                    setAttribute("type", "video/mp4")
                 }
                 video
             }
