@@ -1,8 +1,11 @@
 package net.winedownwednesday.web.composables
 
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,12 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -42,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -56,9 +55,11 @@ import net.winedownwednesday.web.data.Member
 import net.winedownwednesday.web.data.Wine
 import net.winedownwednesday.web.viewmodels.HomePageViewModel
 import org.koin.compose.koinInject
+import kotlin.math.abs
 
 @Composable
 fun Home(
+    modifier: Modifier = Modifier
 ) {
     val selectedPageState = remember {
         mutableStateOf(WDWPages.HOME)
@@ -185,6 +186,17 @@ fun MainContent() {
     val featuredWines by viewModel.featuredWines.collectAsState()
     val highlightedMember by viewModel.highlightedMember.collectAsState()
 
+    var sharedIndex by remember { mutableIntStateOf(0) }
+
+    val maxListSize = maxOf(upcomingEvents.size, featuredWines.size)
+
+    LaunchedEffect(maxListSize) {
+        while (true) {
+            delay(5000L)
+            sharedIndex = (sharedIndex + 1) % maxListSize
+        }
+    }
+
     Card(
         colors = CardDefaults.cardColors(
             containerColor = Color.Black
@@ -206,14 +218,14 @@ fun MainContent() {
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
 
-                    AutoScrollingEventListHorizontal(
+                    AutoScrollingEventDisplay(
                         events = upcomingEvents,
-                        scrollInterval = 3000L
+                        sharedIndex = sharedIndex
                     )
 
                     AutoScrollingWineListHorizontal(
                         wines = featuredWines,
-                        scrollInterval = 3000L
+                        sharedIndex = sharedIndex,
                     )
 
                     MemberSpotlightCard(
@@ -223,6 +235,7 @@ fun MainContent() {
                 }
             }
         }
+
     }
 }
 
@@ -273,88 +286,6 @@ fun MemberSpotlightCard(
 }
 
 @Composable
-fun AutoScrollingEventList(
-    title: String = "Upcoming Events",
-    events: List<Event>,
-    onEventSelectedChange: (Event) -> Unit = {},
-    scrollInterval: Long = 3000L,
-    modifier: Modifier = Modifier
-) {
-    if (events.size <= 1) {
-        SingleEventOrEmpty(title, events, onEventSelectedChange)
-        return
-    }
-
-    val listState = rememberLazyListState()
-    var currentIndex by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(events) {
-        while (true) {
-            delay(scrollInterval)
-            currentIndex = (currentIndex + 1) % events.size
-            listState.animateScrollToItem(currentIndex)
-        }
-    }
-
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        modifier = modifier
-            .fillMaxWidth(0.3f)
-            .height(600.dp),
-        elevation = CardDefaults.cardElevation(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = title,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            LazyColumn(state = listState) {
-                items(events) { event ->
-                    HomePageEventCard(
-                        event = event, onEventSelectedChange = onEventSelectedChange)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SingleEventOrEmpty(
-    title: String,
-    events: List<Event>,
-    onEventSelectedChange: (Event) -> Unit
-) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier
-            .fillMaxWidth(0.3f)
-            .height(600.dp),
-        elevation = CardDefaults.cardElevation(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = title, fontWeight = FontWeight.SemiBold, color = Color.White)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (events.isEmpty()) {
-                Text("No upcoming events", color = Color.LightGray)
-            } else {
-                HomePageEventCard(
-                    event = events.first(),
-                    onEventSelectedChange = onEventSelectedChange
-                )
-            }
-        }
-    }
-}
-
-@Composable
 fun WineCard(
     wine: Wine,
     onWineSelectedChange: (Wine) -> Unit = {},
@@ -362,7 +293,7 @@ fun WineCard(
 ) {
     Card(
         modifier = Modifier
-            .fillMaxWidth(1f)
+            .fillMaxWidth()
             .heightIn(min = 350.dp)
             .clip(RoundedCornerShape(12.dp))
             .clickable {
@@ -421,91 +352,11 @@ fun WineCard(
 }
 
 @Composable
-fun AutoScrollingWineList(
-    title: String = "Featured Wines",
-    wines: List<Wine>,
-    onWineSelectedChange: (Wine) -> Unit = {},
-    scrollInterval: Long = 3000L,
-    modifier: Modifier = Modifier
-) {
-    if (wines.size <= 1) {
-        SingleWineOrEmpty(title, wines, onWineSelectedChange)
-        return
-    }
-
-    val listState = rememberLazyListState()
-    var currentIndex by remember { mutableStateOf(0) }
-
-    LaunchedEffect(wines) {
-        while (true) {
-            delay(scrollInterval)
-            currentIndex = (currentIndex + 1) % wines.size
-            listState.animateScrollToItem(currentIndex)
-        }
-    }
-
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        modifier = modifier
-            .fillMaxWidth(0.3f)
-            .height(600.dp),
-        elevation = CardDefaults.cardElevation(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = title,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            LazyColumn(state = listState) {
-                items(wines) { wine ->
-                    WineCard(wine = wine, onWineSelectedChange = onWineSelectedChange)
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SingleWineOrEmpty(
-    title: String,
-    wines: List<Wine>,
-    onWineSelectedChange: (Wine) -> Unit
-) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier
-            .widthIn(min = 200.dp)
-            .height(600.dp),
-        elevation = CardDefaults.cardElevation(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = title, fontWeight = FontWeight.SemiBold, color = Color.White)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (wines.isEmpty()) {
-                Text("No featured wines", color = Color.LightGray)
-            } else {
-                WineCard(wine = wines.first(), onWineSelectedChange = onWineSelectedChange)
-            }
-        }
-    }
-}
-
-//Horizontal Scrolling
-@Composable
-fun AutoScrollingEventListHorizontal(
+fun AutoScrollingEventDisplay(
     title: String = "Upcoming Events",
     events: List<Event>,
     onEventSelectedChange: (Event) -> Unit = {},
-    scrollInterval: Long = 3000L,
+    sharedIndex: Int,
     modifier: Modifier = Modifier
 ) {
     if (events.size <= 1) {
@@ -513,17 +364,7 @@ fun AutoScrollingEventListHorizontal(
         return
     }
 
-    val listState = rememberLazyListState()
-    var currentIndex by remember { mutableStateOf(0) }
-    val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
-
-    LaunchedEffect(events) {
-        while (true) {
-            delay(scrollInterval)
-            currentIndex = (currentIndex + 1) % events.size
-            listState.animateScrollToItem(currentIndex)
-        }
-    }
+    val transition = updateTransition(targetState = sharedIndex, label = "slideTransition")
 
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -545,20 +386,44 @@ fun AutoScrollingEventListHorizontal(
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            LazyRow(
-                state = listState,
-                flingBehavior = flingBehavior,
-                modifier = Modifier.fillMaxWidth()
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
             ) {
-                items(events) { event ->
-                    HomePageEventCard(
-                        event = event,
-                        onEventSelectedChange = onEventSelectedChange,
+                events.forEachIndexed { index, event ->
+                    val offset by transition.animateFloat(
+                        label = "slideAnimation",
+                        transitionSpec = {
+                            tween(
+                                durationMillis = 500,
+                                easing = LinearOutSlowInEasing
+                            )
+                        }
+                    ) { target ->
+                        val distance = (index - target + events.size) % events.size
+                        when (distance) {
+                            0 -> 0f
+                            1 -> 1f
+                            events.size - 1 -> -1f
+                            else -> 2f
+                        }
+                    }
+
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(end = 16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(64.dp))
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                translationX = offset * size.width
+                                alpha = if (abs(offset) <= 1f) 1 - abs(offset) else 0f
+                            }
+                    ) {
+                        HomePageEventCard(
+                            event = event,
+                            onEventSelectedChange = onEventSelectedChange,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
         }
@@ -569,7 +434,8 @@ fun AutoScrollingEventListHorizontal(
 private fun SingleEventOrEmptyHorizontal(
     title: String,
     events: List<Event>,
-    onEventSelectedChange: (Event) -> Unit
+    onEventSelectedChange: (Event) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -605,7 +471,7 @@ fun AutoScrollingWineListHorizontal(
     title: String = "Featured Wines",
     wines: List<Wine>,
     onWineSelectedChange: (Wine) -> Unit = {},
-    scrollInterval: Long = 3000L,
+    sharedIndex: Int,
     modifier: Modifier = Modifier
 ) {
     if (wines.size <= 1) {
@@ -613,16 +479,7 @@ fun AutoScrollingWineListHorizontal(
         return
     }
 
-    val listState = rememberLazyListState()
-    var currentIndex by remember { mutableStateOf(0) }
-    val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
-    LaunchedEffect(wines) {
-        while (true) {
-            delay(scrollInterval)
-            currentIndex = (currentIndex + 1) % wines.size
-            listState.animateScrollToItem(currentIndex)
-        }
-    }
+    val transition = updateTransition(targetState = sharedIndex, label = "slideTransition")
 
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -633,34 +490,55 @@ fun AutoScrollingWineListHorizontal(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
     ) {
         Column(
-            modifier =
-            Modifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
             Text(
                 text = title,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.White,
-                modifier = Modifier.fillMaxWidth()
+                color = Color.White
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            LazyRow(
-                state = listState,
-                flingBehavior = flingBehavior,
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .weight(1f)
             ) {
-                items(wines) { wine ->
-                    WineCard(
-                        wine = wine,
-                        onWineSelectedChange = onWineSelectedChange,
+                wines.forEachIndexed { index, wine ->
+                    val offset by transition.animateFloat(
+                        label = "slideAnimation",
+                        transitionSpec = {
+                            tween(
+                                durationMillis = 500,
+                                easing = LinearOutSlowInEasing
+                            )
+                        }
+                    ) { target ->
+                        val distance = (index - target + wines.size) % wines.size
+                        when (distance) {
+                            0 -> 0f
+                            1 -> 1f
+                            wines.size - 1 -> -1f
+                            else -> 2f
+                        }
+                    }
+
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(end = 16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(180.dp))
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                translationX = offset * size.width
+                                alpha = if (abs(offset) <= 1f) 1 - abs(offset) else 0f
+                            }
+                    ) {
+                        WineCard(
+                            wine = wine,
+                            onWineSelectedChange = onWineSelectedChange,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
         }
