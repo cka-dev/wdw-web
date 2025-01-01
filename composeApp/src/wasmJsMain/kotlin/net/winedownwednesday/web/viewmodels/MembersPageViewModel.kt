@@ -76,3 +76,11 @@ private val _organizers = MutableStateFlow<List<Member>>(emptyList())
         _selectedMember.value = null
     }
 }
+
+fun Member.matchesQuery(query: String): Boolean {
+    if (query.isBlank()) return true
+    val lowerQuery = query.lowercase()
+    return name.lowercase().contains(lowerQuery) ||
+            role.lowercase().contains(lowerQuery) ||
+            email.lowercase().contains(lowerQuery)
+}

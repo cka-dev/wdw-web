@@ -53,6 +53,7 @@ import coil3.compose.AsyncImage
 import net.winedownwednesday.web.data.Member
 import net.winedownwednesday.web.data.MemberSection
 import net.winedownwednesday.web.viewmodels.MembersPageViewModel
+import net.winedownwednesday.web.viewmodels.matchesQuery
 import org.koin.compose.koinInject
 
 @Composable
@@ -310,7 +311,7 @@ fun CompactMemberCard(
             Text(
                 text = member.role,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary,
+                color = Color.White,
                 textAlign = TextAlign.Center
             )
         }
@@ -353,7 +354,7 @@ fun MemberDetailContent(member: Member, onCloseClick: () -> Unit) {
             Text(
                 text = member.name,
                 style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.primary
+                color = Color.White
             )
             IconButton(onClick = onCloseClick) {
                 Icon(
@@ -402,7 +403,7 @@ fun MemberDetailRow(label: String, value: String) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.primary
+            color = Color.White
         )
         Text(
             text = value,
@@ -491,13 +492,5 @@ fun LargeScreenMemberPage(
                 )
             }
         }
-}
-
-fun Member.matchesQuery(query: String): Boolean {
-    if (query.isBlank()) return true
-    val lowerQuery = query.lowercase()
-    return name.lowercase().contains(lowerQuery) ||
-            role.lowercase().contains(lowerQuery) ||
-            email.lowercase().contains(lowerQuery)
 }
 
