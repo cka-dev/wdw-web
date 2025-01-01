@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -29,12 +30,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.browser.window
 import net.winedownwednesday.web.viewmodels.AuthPageViewModel
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.koinInject
 import wdw_web.composeapp.generated.resources.Res
 import wdw_web.composeapp.generated.resources.ig_logo_96
-import wdw_web.composeapp.generated.resources.tiktok_logo_96
 import wdw_web.composeapp.generated.resources.wdw_logo_2_96
 import wdw_web.composeapp.generated.resources.yt_logo_96
 
@@ -165,6 +166,9 @@ fun Footer(
     isMobile: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val instagram_link = "https://www.instagram.com/uncorked.conversations/"
+    val youtube_link = "https://www.youtube.com/@FreeHDvideosnocopyright"
+
     MaterialTheme(
         colorScheme = darkColorScheme(
             primary = Color(0xFF1E1E1E),
@@ -193,37 +197,32 @@ fun Footer(
                         Icon(
                             painter = painterResource(Res.drawable.ig_logo_96),
                             contentDescription = "Instagram logo",
-                            modifier = Modifier.clickable {
-
-                            }
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Icon(
-                            painter = painterResource(Res.drawable.tiktok_logo_96),
-                            contentDescription = "Tiktok logo",
-                            modifier = Modifier.clickable {
-
-                            }
+                            modifier = Modifier
+                                .clickable {
+                                    window.open(instagram_link)
+                                }
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Icon(
                             painter = painterResource(Res.drawable.yt_logo_96),
                             contentDescription = "Youtube logo",
                             modifier = Modifier.clickable {
-
+                                window.open(youtube_link)
                             }
                         )
                     }
                 }
                 FooterColumn(
                     title = "Contact",
-                    items = listOf("info@winesocialclub.com", "+1 234 567 890")
+                    items = listOf("info@winesocialclub.com", "+1 234 567 890"),
+                    onLinkClicked = {}
                 )
                 AnimatedVisibility(!isMobile){
                     FooterColumn(
                         title = "Resources",
                         items = listOf("Privacy Policy", "Terms of Service"),
-                        isLinks = true
+                        isLinks = true,
+                        {}
                     )
                 }
             }
@@ -235,7 +234,9 @@ fun Footer(
 fun FooterColumn(
     title: String,
     items: List<String>,
-    isLinks: Boolean = false) {
+    isLinks: Boolean = false,
+    onLinkClicked: () -> Unit
+) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             text = title,
@@ -244,11 +245,21 @@ fun FooterColumn(
         items.forEach { item ->
             if (isLinks) {
                 Text(
-                    text = item
+                    text = item,
+                    modifier = Modifier.selectable(
+                        selected = false,
+                        enabled = true,
+                        onClick = { onLinkClicked() }
+                    )
                 )
             } else {
                 Text(
-                    text = item
+                    text = item,
+                    modifier = Modifier.selectable(
+                        selected = false,
+                        enabled = true,
+                        onClick = {}
+                    )
                 )
             }
         }

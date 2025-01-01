@@ -151,13 +151,11 @@ fun Home(
                                 }
                             )
                         }
-                        else -> {
-                            // Do nothing.
-                        }
                     }
                 }
                 Footer(
-                    isMobile = isMobile
+                    isMobile = isMobile,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
