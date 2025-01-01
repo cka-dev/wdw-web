@@ -3,6 +3,7 @@ package net.winedownwednesday.web.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import net.winedownwednesday.web.data.Member
@@ -24,6 +25,12 @@ private val _organizers = MutableStateFlow<List<Member>>(emptyList())
 
     private val _allMemberSections = MutableStateFlow<List<MemberSection>>(emptyList())
     val allMemberSections = _allMemberSections.asStateFlow()
+
+    private val _selectedMember = MutableStateFlow<Member?>(null)
+    val selectedMember = _selectedMember.asStateFlow()
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery
 
     init {
         viewModelScope.launch {
@@ -55,5 +62,17 @@ private val _organizers = MutableStateFlow<List<Member>>(emptyList())
                 MemberSection("Guests", newGuests)
             )
         }
+    }
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun setSelectedMember(member: Member) {
+        _selectedMember.value = member
+    }
+
+    fun clearSelectedMember(){
+        _selectedMember.value = null
     }
 }

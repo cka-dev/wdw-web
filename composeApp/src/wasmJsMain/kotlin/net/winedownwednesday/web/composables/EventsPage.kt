@@ -78,13 +78,10 @@ import net.winedownwednesday.web.viewmodels.EventsPageViewModel
 import org.koin.compose.koinInject
 import kotlin.contracts.ExperimentalContracts
 
-@Composable
-fun EventsPage() {
-    WebEventsScreen()
-}
 
 @Composable
-fun WebEventsScreen(
+fun EventsPage(
+    isCompactScreen: Boolean
 ) {
     val viewModel: EventsPageViewModel = koinInject()
 
@@ -162,11 +159,20 @@ fun WebEventsScreen(
     }
 
     if (selectedEvent != null) {
-        EventDetailPopup(
-            selectedEvent = selectedEvent!!,
-            onDismissRequest = {
-                viewModel.setSelectedEvent(null)
-            })
+        if (isCompactScreen){
+            CompactScreenEventDetailPopup(
+                event = selectedEvent!!,
+                onDismissRequest = {
+                    viewModel.setSelectedEvent(null)
+                }
+            )
+        } else {
+            LargeScreenEventDetailPopup(
+                selectedEvent = selectedEvent!!,
+                onDismissRequest = {
+                    viewModel.setSelectedEvent(null)
+                })
+        }
     }
 }
 
@@ -268,7 +274,7 @@ fun EventCard(
 }
 
 @Composable
-fun EventDetailPopup(
+fun LargeScreenEventDetailPopup(
     selectedEvent: Event,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier
@@ -288,6 +294,31 @@ fun EventDetailPopup(
                 .padding(16.dp)
         ) {
             EventDetailContent(event = selectedEvent, onCloseClick = onDismissRequest)
+        }
+    }
+}
+
+@Composable
+fun CompactScreenEventDetailPopup(
+    event: Event,
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable(onClick = onDismissRequest)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier
+                .align(Alignment.Center)
+                .fillMaxWidth(0.9f)
+                .padding(16.dp)
+        ) {
+            EventDetailContent(event = event, onCloseClick = onDismissRequest)
         }
     }
 }

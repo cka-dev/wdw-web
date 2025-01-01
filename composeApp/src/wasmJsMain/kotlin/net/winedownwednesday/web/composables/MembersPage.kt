@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -18,9 +19,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -29,13 +35,11 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,90 +49,44 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import net.winedownwednesday.web.data.Member
+import net.winedownwednesday.web.data.MemberSection
 import net.winedownwednesday.web.viewmodels.MembersPageViewModel
 import org.koin.compose.koinInject
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun MembersPage() {
+fun MembersPage(
+    isCompactScreen: Boolean
+) {
 
-    var selectedMember by remember { mutableStateOf<Member?>(null) }
     val viewModel: MembersPageViewModel = koinInject()
     val memberSections by viewModel.allMemberSections.collectAsState()
+    val selectedMember by viewModel.selectedMember.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
 
-    Column(
-        modifier = Modifier.fillMaxSize()
-            .background(Color.Black),
-    ) {
-
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.Black)
-                .weight(1f),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            item {
-                Text(
-                    text = "Meet our Members",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "The people and the stories behind Wine Down.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            if (memberSections.isEmpty()) {
-                item {
-                    Text(
-                        text = "Loading...",
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
-            } else {
-                items(memberSections) { section ->
-                    Text(
-                        text = section.title,
-                        style = MaterialTheme.typography.headlineMedium,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-                    FlowRow(
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        section.members.forEach { member ->
-                            MemberCard(
-                                member = member,
-                                modifier = Modifier.width(200.dp),
-                                onClick = { selectedMember = member }
-                            )
-                        }
-                    }
-                }
-            }
-
-
-
-        }
-        if (selectedMember != null) {
-            MemberDetailPopup(member = selectedMember!!) {
-                selectedMember = null
-            }
-        }
+    if (isCompactScreen) {
+        CompactScreenMembersPage(
+            allMembers= memberSections,
+            selectedMember = selectedMember,
+            searchQuery = searchQuery,
+            onSelectedMemberChange = { it?.let {
+                viewModel.setSelectedMember(it)
+            } },
+            onDismissRequest = {viewModel.clearSelectedMember()},
+            onSearchQueryChange = {viewModel.setSearchQuery(it)},
+        )
+    } else {
+        LargeScreenMemberPage(
+            memberSections= memberSections,
+            selectedMember = selectedMember,
+            onSelectedMemberChange = { it?.let {
+                viewModel.setSelectedMember(it)
+            } },
+            onDismissRequest = {viewModel.clearSelectedMember()},
+        )
     }
+
 }
 
 @Composable
@@ -251,44 +209,295 @@ fun MemberDetailPopup(member: Member, onDismissRequest: () -> Unit) {
     }
 }
 
+
+@Composable
+fun CompactScreenMembersPage(
+    allMembers: List<MemberSection>,
+    selectedMember: Member?,
+    searchQuery: String,
+    onSelectedMemberChange: (Member?) -> Unit = {},
+    onDismissRequest: () -> Unit,
+    onSearchQueryChange: (String) -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+    ) {
+        SearchBar(
+            label = "Search our members directory",
+            query = searchQuery,
+            onQueryChange = {onSearchQueryChange(it)},
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            modifier = Modifier
+                .fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            allMembers.forEach { section ->
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Text(
+                        text = section.title,
+                        style = MaterialTheme.typography.headlineMedium,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                }
+
+                items(section.members.filter {
+                    it.matchesQuery(searchQuery)
+                }) { member ->
+                    CompactMemberCard(
+                        member = member,
+                        onClick = {
+                            onSelectedMemberChange(member)
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    if (selectedMember != null) {
+        CompactMemberDetailPopup(
+            member = selectedMember,
+            onDismissRequest = { onDismissRequest() }
+        )
+    }
+}
+
+@Composable
+fun CompactMemberCard(
+    member: Member,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .aspectRatio(1f)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            AsyncImage(
+                model = member.profilePictureUrl,
+                contentDescription = "${member.name}'s profile picture",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(175.dp)
+                    .clip(CircleShape),
+                alignment = Alignment.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = member.name,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = member.role,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+fun CompactMemberDetailPopup(member: Member, onDismissRequest: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable(onClick = onDismissRequest)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier
+                .align(Alignment.Center)
+                .fillMaxWidth(0.9f)
+                .padding(16.dp)
+        ) {
+            MemberDetailContent(member = member, onCloseClick = onDismissRequest)
+        }
+    }
+}
+
+@Composable
+fun MemberDetailContent(member: Member, onCloseClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = member.name,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            IconButton(onClick = onCloseClick) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close"
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        AsyncImage(
+            model = member.profilePictureUrl,
+            contentDescription = "${member.name}'s profile picture",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(120.dp)
+                .clip(CircleShape)
+                .align(Alignment.CenterHorizontally)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        MemberDetailRow(label = "Role", value = member.role)
+        MemberDetailRow(label = "Email", value = member.email)
+        MemberDetailRow(label = "Phone", value = member.phoneNumber)
+        MemberDetailRow(label = "Birthday", value = member.birthday)
+        MemberDetailRow(label = "Profession", value = member.profession)
+        MemberDetailRow(label = "Company", value = member.company)
+        if (!member.business.isNullOrEmpty()) {
+            MemberDetailRow(label = "Business", value = member.business)
+        }
+        MemberDetailRow(
+            label = "Interests/Hobbies",
+            value = member.interests.joinToString(separator = ", ")
+        )
+        MemberDetailRow(
+            label = "Favorite Wines",
+            value = member.favoriteWines.joinToString(separator = ", ")
+        )
+    }
+}
+
 @Composable
 fun MemberDetailRow(label: String, value: String) {
     Column(modifier = Modifier.padding(vertical = 4.dp)) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = Color.White
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary
         )
-        Text(text = value, style = MaterialTheme.typography.bodyMedium)
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium
+        )
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun MemberHeroSection(
-) {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(50.dp, 40.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+fun LargeScreenMemberPage(
+    memberSections: List<MemberSection>,
+    selectedMember: Member?,
+    onSelectedMemberChange: (Member?) -> Unit,
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier
     ) {
-        item {
-            Text(
-                text = "Meet our Members",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
+        Column(
+            modifier = Modifier.fillMaxSize()
+                .background(Color.Black),
+        ) {
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.Black)
+                    .weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                item {
+                    Text(
+                        text = "Meet our Members",
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "The people and the stories behind Wine Down.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                if (memberSections.isEmpty()) {
+                    item {
+                        Text(
+                            text = "Loading...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                } else {
+                    items(memberSections) { section ->
+                        Text(
+                            text = section.title,
+                            style = MaterialTheme.typography.headlineMedium,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                        FlowRow(
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            section.members.forEach { member ->
+                                MemberCard(
+                                    member = member,
+                                    modifier = Modifier.width(200.dp),
+                                    onClick = { onSelectedMemberChange(member) }
+                                )
+                            }
+                        }
+                    }
+                }
+
+
+
+            }
+            if (selectedMember != null) {
+                MemberDetailPopup(
+                    member = selectedMember,
+                    onDismissRequest = { onDismissRequest() }
+                )
+            }
         }
-        item {
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-        item {
-            Text(
-                text = "The people and the stories behind Wine Down.",
-                fontSize = 16.sp,
-                textAlign = TextAlign.Center
-            )
-        }
-    }
 }
+
+fun Member.matchesQuery(query: String): Boolean {
+    if (query.isBlank()) return true
+    val lowerQuery = query.lowercase()
+    return name.lowercase().contains(lowerQuery) ||
+            role.lowercase().contains(lowerQuery) ||
+            email.lowercase().contains(lowerQuery)
+}
+

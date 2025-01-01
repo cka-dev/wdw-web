@@ -45,6 +45,10 @@ class PodcastsPageViewModel(
     fun setSelectedEpisode(episode: Episode){
         _selectedEpisode.value = episode
     }
+
+    fun clearSelectedEpisode() {
+        _selectedEpisode.value = null
+    }
 }
 
 fun Episode.matchesQuery(query: String): Boolean {

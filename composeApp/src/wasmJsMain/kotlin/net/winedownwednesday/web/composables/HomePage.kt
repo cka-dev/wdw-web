@@ -28,6 +28,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -57,6 +60,8 @@ import net.winedownwednesday.web.viewmodels.HomePageViewModel
 import org.koin.compose.koinInject
 import kotlin.math.abs
 
+
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun Home(
     modifier: Modifier = Modifier
@@ -64,6 +69,10 @@ fun Home(
     val selectedPageState = remember {
         mutableStateOf(WDWPages.HOME)
     }
+    val windowSizeClass = calculateWindowSizeClass()
+
+    val isMobile = windowSizeClass.widthSizeClass ==
+            WindowWidthSizeClass.Compact
     MaterialTheme(
         colorScheme = darkColorScheme(
             primary = Color(0xFF1E1E1E),
@@ -91,42 +100,54 @@ fun Home(
                         WDWPages.HOME -> {
                             PageBody (
                                 content = {
-                                    MainContent()
+                                    MainContent(
+                                        isMobile = isMobile
+                                    )
                                 }
                             )
                         }
                         WDWPages.ABOUT -> {
                             PageBody(
                                 content = {
-                                    AboutPage()
+                                    AboutPage(
+                                        isCompactScreen = isMobile
+                                    )
                                 }
                             )
                         }
                         WDWPages.MEMBERS -> {
                             PageBody(
                                 content = {
-                                    MembersPage()
+                                    MembersPage(
+                                        isCompactScreen = isMobile
+                                    )
                                 }
                             )
                         }
                         WDWPages.PODCASTS -> {
                             PageBody(
                                 content = {
-                                    PodcastsPage()
+                                    PodcastsPage(
+                                        isCompactScreen = isMobile
+                                    )
                                 }
                             )
                         }
                         WDWPages.EVENTS -> {
                             PageBody(
                                 content = {
-                                    EventsPage()
+                                    EventsPage(
+                                        isCompactScreen = isMobile
+                                    )
                                 }
                             )
                         }
                         WDWPages.WINE -> {
                             PageBody(
                                 content = {
-                                    WinePage()
+                                    WinePage(
+                                        isCompactScreen = isMobile
+                                    )
                                 }
                             )
                         }
@@ -135,7 +156,9 @@ fun Home(
                         }
                     }
                 }
-                Footer()
+                Footer(
+                    isMobile = isMobile
+                )
             }
         }
     }
@@ -149,11 +172,19 @@ fun PageBody(
 }
 
 @Composable
-fun HeroSection() {
+fun HeroSection(
+    isMobile: Boolean
+) {
+    val padding = if (isMobile) {
+        20.dp
+    } else {
+        50.dp
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(50.dp, 40.dp)
+            .padding(horizontal = padding, vertical = 40.dp)
             .background(Color.Transparent),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -180,11 +211,21 @@ fun HeroSection() {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun MainContent() {
+fun MainContent(
+    isMobile: Boolean
+) {
     val viewModel: HomePageViewModel = koinInject()
     val upcomingEvents by viewModel.upcomingEvents.collectAsState()
     val featuredWines by viewModel.featuredWines.collectAsState()
     val highlightedMember by viewModel.highlightedMember.collectAsState()
+
+
+
+    if(isMobile){
+        println("Mobile size detected")
+    } else {
+        println("Larger size detected")
+    }
 
     var sharedIndex by remember { mutableIntStateOf(0) }
 
@@ -202,7 +243,9 @@ fun MainContent() {
             containerColor = Color.Black
         )
     ) {
-        HeroSection()
+        HeroSection(
+            isMobile = isMobile
+        )
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
@@ -220,17 +263,20 @@ fun MainContent() {
 
                     AutoScrollingEventDisplay(
                         events = upcomingEvents,
-                        sharedIndex = sharedIndex
+                        sharedIndex = sharedIndex,
+                        isMobile = isMobile
                     )
 
                     AutoScrollingWineListHorizontal(
                         wines = featuredWines,
                         sharedIndex = sharedIndex,
+                        isMobile = isMobile
                     )
 
                     MemberSpotlightCard(
                         title = "Member Spotlight",
-                        member = highlightedMember
+                        member = highlightedMember,
+                        isMobile = isMobile
                     )
                 }
             }
@@ -242,12 +288,14 @@ fun MainContent() {
 @Composable
 fun MemberSpotlightCard(
     title: String = "Member Spotlight",
-    member: Member?
+    member: Member?,
+    isMobile: Boolean,
+    modifier: Modifier = Modifier
 ) {
     Card(
         shape = RoundedCornerShape(16.dp),
-        modifier = Modifier
-            .fillMaxWidth(0.3f)
+        modifier = modifier
+            .then(if (!isMobile) Modifier.fillMaxWidth(0.3f) else Modifier.fillMaxWidth())
             .height(600.dp),
         elevation = CardDefaults.cardElevation(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
@@ -261,15 +309,15 @@ fun MemberSpotlightCard(
             if (member == null) {
                 Text("No member selected", color = Color.LightGray)
             } else {
-                Card (
+                Card(
                     elevation = CardDefaults.cardElevation(8.dp)
-                ){
+                ) {
                     AsyncImage(
                         model = member.profilePictureUrl,
                         contentDescription = "${member.name}' s profile picture"
                     )
                 }
-                Column{
+                Column {
                     Text(
                         text = member.name,
                         style = MaterialTheme.typography.displayMedium
@@ -357,6 +405,7 @@ fun AutoScrollingEventDisplay(
     events: List<Event>,
     onEventSelectedChange: (Event) -> Unit = {},
     sharedIndex: Int,
+    isMobile: Boolean,
     modifier: Modifier = Modifier
 ) {
     if (events.size <= 1) {
@@ -369,7 +418,7 @@ fun AutoScrollingEventDisplay(
     Card(
         shape = RoundedCornerShape(16.dp),
         modifier = modifier
-            .fillMaxWidth(0.3f)
+            .then(if (!isMobile) Modifier.fillMaxWidth(0.3f) else Modifier.fillMaxWidth())
             .height(600.dp),
         elevation = CardDefaults.cardElevation(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
@@ -472,6 +521,7 @@ fun AutoScrollingWineListHorizontal(
     wines: List<Wine>,
     onWineSelectedChange: (Wine) -> Unit = {},
     sharedIndex: Int,
+    isMobile: Boolean,
     modifier: Modifier = Modifier
 ) {
     if (wines.size <= 1) {
@@ -484,7 +534,7 @@ fun AutoScrollingWineListHorizontal(
     Card(
         shape = RoundedCornerShape(16.dp),
         modifier = modifier
-            .fillMaxWidth(0.3f)
+            .then(if (!isMobile) Modifier.fillMaxWidth(0.3f) else Modifier.fillMaxWidth())
             .height(600.dp),
         elevation = CardDefaults.cardElevation(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))

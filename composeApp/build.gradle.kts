@@ -73,6 +73,8 @@ kotlin {
 //            implementation("com.github.Hamamas:Kotlin-Wasm-Html-Interop:1.0.1")
 //            implementation(project(":libraries:Kotlin-Wasm-Html-Interop-master"))
 
+            implementation("dev.chrisbanes.material3:material3-window-size-class-multiplatform:0.5.0")
+
         }
     }
 

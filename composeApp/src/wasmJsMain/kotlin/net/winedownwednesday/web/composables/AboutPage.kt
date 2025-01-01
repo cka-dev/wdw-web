@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -47,7 +48,9 @@ import wdw_web.composeapp.generated.resources.wdw_web_carousel_3
 
 
 @Composable
-fun AboutPage() {
+fun AboutPage(
+    isCompactScreen: Boolean
+) {
     val viewModel: AboutPageViewModel = koinInject()
     val aboutSections by viewModel.aboutSections.collectAsState()
 
@@ -69,7 +72,8 @@ fun AboutPage() {
                             Res.drawable.wdw_web_carousel_2,
                             Res.drawable.wdw_web_carousel_3
                         ),
-                        intervalMillis = 4000L
+                        intervalMillis = 4000L,
+                        isCompactScreen = isCompactScreen
                     )
                 }
             }
@@ -90,7 +94,8 @@ fun AboutPage() {
 
             item {
                 Text(
-                    text = "Exploring the rich history, mission, and values of our community dedicated to the appreciation of fine wines.",
+                    text = "Exploring the rich history, mission, and values of our community" +
+                            "dedicated to the appreciation of fine wines.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.LightGray,
                     textAlign = TextAlign.Center,
@@ -102,46 +107,85 @@ fun AboutPage() {
 
             item { Spacer(modifier = Modifier.height(24.dp)) }
 
+            if (isCompactScreen) {
+                items(aboutSections) { aboutSection ->
+                    CompactScreenAboutCard(
+                        section = aboutSection
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            } else {
+                val chunkedSections = aboutSections.chunked(2)
 
-            val chunkedSections = aboutSections.chunked(2)
-
-            items(chunkedSections.size) { chunkIndex ->
-                val chunk = chunkedSections[chunkIndex]
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    chunk.forEachIndexed { indexInChunk, section ->
-                        Box(modifier = Modifier
-                            .weight(1f)
-                        ) {
-                            AboutCard(section)
+                items(chunkedSections.size) { chunkIndex ->
+                    val chunk = chunkedSections[chunkIndex]
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        chunk.forEachIndexed { indexInChunk, section ->
+                            Box(modifier = Modifier
+                                .weight(1f)
+                            ) {
+                                LSAboutCard(section)
+                            }
                         }
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
-                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
 }
 
 @Composable
-fun AboutCard(section: AboutSection) {
+fun LSAboutCard(
+    section: AboutSection,
+) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
         elevation = CardDefaults.cardElevation(4.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AboutImage(section.imageRes)
+                Spacer(modifier = Modifier.width(16.dp))
+                AboutText(section.title, section.body)
+            }
+        }
+    }
+}
+
+@Composable
+fun CompactScreenAboutCard(
+    section: AboutSection
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        elevation = CardDefaults.cardElevation(4.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
         ) {
             AboutImage(section.imageRes)
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             AboutText(section.title, section.body)
         }
     }
@@ -149,8 +193,7 @@ fun AboutCard(section: AboutSection) {
 
 @Composable
 fun AboutText(title: String, body: String) {
-    Column(
-    ) {
+    Column {
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge,
@@ -167,30 +210,32 @@ fun AboutText(title: String, body: String) {
 
 @Composable
 fun AboutImage(imageRes: DrawableResource?) {
+    val imageModifier = Modifier
+        .size(width = 100.dp, height = 100.dp)
+        .clip(RectangleShape)
+
     if (imageRes == null) {
         Box(
-            modifier = Modifier
-                .size(width = 100.dp, height = 100.dp)
-                .background(Color.DarkGray),
+            modifier = imageModifier.background(Color.DarkGray),
             contentAlignment = Alignment.Center
         ) {
-            Text("No image", color = Color.White)
+            Text("No Image", color = Color.White)
         }
     } else {
         Image(
             painter = painterResource(imageRes),
-            contentDescription = null,
+            contentDescription = "About Image",
             contentScale = ContentScale.Crop,
-            modifier = Modifier.size(width = 100.dp, height = 100.dp)
+            modifier = imageModifier
         )
     }
 }
-
 
 @Composable
 fun AutoScrollingImageCarousel(
     imagePaths: List<DrawableResource>,
     intervalMillis: Long = 3000L,
+    isCompactScreen: Boolean,
     modifier: Modifier = Modifier
 ) {
     var currentIndex by remember { mutableIntStateOf(0) }
@@ -204,26 +249,28 @@ fun AutoScrollingImageCarousel(
 
     Box(
         modifier = modifier
-            .height(450.dp)
-            .width(1200.dp)
+            .then(if (isCompactScreen) Modifier.fillMaxWidth(0.8f)
+                else Modifier.width(1200.dp)
+            )
+            .height(if (isCompactScreen) 200.dp else 450.dp)
             .clip(RectangleShape),
         contentAlignment = Alignment.Center
     ) {
         Card(
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(RectangleShape),
+            modifier = Modifier.fillMaxSize(),
             elevation = CardDefaults.cardElevation(4.dp)
         ) {
             Image(
                 painter = painterResource(imagePaths[currentIndex]),
-                contentDescription = null,
+                contentDescription = "Carousel Image",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
         }
     }
 }
+
+
 
 
 

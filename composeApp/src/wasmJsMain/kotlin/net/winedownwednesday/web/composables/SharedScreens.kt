@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -68,66 +69,82 @@ fun TopNavBar(
                 )
             }
         }, actions = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "Home",
-                    modifier = Modifier
-                        .padding(horizontal = 8.dp)
-                        .clickable {
-                            selectedPageState.value = WDWPages.HOME
-                        }
-                )
-                Text(
-                    text = "About",
-                    modifier = Modifier
-                        .padding(horizontal = 8.dp)
-                        .clickable {
-                            selectedPageState.value = WDWPages.ABOUT
-                        }
-                )
-                Text(
-                    text = "Members",
-                    modifier = Modifier
-                        .padding(horizontal = 8.dp)
-                        .clickable {
-                            selectedPageState.value = WDWPages.MEMBERS
-                        }
-                )
-                Text(
-                    text = "Uncorked Conversations",
-                    modifier = Modifier
-                        .padding(horizontal = 8.dp)
-                        .clickable {
-                            selectedPageState.value = WDWPages.PODCASTS
-                        }
-                )
-                Text(
-                    text = "Events",
-                    modifier = Modifier
-                        .padding(horizontal = 8.dp)
-                        .clickable {
-                            selectedPageState.value = WDWPages.EVENTS
-                        }
-                )
-                Text(
-                    text = "Our Wine",
-                    modifier = Modifier
-                        .padding(horizontal = 8.dp)
-                        .clickable {
-                            selectedPageState.value = WDWPages.WINE
-                        }
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Text(
-                    text = "Member Login",
-                    modifier = Modifier
-                        .padding(horizontal = 8.dp)
-                        .clickable {
-                           viewModel.setShowAuthCardState(
-                               value = true
-                           )
-                        }
-                )
+            LazyRow(verticalAlignment = Alignment.CenterVertically) {
+                item {
+                    Text(
+                        text = "Home",
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .clickable {
+                                selectedPageState.value = WDWPages.HOME
+                            }
+                    )
+                }
+                item {
+                    Text(
+                        text = "About",
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .clickable {
+                                selectedPageState.value = WDWPages.ABOUT
+                            }
+                    )
+                }
+                item {
+                    Text(
+                        text = "Members",
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .clickable {
+                                selectedPageState.value = WDWPages.MEMBERS
+                            }
+                    )
+                }
+                item {
+                    Text(
+                        text = "Uncorked Conversations",
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .clickable {
+                                selectedPageState.value = WDWPages.PODCASTS
+                            }
+                    )
+                }
+                item {
+                    Text(
+                        text = "Events",
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .clickable {
+                                selectedPageState.value = WDWPages.EVENTS
+                            }
+                    )
+                }
+                item {
+                    Text(
+                        text = "Our Wine",
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .clickable {
+                                selectedPageState.value = WDWPages.WINE
+                            }
+                    )
+                }
+                item {
+                    Spacer(modifier = Modifier.width(16.dp))
+                }
+                item {
+                    Text(
+                        text = "Member Login",
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .clickable {
+                                viewModel.setShowAuthCardState(
+                                    value = true
+                                )
+                            }
+                    )
+                }
             }
         })
 
@@ -145,6 +162,7 @@ fun TopNavBar(
 
 @Composable
 fun Footer(
+    isMobile: Boolean,
     modifier: Modifier = Modifier,
 ) {
     MaterialTheme(
@@ -201,11 +219,13 @@ fun Footer(
                     title = "Contact",
                     items = listOf("info@winesocialclub.com", "+1 234 567 890")
                 )
-                FooterColumn(
-                    title = "Resources",
-                    items = listOf("Privacy Policy", "Terms of Service"),
-                    isLinks = true
-                )
+                AnimatedVisibility(!isMobile){
+                    FooterColumn(
+                        title = "Resources",
+                        items = listOf("Privacy Policy", "Terms of Service"),
+                        isLinks = true
+                    )
+                }
             }
         }
     }
