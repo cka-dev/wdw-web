@@ -11,6 +11,7 @@ import net.winedownwednesday.web.data.Episode
 import net.winedownwednesday.web.data.Event
 import net.winedownwednesday.web.data.Member
 import net.winedownwednesday.web.data.Wine
+import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.data.network.RemoteDataSource
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.Single
@@ -113,6 +114,10 @@ class AppRepository (
         } catch (e: Exception) {
             println("$TAG: Error fetching wine list with message: ${e.message}")
         }
+    }
+
+    suspend fun sendRSVP(rsvpRequest: RSVPRequest): Boolean {
+        return remoteDataSource.postRSVP(rsvpRequest)
     }
 
     companion object{

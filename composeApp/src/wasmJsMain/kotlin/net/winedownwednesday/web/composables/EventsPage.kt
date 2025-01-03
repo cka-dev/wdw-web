@@ -1,5 +1,6 @@
 package net.winedownwednesday.web.composables
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -27,6 +29,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -37,18 +40,23 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,6 +65,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -74,6 +84,7 @@ import net.winedownwednesday.web.LocalLayerContainer
 import net.winedownwednesday.web.data.Event
 import net.winedownwednesday.web.data.MediaItem
 import net.winedownwednesday.web.data.MediaType
+import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.viewmodels.EventsPageViewModel
 import org.koin.compose.koinInject
 import kotlin.contracts.ExperimentalContracts
@@ -114,7 +125,8 @@ fun EventsPage(
                 Button(
                     onClick = { showUpcoming = true },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (showUpcoming) Color(0xFFFF7F33) else Color(0xFF2A2A2A),
+                        containerColor = if (showUpcoming)
+                            Color(0xFFFF7F33) else Color(0xFF2A2A2A),
                         contentColor = Color.White
                     ),
                     shape = RoundedCornerShape(8.dp),
@@ -126,7 +138,8 @@ fun EventsPage(
                 Button(
                     onClick = { showUpcoming = false },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (!showUpcoming) Color(0xFFFF7F33) else Color(0xFF2A2A2A),
+                        containerColor = if (!showUpcoming)
+                            Color(0xFFFF7F33) else Color(0xFF2A2A2A),
                         contentColor = Color.White
                     ),
                     shape = RoundedCornerShape(8.dp)
@@ -151,7 +164,9 @@ fun EventsPage(
                         event = event,
                         onEventSelectedChange = {
                             viewModel.setSelectedEvent(it)
-                        }
+                        },
+                        viewModel = viewModel,
+                        showUpcoming = showUpcoming
                     )
                 }
             }
@@ -180,8 +195,14 @@ fun EventsPage(
 fun EventCard(
     event: Event,
     onEventSelectedChange: (Event) -> Unit = {},
+    viewModel: EventsPageViewModel,
+    showUpcoming: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val showRegistrationForm = remember {
+        mutableStateOf<Boolean>(false)
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -255,10 +276,9 @@ fun EventCard(
             )
             {
                 Button(
+                    enabled = showUpcoming,
                     onClick = {
-                        event.registrationLink?.let {
-                            window.open(it, "_blank")
-                        }
+                        showRegistrationForm.value = true
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color.White,
@@ -270,6 +290,15 @@ fun EventCard(
                 }
             }
         }
+    }
+
+    AnimatedVisibility (showRegistrationForm.value) {
+        RSVPComponent(
+            onDismissRequest = { showRegistrationForm.value = false},
+            event = event,
+            viewModel = viewModel,
+            showRegistrationForm = showRegistrationForm
+        )
     }
 }
 
@@ -651,6 +680,240 @@ fun KmpVideoPlayer(url: String) {
     }
 }
 
+@Composable
+fun RSVPComponent(
+    onDismissRequest: () -> Unit,
+    event: Event,
+    viewModel: EventsPageViewModel,
+    showRegistrationForm: MutableState<Boolean>,
+    modifier: Modifier = Modifier
+) {
+    var firstName by rememberSaveable { mutableStateOf("") }
+    var lastName by rememberSaveable { mutableStateOf("") }
+    var email by rememberSaveable { mutableStateOf("") }
+    var phoneNumber by rememberSaveable { mutableStateOf("") }
+    var guestsCount by rememberSaveable { mutableStateOf(1) }
+    var allowUpdates by rememberSaveable { mutableStateOf(true) }
+    var guestsCountText by rememberSaveable { mutableStateOf("1") }
+
+    val emailError = mutableStateOf("")
+    val isEmailError = mutableStateOf(false)
+
+    Dialog(onDismissRequest = { onDismissRequest() }) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Card(
+                    elevation = CardDefaults.elevatedCardElevation(4.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AsyncImage(
+                            model = event.imageUrl,
+                            contentDescription = "${event.name}'s picture",
+                            alignment = Alignment.Center,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                }
+
+                Text(
+                    text = "RSVP for ${event.name}",
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .fillMaxWidth()
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .toggleable(
+                            value = allowUpdates,
+                            onValueChange = { allowUpdates = it },
+                            role = Role.Checkbox
+                        )
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = allowUpdates,
+                        onCheckedChange = { allowUpdates = it }
+                    )
+                    Text(
+                        text = "Keep me updated on WDW events",
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
+
+                Text(
+                    text = "Your contact information",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = firstName,
+                        onValueChange = { firstName = it },
+                        label = { Text("First Name", color = Color.White) },
+                        colors = TextFieldDefaults.colors(
+                            cursorColor = Color(0xFFFF7F33)
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = lastName,
+                        onValueChange = { lastName = it },
+                        label = { Text("Last Name", color = Color.White) },
+                        colors = TextFieldDefaults.colors(
+                            cursorColor = Color(0xFFFF7F33)
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = {
+                            email = it
+                            validateEmailInput(
+                                emailValue = it,
+                                emailError = emailError,
+                                isEmailError = isEmailError
+                            ) },
+                        label = { Text("Email", color = Color.White) },
+                        colors = TextFieldDefaults.colors(cursorColor = Color(0xFFFF7F33)),
+                        shape = RoundedCornerShape(8.dp),
+                        isError = isEmailError.value,
+                        supportingText = {
+                            if (isEmailError.value) {
+                                println("Email is invalid")
+                                Text(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    text = "Enter a valid email",
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = phoneNumber,
+                        onValueChange = { phoneNumber = it },
+                        label = { Text("Phone number", color = Color.White) },
+                        colors = TextFieldDefaults.colors(cursorColor = Color(0xFFFF7F33)),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Number of guests: ",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    OutlinedTextField(
+                        value = guestsCountText,
+                        onValueChange = { newVal ->
+                            if (newVal.isEmpty()) {
+                                guestsCountText = ""
+                                guestsCount = 1
+                            } else {
+                                val parsedInt = newVal.toIntOrNull()
+                                if (parsedInt != null) {
+                                    if (parsedInt in 1..10) {
+                                        guestsCountText = newVal
+                                        guestsCount = parsedInt
+                                    } else {
+                                        // TODO
+                                    }
+                                }
+                            }
+                        },
+                        label = { Text("Guests") },
+                        singleLine = true,
+                        colors = TextFieldDefaults.colors(
+                            cursorColor = Color(0xFFFF7F33)
+                        ),
+                        modifier = Modifier.width(80.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = {
+                        val rsvpRequest = RSVPRequest(
+                            eventId = event.id,
+                            firstName = firstName,
+                            lastName = lastName,
+                            email = email,
+                            phoneNumber = phoneNumber,
+                            allowUpdates = allowUpdates,
+                            guestsCount = guestsCount
+                        )
+//                        viewModel.submitRSVP(rsvpRequest) { success ->
+//                            if (success) {
+//                                window.alert(message = "RSVP submitted successfully")
+//                                showRegistrationForm.value = false
+//                                onDismissRequest()
+//                            } else {
+//                                window.alert(message = "Oh oh! We were not able to submit your" +
+//                                        "RSVP. Please try again.")
+//                            }
+//                        }
+                        viewModel.mimicSubmitRSVP(rsvpRequest) { success ->
+                            if (success) {
+                                window.alert(message = "RSVP submitted successfully")
+                                showRegistrationForm.value = false
+                            } else {
+                                window.alert(message = "Oh oh! We were not able to submit your" +
+                                        "RSVP. Please try again.")
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFF7F33),
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text("Submit")
+                }
+            }
+        }
+    }
+}
 
 fun stringToDate(date: String): LocalDate {
     val (year, month, day) = date.split(", ").map { it.toInt() }
@@ -675,4 +938,32 @@ private fun formatDate(date: LocalDate): String {
     }
 
     return "$month ${date.dayOfMonth}, ${date.year}"
+}
+
+fun validateEmailInput(
+    emailValue: String,
+    isEmailError: MutableState<Boolean>,
+    emailError: MutableState<String>,
+) {
+    val emailAddressRegex = Regex(
+        "[a-zA-Z0-9+._%\\-]{1,256}" +
+                "@" +
+                "[a-zA-Z0-9][a-zA-Z0-9\\-]{0,64}" +
+                "(" +
+                "\\." +
+                "[a-zA-Z0-9][a-zA-Z0-9\\-]{0,25}" +
+                ")+"
+    )
+    val email = emailValue.trim()
+    var isValid = true
+    var errorMessage = ""
+    if (email.isBlank() || email.isEmpty()) {
+        errorMessage = "Please fill email field"
+        isValid = false
+    } else if (!email.matches(emailAddressRegex)) {
+        errorMessage = "Wrong email Format"
+        isValid = false
+    }
+    emailError.value = errorMessage
+    isEmailError.value = isValid
 }

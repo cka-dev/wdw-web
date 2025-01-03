@@ -69,10 +69,12 @@ fun Home(
     val selectedPageState = remember {
         mutableStateOf(WDWPages.HOME)
     }
+
     val windowSizeClass = calculateWindowSizeClass()
 
     val isMobile = windowSizeClass.widthSizeClass ==
             WindowWidthSizeClass.Compact
+
     MaterialTheme(
         colorScheme = darkColorScheme(
             primary = Color(0xFF1E1E1E),
@@ -230,9 +232,11 @@ fun MainContent(
     val maxListSize = maxOf(upcomingEvents.size, featuredWines.size)
 
     LaunchedEffect(maxListSize) {
-        while (true) {
-            delay(5000L)
-            sharedIndex = (sharedIndex + 1) % maxListSize
+        if (maxListSize >= 1) {
+            while (true) {
+                delay(5000L)
+                sharedIndex = (sharedIndex + 1) % maxListSize
+            }
         }
     }
 

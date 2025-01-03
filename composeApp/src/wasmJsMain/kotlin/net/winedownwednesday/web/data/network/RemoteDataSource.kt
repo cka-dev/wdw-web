@@ -5,9 +5,13 @@ import io.ktor.client.call.body
 import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.SIMPLE
 import io.ktor.client.request.get
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.headers
+import io.ktor.http.isSuccess
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import net.winedownwednesday.web.data.AboutItem
@@ -15,6 +19,7 @@ import net.winedownwednesday.web.data.Episode
 import net.winedownwednesday.web.data.Event
 import net.winedownwednesday.web.data.Member
 import net.winedownwednesday.web.data.Wine
+import net.winedownwednesday.web.data.models.RSVPRequest
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.Single
 
@@ -124,6 +129,24 @@ class RemoteDataSource (
         }
     }
 
+    override suspend fun postRSVP(rsvp: RSVPRequest): Boolean {
+        _isLoading.value = true
+        return try {
+            val response: HttpResponse = client.post("$SERVER_URL/postRsvp") {
+                headers {
+                    append(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                }
+                setBody(rsvp)
+            }
+            response.status.isSuccess()
+        } catch (e: Exception) {
+            _error.value = e.message
+            println("Error posting RSVP: ${e.message}")
+            false
+        } finally {
+            _isLoading.value = false
+        }
+    }
 
 
     companion object{

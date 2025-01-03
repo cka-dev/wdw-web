@@ -5,9 +5,9 @@ import net.winedownwednesday.web.data.Episode
 import net.winedownwednesday.web.data.Event
 import net.winedownwednesday.web.data.Member
 import net.winedownwednesday.web.data.Wine
+import net.winedownwednesday.web.data.models.RSVPRequest
 
 interface ApiService {
-
 
     suspend fun fetchEpisodes(): List<Episode>?
 
@@ -18,6 +18,8 @@ interface ApiService {
     suspend fun fetchMembers(): List<Member>?
 
     suspend fun fetchEvents(): List<Event>?
+
+    suspend fun postRSVP(rsvp: RSVPRequest): Boolean
 
 //    suspend fun getRegistrationOptions(
 //        request: RegistrationOptionsRequest,
@@ -34,6 +36,5 @@ interface ApiService {
 //    suspend fun verifyAuthentication(
 //        request: AuthenticationVerificationRequest,
 //    ): AuthenticationVerificationResponse?
-
 
 }

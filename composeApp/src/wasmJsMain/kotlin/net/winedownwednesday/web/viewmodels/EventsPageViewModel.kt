@@ -10,6 +10,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import net.winedownwednesday.web.data.Event
+import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.data.repositories.AppRepository
 
 class EventsPageViewModel(
@@ -78,6 +79,16 @@ class EventsPageViewModel(
         _selectedEvent.value = null
     }
 
+    fun submitRSVP(rsvp: RSVPRequest, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val success = repository.sendRSVP(rsvp)
+            onResult(success)
+        }
+    }
+
+    fun mimicSubmitRSVP(rsvp: RSVPRequest, onResult: (Boolean) -> Unit){
+        onResult(false)
+    }
 
     companion object {
         private const val TAG = "EventsPageViewModel"

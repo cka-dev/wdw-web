@@ -241,9 +241,11 @@ fun AutoScrollingImageCarousel(
     var currentIndex by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(key1 = imagePaths) {
-        while (true) {
-            delay(intervalMillis)
-            currentIndex = (currentIndex + 1) % imagePaths.size
+        if (imagePaths.isNotEmpty()) {
+            while (true) {
+                delay(intervalMillis)
+                currentIndex = (currentIndex + 1) % imagePaths.size
+            }
         }
     }
 
