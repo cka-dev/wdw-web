@@ -24,8 +24,10 @@ import net.winedownwednesday.web.data.models.AuthenticationResponse
 import net.winedownwednesday.web.data.models.PublicKeyCredentialCreationOptions
 import net.winedownwednesday.web.data.models.PublicKeyCredentialRequestOptions
 import net.winedownwednesday.web.data.models.RSVPRequest
+import net.winedownwednesday.web.data.models.RegistrationOptionsRequest
 import net.winedownwednesday.web.data.models.RegistrationResponse
 import net.winedownwednesday.web.data.models.VerifyAuthenticationRequest
+import net.winedownwednesday.web.data.models.VerifyRegistrationRequest
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.Single
 
@@ -155,35 +157,40 @@ class RemoteDataSource (
     }
 
     override suspend fun generatePasskeyRegistrationOptions(email: String): PublicKeyCredentialCreationOptions? {
+        _isLoading.value = true
         return try {
             client.post("$SERVER_URL/generatePasskeyRegistrationOptions") {
-                headers {
-                    append(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                }
-                setBody(mapOf("email" to email))
+                contentType(ContentType.Application.Json)
+                setBody(RegistrationOptionsRequest(email))
             }.body()
         } catch (e: Exception) {
             _error.value = e.message
             println("Error generating registration options: ${e.message}")
             null
+        } finally {
+            _isLoading.value = false
         }
     }
 
     override suspend fun verifyPasskeyRegistration(credential: RegistrationResponse, email: String): Boolean {
+        _isLoading.value = true
         return try {
             val response: HttpResponse = client.post("$SERVER_URL/verifyPasskeyRegistration") {
                 contentType(ContentType.Application.Json)
-                setBody(mapOf("credential" to credential, "email" to email))
+                setBody(VerifyRegistrationRequest(credential, email))
             }
             response.body<Map<String, Boolean>>()["verified"] ?: false
         } catch (e: Exception) {
             _error.value = e.message
             println("Error verifying registration: ${e.message}")
             false
+        } finally {
+            _isLoading.value = false
         }
     }
 
     override suspend fun generatePasskeyAuthenticationOptions(email: String): PublicKeyCredentialRequestOptions? {
+        _isLoading.value = true
         return try {
             client.post("$SERVER_URL/generatePasskeyAuthenticationOptions") {
                 contentType(ContentType.Application.Json)
@@ -193,10 +200,13 @@ class RemoteDataSource (
             _error.value = e.message
             println("Error generating authentication options: ${e.message}")
             null
+        } finally {
+            _isLoading.value = false
         }
     }
 
     override suspend fun verifyPasskeyAuthentication(credential: AuthenticationResponse, email: String): Boolean {
+        _isLoading.value = true
         return try {
             val response: HttpResponse = client.post("$SERVER_URL/verifyPasskeyAuthentication") {
                 contentType(ContentType.Application.Json)
@@ -207,6 +217,8 @@ class RemoteDataSource (
             _error.value = e.message
             println("Error verifying authentication: ${e.message}")
             false
+        } finally {
+            _isLoading.value = false
         }
     }
 

@@ -31,7 +31,7 @@ class AuthPageViewModel(
                     challenge = options.challenge,
                     rpId = options.rp.id,
                     rpName = options.rp.name,
-                    userId = options.user.id.toBase64Url(),
+                    userId = options.user.id,
                     userName = options.user.name,
                     userDisplayName = options.user.displayName,
                     timeout = options.timeout ?: 60000,
@@ -41,6 +41,8 @@ class AuthPageViewModel(
                     requireResidentKey = options.authenticatorSelection.requireResidentKey,
                     userVerification = options.authenticatorSelection.userVerification
                 ).await<PublicKeyCredential>()
+
+                println("$TAG: Credential: $credential")
 
                 val registrationResponse = try {
                     credential.toRegistrationResponse()
@@ -62,6 +64,8 @@ class AuthPageViewModel(
         }
     }
 
+
+
     fun authenticateWithPasskey(email: String) {
         viewModelScope.launch {
             _uiState.value = LoginUIState.Loading
@@ -69,13 +73,9 @@ class AuthPageViewModel(
                 val options = repository.generatePasskeyAuthenticationOptions(email)
                     ?: throw Exception("Failed to generate authentication options")
 
-                println("Authentication Options: $options")
-
                 val allowCredentialIds = options.allowCredentials?.joinToString(",", "[", "]") {
                     "\"" + it.id.toBase64Url() + "\""
                 } ?: "[]"
-
-                println("Calling WebAuthn.startAuthentication with options: $options")
 
                 try {
                     val credential = myWebAuthnBridge.startAuthentication(
@@ -106,9 +106,6 @@ class AuthPageViewModel(
                     println("Error during authentication: ${e.message}")
                 }
 
-                println("$TAG: Outside of try/catch block")
-
-
             } catch (e: Exception) {
                 _uiState.value = LoginUIState.Error("Error during authentication: ${e.message}")
             }
@@ -116,33 +113,33 @@ class AuthPageViewModel(
     }
 
     private fun JsAny.toRegistrationResponse(): RegistrationResponse {
-        val credential = this.unsafeCast<PublicKeyCredential>()
+        println("$TAG: Converting to RegistrationResponse")
+        val credential = this as? PublicKeyCredential ?: run {
+            println("$TAG: this is not a PublicKeyCredential")
+            throw IllegalStateException("Expected PublicKeyCredential but was ${this::class.simpleName}")
+        }
+
         val response = credential.response
 
         return RegistrationResponse(
             id = credential.id,
             rawId = credential.rawId.toBase64Url(),
-            type = credential.type,
+            type = "public-key",
             response = RegistrationResponse.ResponseData(
                 clientDataJSON = response.clientDataJSON.toBase64Url(),
-                attestationObject = response.attestationObject?.toBase64Url() ?: "",
-            ),
+                attestationObject = response.attestationObject?.toBase64Url() ?: ""
+            )
         )
     }
 
     private fun JsAny.toAuthenticationResponse(): AuthenticationResponse {
-        println("$TAG: Converting to AuthenticationResponse")
         val credential = this.unsafeCast<PublicKeyCredential>()
-
-        println("$TAG: Credential: $credential")
 
         val response = credential.response
         if (response.authenticatorData == null || response.signature == null) {
             println("$TAG: Response is null")
             throw IllegalStateException("AuthenticatorResponse is null")
         }
-
-        println("$TAG: Response: $response")
 
         val authenticationResponse=
             try {
@@ -161,7 +158,7 @@ class AuthPageViewModel(
                 println("$TAG: Caught exception: $e")
                 throw e
             }
-        println("$TAG: AuthenticationResponse: $authenticationResponse")
+
         return authenticationResponse
     }
 

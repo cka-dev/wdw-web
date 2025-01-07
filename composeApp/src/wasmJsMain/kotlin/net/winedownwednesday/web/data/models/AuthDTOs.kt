@@ -22,30 +22,10 @@ data class PublicKeyCredentialCreationOptions(
 
     @Serializable
     data class User(
-        val id: ByteArray,
+        val id: String,
         val name: String,
         val displayName: String,
-    ) {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (other == null || this::class != other::class) return false
-
-            other as User
-
-            if (!id.contentEquals(other.id)) return false
-            if (name != other.name) return false
-            if (displayName != other.displayName) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            var result = id.contentHashCode()
-            result = 31 * result + name.hashCode()
-            result = 31 * result + displayName.hashCode()
-            return result
-        }
-    }
+    )
 
     @Serializable
     data class PubKeyCredParam(
@@ -126,7 +106,7 @@ data class AuthenticationResponse(
 data class RegistrationResponse(
     val id: String,
     val rawId: String,
-    val type: String = "public-key",
+    val type: String,
     val response: ResponseData,
 ) {
     @Serializable
@@ -147,3 +127,9 @@ data class VerifyAuthenticationRequest(
     val credential: AuthenticationResponse,
     val email: String
 )
+
+@Serializable
+data class RegistrationOptionsRequest(
+    val email: String,
+)
+

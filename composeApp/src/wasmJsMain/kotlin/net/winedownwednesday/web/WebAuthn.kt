@@ -49,7 +49,7 @@ external interface AuthenticatorResponse: JsAny {
     val userHandle: ArrayBuffer?
 }
 
-external interface PublicKeyCredential : JsAny {
+external interface PublicKeyCredential: JsAny {
     val id: String
     val rawId: ArrayBuffer
     val response: AuthenticatorResponse

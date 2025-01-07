@@ -12,10 +12,8 @@ function base64urlDecode(str) {
 }
 
 async function _startRegistration(options) {
-    console.log("_startRegistration called with options:", options);
     try {
         const credential = await navigator.credentials.create({ publicKey: options });
-        console.log("navigator.credentials.create() successful, credential:", credential);
         return credential;
     } catch (error) {
         console.error("Error during registration:", error);
@@ -25,10 +23,8 @@ async function _startRegistration(options) {
 
 
 async function _startAuthentication(options) {
-    console.log("_startAuthentication called with options:", options);
     try {
         const assertion = await navigator.credentials.get({ publicKey: options });
-        console.log("navigator.credentials.get() successful, assertion:", assertion);
         return assertion;
     } catch (error) {
         console.error("Error during authentication:", error);
@@ -52,7 +48,6 @@ window.myWebAuthnBridge = {
         userVerification
     ) {
         console.log("startRegistration called");
-        println("startRegistration called");
         const decodedChallenge = Uint8Array.from(base64urlDecode(challenge), c => c.charCodeAt(0));
         const decodedUserId = Uint8Array.from(base64urlDecode(userId), c => c.charCodeAt(0));
 
@@ -97,7 +92,6 @@ window.myWebAuthnBridge = {
         userVerification,
         allowCredentialIds
     ) {
-        console.log("startAuthentication called");
         const decodedChallenge = Uint8Array.from(base64urlDecode(challenge), c => c.charCodeAt(0));
         const credentialIds = JSON.parse(allowCredentialIds).map(id => ({
             type: 'public-key',
