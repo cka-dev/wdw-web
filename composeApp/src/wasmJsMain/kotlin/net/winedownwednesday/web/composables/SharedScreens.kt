@@ -24,30 +24,24 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.browser.window
-import net.winedownwednesday.web.viewmodels.AuthPageViewModel
 import org.jetbrains.compose.resources.painterResource
-import org.koin.compose.koinInject
 import wdw_web.composeapp.generated.resources.Res
 import wdw_web.composeapp.generated.resources.ig_logo_96
 import wdw_web.composeapp.generated.resources.wdw_logo_2_96
 import wdw_web.composeapp.generated.resources.yt_logo_96
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopNavBar(
-    selectedPageState: MutableState<WDWPages>
- ) {
-    val viewModel: AuthPageViewModel = koinInject()
-
-    val showAuthPageCardState = viewModel.showAuthCard.collectAsState()
-
+    appBarState: MutableState<AppBarState>
+) {
     Surface {
         TopAppBar(title = {
             Row {
@@ -55,7 +49,7 @@ fun TopNavBar(
                     painter = painterResource(Res.drawable.wdw_logo_2_96),
                     contentDescription = "Wine Down Wednesday Logo",
                     modifier = Modifier.clickable {
-                        selectedPageState.value = WDWPages.HOME
+                        appBarState.value = AppBarState.HOME
                     }
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -64,7 +58,7 @@ fun TopNavBar(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier
                         .clickable {
-                            selectedPageState.value = WDWPages.HOME
+                            appBarState.value = AppBarState.HOME
                         }
                         .align(Alignment.CenterVertically)
                 )
@@ -77,7 +71,7 @@ fun TopNavBar(
                         modifier = Modifier
                             .padding(horizontal = 8.dp)
                             .clickable {
-                                selectedPageState.value = WDWPages.HOME
+                                appBarState.value = AppBarState.HOME
                             }
                     )
                 }
@@ -87,7 +81,7 @@ fun TopNavBar(
                         modifier = Modifier
                             .padding(horizontal = 8.dp)
                             .clickable {
-                                selectedPageState.value = WDWPages.ABOUT
+                                appBarState.value = AppBarState.ABOUT
                             }
                     )
                 }
@@ -97,7 +91,7 @@ fun TopNavBar(
                         modifier = Modifier
                             .padding(horizontal = 8.dp)
                             .clickable {
-                                selectedPageState.value = WDWPages.MEMBERS
+                                appBarState.value = AppBarState.MEMBERS
                             }
                     )
                 }
@@ -107,7 +101,7 @@ fun TopNavBar(
                         modifier = Modifier
                             .padding(horizontal = 8.dp)
                             .clickable {
-                                selectedPageState.value = WDWPages.PODCASTS
+                                appBarState.value = AppBarState.PODCASTS
                             }
                     )
                 }
@@ -117,7 +111,7 @@ fun TopNavBar(
                         modifier = Modifier
                             .padding(horizontal = 8.dp)
                             .clickable {
-                                selectedPageState.value = WDWPages.EVENTS
+                                appBarState.value = AppBarState.EVENTS
                             }
                     )
                 }
@@ -127,7 +121,7 @@ fun TopNavBar(
                         modifier = Modifier
                             .padding(horizontal = 8.dp)
                             .clickable {
-                                selectedPageState.value = WDWPages.WINE
+                                appBarState.value = AppBarState.WINES
                             }
                     )
                 }
@@ -140,24 +134,12 @@ fun TopNavBar(
                         modifier = Modifier
                             .padding(horizontal = 8.dp)
                             .clickable {
-                                viewModel.setShowAuthCardState(
-                                    value = true
-                                )
+                                appBarState.value = AppBarState.LOGIN
                             }
                     )
                 }
             }
         })
-
-        AnimatedVisibility(showAuthPageCardState.value) {
-            UnderConstruction(
-                onDismissRequest = {
-                    viewModel.setShowAuthCardState(
-                        value = false
-                    )
-                }
-            )
-        }
     }
 }
 

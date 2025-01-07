@@ -10,6 +10,7 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import io.ktor.http.contentType
 import io.ktor.http.headers
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +20,12 @@ import net.winedownwednesday.web.data.Episode
 import net.winedownwednesday.web.data.Event
 import net.winedownwednesday.web.data.Member
 import net.winedownwednesday.web.data.Wine
+import net.winedownwednesday.web.data.models.AuthenticationResponse
+import net.winedownwednesday.web.data.models.PublicKeyCredentialCreationOptions
+import net.winedownwednesday.web.data.models.PublicKeyCredentialRequestOptions
 import net.winedownwednesday.web.data.models.RSVPRequest
+import net.winedownwednesday.web.data.models.RegistrationResponse
+import net.winedownwednesday.web.data.models.VerifyAuthenticationRequest
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.Single
 
@@ -148,9 +154,66 @@ class RemoteDataSource (
         }
     }
 
+    override suspend fun generatePasskeyRegistrationOptions(email: String): PublicKeyCredentialCreationOptions? {
+        return try {
+            client.post("$SERVER_URL/generatePasskeyRegistrationOptions") {
+                headers {
+                    append(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                }
+                setBody(mapOf("email" to email))
+            }.body()
+        } catch (e: Exception) {
+            _error.value = e.message
+            println("Error generating registration options: ${e.message}")
+            null
+        }
+    }
+
+    override suspend fun verifyPasskeyRegistration(credential: RegistrationResponse, email: String): Boolean {
+        return try {
+            val response: HttpResponse = client.post("$SERVER_URL/verifyPasskeyRegistration") {
+                contentType(ContentType.Application.Json)
+                setBody(mapOf("credential" to credential, "email" to email))
+            }
+            response.body<Map<String, Boolean>>()["verified"] ?: false
+        } catch (e: Exception) {
+            _error.value = e.message
+            println("Error verifying registration: ${e.message}")
+            false
+        }
+    }
+
+    override suspend fun generatePasskeyAuthenticationOptions(email: String): PublicKeyCredentialRequestOptions? {
+        return try {
+            client.post("$SERVER_URL/generatePasskeyAuthenticationOptions") {
+                contentType(ContentType.Application.Json)
+                setBody(mapOf("email" to email))
+            }.body()
+        } catch (e: Exception) {
+            _error.value = e.message
+            println("Error generating authentication options: ${e.message}")
+            null
+        }
+    }
+
+    override suspend fun verifyPasskeyAuthentication(credential: AuthenticationResponse, email: String): Boolean {
+        return try {
+            val response: HttpResponse = client.post("$SERVER_URL/verifyPasskeyAuthentication") {
+                contentType(ContentType.Application.Json)
+                setBody(VerifyAuthenticationRequest(credential, email))
+            }
+            response.body<Map<String, Boolean>>()["verified"] ?: false
+        } catch (e: Exception) {
+            _error.value = e.message
+            println("Error verifying authentication: ${e.message}")
+            false
+        }
+    }
 
     companion object{
         private const val SERVER_URL =
             "https://us-central1-wdw-app-52a3c.cloudfunctions.net"
+//        private const val SERVER_URL =
+//            "http://127.0.0.1:5001/wdw-app-52a3c/us-central1"
     }
 }

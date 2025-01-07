@@ -90,7 +90,77 @@ class EventsPageViewModel(
         onResult(false)
     }
 
+    fun validateAndSubmitRSVP(
+        rsvp: RSVPRequest,
+        onResult: (Boolean, Map<RSVPField, String>) -> Unit
+    ) {
+        viewModelScope.launch {
+            val validation = RsvpValidator.validate(rsvp)
+            if (!validation.isValid) {
+                onResult(false, validation.errors)
+            } else {
+                val success = repository.sendRSVP(rsvp)
+                onResult(success, emptyMap())
+            }
+        }
+    }
+
+    fun mimicValidateAndSubmitRSVP(
+        rsvp: RSVPRequest,
+        onResult: (Boolean, Map<RSVPField, String>) -> Unit
+    ) {
+        onResult(true, emptyMap())
+    }
+
     companion object {
         private const val TAG = "EventsPageViewModel"
     }
 }
+
+object RsvpValidator {
+
+    private val EMAIL_REGEX = Regex(
+        "[a-zA-Z0-9+._%\\-]{1,256}@" +
+                "[a-zA-Z0-9][a-zA-Z0-9\\-]{0,64}" +
+                "(" +
+                "\\.[a-zA-Z0-9][a-zA-Z0-9\\-]{0,25}" +
+                ")+"
+    )
+
+    fun validate(rsvp: RSVPRequest): RsvpValidationResult {
+        val errors = mutableMapOf<RSVPField, String>()
+
+        if (rsvp.firstName.isBlank()) {
+            errors[RSVPField.FIRST_NAME] = "First name is required"
+        }
+        if (rsvp.lastName.isBlank()) {
+            errors[RSVPField.LAST_NAME] = "Last name is required"
+        }
+        if (rsvp.email.isBlank()) {
+            errors[RSVPField.EMAIL] = "Email is required"
+        } else if (!rsvp.email.matches(EMAIL_REGEX)) {
+            errors[RSVPField.EMAIL] = "Invalid email format"
+        }
+        if (rsvp.phoneNumber.isBlank()) {
+            errors[RSVPField.PHONE] = "Phone number is required"
+        }
+        if (rsvp.guestsCount < 1 || rsvp.guestsCount > 10) {
+            errors[RSVPField.GUESTS] = "Number of guests must be between 1 and 10"
+        }
+
+        return if (errors.isEmpty()) {
+            RsvpValidationResult(true, emptyMap())
+        } else {
+            RsvpValidationResult(false, errors)
+        }
+    }
+}
+
+enum class RSVPField {
+    FIRST_NAME, LAST_NAME, EMAIL, PHONE, GUESTS
+}
+
+data class RsvpValidationResult(
+    val isValid: Boolean,
+    val errors: Map<RSVPField, String>
+)

@@ -14,7 +14,7 @@ fun MainNavigation() {
         startDestination = "home",
     ) {
         composable("home") {
-            Home()
+            AppNavigation()
         }
     }
 }

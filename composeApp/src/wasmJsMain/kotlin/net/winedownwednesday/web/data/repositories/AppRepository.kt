@@ -11,7 +11,11 @@ import net.winedownwednesday.web.data.Episode
 import net.winedownwednesday.web.data.Event
 import net.winedownwednesday.web.data.Member
 import net.winedownwednesday.web.data.Wine
+import net.winedownwednesday.web.data.models.AuthenticationResponse
+import net.winedownwednesday.web.data.models.PublicKeyCredentialCreationOptions
+import net.winedownwednesday.web.data.models.PublicKeyCredentialRequestOptions
 import net.winedownwednesday.web.data.models.RSVPRequest
+import net.winedownwednesday.web.data.models.RegistrationResponse
 import net.winedownwednesday.web.data.network.RemoteDataSource
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.Single
@@ -118,6 +122,22 @@ class AppRepository (
 
     suspend fun sendRSVP(rsvpRequest: RSVPRequest): Boolean {
         return remoteDataSource.postRSVP(rsvpRequest)
+    }
+
+    suspend fun generatePasskeyRegistrationOptions(email: String): PublicKeyCredentialCreationOptions? {
+        return remoteDataSource.generatePasskeyRegistrationOptions(email)
+    }
+
+    suspend fun verifyPasskeyRegistration(credential: RegistrationResponse, email: String): Boolean {
+        return remoteDataSource.verifyPasskeyRegistration(credential, email)
+    }
+
+    suspend fun generatePasskeyAuthenticationOptions(email: String): PublicKeyCredentialRequestOptions? {
+        return remoteDataSource.generatePasskeyAuthenticationOptions(email)
+    }
+
+    suspend fun verifyPasskeyAuthentication(credential: AuthenticationResponse,email: String): Boolean {
+        return remoteDataSource.verifyPasskeyAuthentication(credential, email)
     }
 
     companion object{

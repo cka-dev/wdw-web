@@ -25,18 +25,12 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
-import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -60,109 +54,6 @@ import net.winedownwednesday.web.viewmodels.HomePageViewModel
 import org.koin.compose.koinInject
 import kotlin.math.abs
 
-
-@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
-@Composable
-fun Home(
-    modifier: Modifier = Modifier
-) {
-    val selectedPageState = remember {
-        mutableStateOf(WDWPages.HOME)
-    }
-
-    val windowSizeClass = calculateWindowSizeClass()
-
-    val isMobile = windowSizeClass.widthSizeClass ==
-            WindowWidthSizeClass.Compact
-
-    MaterialTheme(
-        colorScheme = darkColorScheme(
-            primary = Color(0xFF1E1E1E),
-            secondary = Color(0xFF333333),
-            surface = Color(0xFF141414),
-            onSurface = Color.White,
-            onPrimary = Color.White
-        )
-    ) {
-        Surface(
-            modifier =
-            Modifier
-                .fillMaxSize()
-        ) {
-            Column(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                TopNavBar(
-                    selectedPageState = selectedPageState
-                )
-                Box(
-                    modifier = Modifier.weight(1f)
-                ){
-                    when (selectedPageState.value) {
-                        WDWPages.HOME -> {
-                            PageBody (
-                                content = {
-                                    MainContent(
-                                        isMobile = isMobile
-                                    )
-                                }
-                            )
-                        }
-                        WDWPages.ABOUT -> {
-                            PageBody(
-                                content = {
-                                    AboutPage(
-                                        isCompactScreen = isMobile
-                                    )
-                                }
-                            )
-                        }
-                        WDWPages.MEMBERS -> {
-                            PageBody(
-                                content = {
-                                    MembersPage(
-                                        isCompactScreen = isMobile
-                                    )
-                                }
-                            )
-                        }
-                        WDWPages.PODCASTS -> {
-                            PageBody(
-                                content = {
-                                    PodcastsPage(
-                                        isCompactScreen = isMobile
-                                    )
-                                }
-                            )
-                        }
-                        WDWPages.EVENTS -> {
-                            PageBody(
-                                content = {
-                                    EventsPage(
-                                        isCompactScreen = isMobile
-                                    )
-                                }
-                            )
-                        }
-                        WDWPages.WINE -> {
-                            PageBody(
-                                content = {
-                                    WinePage(
-                                        isCompactScreen = isMobile
-                                    )
-                                }
-                            )
-                        }
-                    }
-                }
-                Footer(
-                    isMobile = isMobile,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-    }
-}
 
 @Composable
 fun PageBody(
@@ -723,13 +614,4 @@ fun HomePageEventCard(
             }
         }
     }
-}
-
-enum class WDWPages {
-    HOME,
-    ABOUT,
-    MEMBERS,
-    PODCASTS,
-    EVENTS,
-    WINE
 }

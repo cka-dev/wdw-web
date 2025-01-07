@@ -5,7 +5,11 @@ import net.winedownwednesday.web.data.Episode
 import net.winedownwednesday.web.data.Event
 import net.winedownwednesday.web.data.Member
 import net.winedownwednesday.web.data.Wine
+import net.winedownwednesday.web.data.models.AuthenticationResponse
+import net.winedownwednesday.web.data.models.PublicKeyCredentialCreationOptions
+import net.winedownwednesday.web.data.models.PublicKeyCredentialRequestOptions
 import net.winedownwednesday.web.data.models.RSVPRequest
+import net.winedownwednesday.web.data.models.RegistrationResponse
 
 interface ApiService {
 
@@ -21,20 +25,20 @@ interface ApiService {
 
     suspend fun postRSVP(rsvp: RSVPRequest): Boolean
 
-//    suspend fun getRegistrationOptions(
-//        request: RegistrationOptionsRequest,
-//    ): RegistrationOptionsResponse?
-//
-//    suspend fun verifyRegistration(
-//        request: RegistrationVerificationRequest,
-//    ): RegistrationVerificationResponse?
-//
-//    suspend fun getAuthenticationOptions(
-//        request: AuthenticationOptionsRequest,
-//    ): AuthenticationOptionsResponse?
-//
-//    suspend fun verifyAuthentication(
-//        request: AuthenticationVerificationRequest,
-//    ): AuthenticationVerificationResponse?
+    suspend fun generatePasskeyRegistrationOptions(email: String):
+            PublicKeyCredentialCreationOptions?
+
+    suspend fun verifyPasskeyRegistration(
+        credential: RegistrationResponse,
+        email: String,
+    ): Boolean
+
+    suspend fun generatePasskeyAuthenticationOptions(email: String):
+            PublicKeyCredentialRequestOptions?
+
+    suspend fun verifyPasskeyAuthentication(
+        credential: AuthenticationResponse,
+        email: String,
+    ): Boolean
 
 }

@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -47,10 +48,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -166,7 +165,8 @@ fun EventsPage(
                             viewModel.setSelectedEvent(it)
                         },
                         viewModel = viewModel,
-                        showUpcoming = showUpcoming
+                        showUpcoming = showUpcoming,
+                        isCompactScreen = isCompactScreen
                     )
                 }
             }
@@ -197,6 +197,7 @@ fun EventCard(
     onEventSelectedChange: (Event) -> Unit = {},
     viewModel: EventsPageViewModel,
     showUpcoming: Boolean,
+    isCompactScreen: Boolean,
     modifier: Modifier = Modifier
 ) {
     val showRegistrationForm = remember {
@@ -296,8 +297,21 @@ fun EventCard(
         RSVPComponent(
             onDismissRequest = { showRegistrationForm.value = false},
             event = event,
-            viewModel = viewModel,
-            showRegistrationForm = showRegistrationForm
+            isCompactScreen = isCompactScreen,
+            onSubmit = { rsvpRequest ->
+                viewModel.mimicValidateAndSubmitRSVP(rsvpRequest) { success, errors ->
+                    if (!success) {
+                        if (errors.isNotEmpty()) {
+                            window.alert("Some fields are invalid: $errors")
+                        } else {
+                            window.alert("We couldn't submit your RSVP. Try again.")
+                        }
+                    } else {
+                        window.alert("RSVP submitted successfully!")
+                        showRegistrationForm.value = false
+                    }
+                }
+            }
         )
     }
 }
@@ -682,10 +696,10 @@ fun KmpVideoPlayer(url: String) {
 
 @Composable
 fun RSVPComponent(
-    onDismissRequest: () -> Unit,
     event: Event,
-    viewModel: EventsPageViewModel,
-    showRegistrationForm: MutableState<Boolean>,
+    onDismissRequest: () -> Unit,
+    onSubmit: (RSVPRequest) -> Unit,
+    isCompactScreen: Boolean,
     modifier: Modifier = Modifier
 ) {
     var firstName by rememberSaveable { mutableStateOf("") }
@@ -696,10 +710,13 @@ fun RSVPComponent(
     var allowUpdates by rememberSaveable { mutableStateOf(true) }
     var guestsCountText by rememberSaveable { mutableStateOf("1") }
 
-    val emailError = mutableStateOf("")
-    val isEmailError = mutableStateOf(false)
+    var firstNameError by rememberSaveable { mutableStateOf("") }
+    var lastNameError by rememberSaveable { mutableStateOf("") }
+    var emailError by rememberSaveable { mutableStateOf("") }
+    var phoneError by rememberSaveable { mutableStateOf("") }
+    var guestsError by rememberSaveable { mutableStateOf("") }
 
-    Dialog(onDismissRequest = { onDismissRequest() }) {
+    Dialog(onDismissRequest = onDismissRequest) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -711,209 +728,541 @@ fun RSVPComponent(
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
-                Card(
-                    elevation = CardDefaults.elevatedCardElevation(4.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        AsyncImage(
-                            model = event.imageUrl,
-                            contentDescription = "${event.name}'s picture",
-                            alignment = Alignment.Center,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                }
-
-                Text(
-                    text = "RSVP for ${event.name}",
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .fillMaxWidth()
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .toggleable(
-                            value = allowUpdates,
-                            onValueChange = { allowUpdates = it },
-                            role = Role.Checkbox
-                        )
-                        .padding(horizontal = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        checked = allowUpdates,
-                        onCheckedChange = { allowUpdates = it }
-                    )
-                    Text(
-                        text = "Keep me updated on WDW events",
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
-                }
-
-                Text(
-                    text = "Your contact information",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = firstName,
-                        onValueChange = { firstName = it },
-                        label = { Text("First Name", color = Color.White) },
-                        colors = TextFieldDefaults.colors(
-                            cursorColor = Color(0xFFFF7F33)
-                        ),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier
-                            .weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = lastName,
-                        onValueChange = { lastName = it },
-                        label = { Text("Last Name", color = Color.White) },
-                        colors = TextFieldDefaults.colors(
-                            cursorColor = Color(0xFFFF7F33)
-                        ),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier
-                            .weight(1f)
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = {
-                            email = it
-                            validateEmailInput(
-                                emailValue = it,
-                                emailError = emailError,
-                                isEmailError = isEmailError
-                            ) },
-                        label = { Text("Email", color = Color.White) },
-                        colors = TextFieldDefaults.colors(cursorColor = Color(0xFFFF7F33)),
-                        shape = RoundedCornerShape(8.dp),
-                        isError = isEmailError.value,
-                        supportingText = {
-                            if (isEmailError.value) {
-                                println("Email is invalid")
-                                Text(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    text = "Enter a valid email",
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            }
+                if (!isCompactScreen) {
+                    NonCompactReservationFields(
+                        event = event,
+                        firstName = firstName,
+                        onFirstNameChange = {
+                            firstName = it
+                            firstNameError = ""
                         },
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = phoneNumber,
-                        onValueChange = { phoneNumber = it },
-                        label = { Text("Phone number", color = Color.White) },
-                        colors = TextFieldDefaults.colors(cursorColor = Color(0xFFFF7F33)),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Number of guests: ",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    OutlinedTextField(
-                        value = guestsCountText,
-                        onValueChange = { newVal ->
+                        lastName = lastName,
+                        onLastNameChange = {
+                            lastName = it
+                            lastNameError = ""
+                        },
+                        email = email,
+                        onEmailChange = {
+                            email = it
+                            emailError = ""
+                        },
+                        phoneNumber = phoneNumber,
+                        onPhoneNumberChange = {
+                            phoneNumber = it
+                            phoneError = ""
+                        },
+                        guestsCountText = guestsCountText,
+                        onGuestsCountChange = { newVal ->
+                            guestsError = ""
                             if (newVal.isEmpty()) {
                                 guestsCountText = ""
                                 guestsCount = 1
                             } else {
-                                val parsedInt = newVal.toIntOrNull()
-                                if (parsedInt != null) {
-                                    if (parsedInt in 1..10) {
+                                newVal.toIntOrNull()?.let { parsed ->
+                                    if (parsed in 1..10) {
                                         guestsCountText = newVal
-                                        guestsCount = parsedInt
-                                    } else {
-                                        // TODO
+                                        guestsCount = parsed
                                     }
                                 }
                             }
                         },
-                        label = { Text("Guests") },
-                        singleLine = true,
-                        colors = TextFieldDefaults.colors(
-                            cursorColor = Color(0xFFFF7F33)
-                        ),
-                        modifier = Modifier.width(80.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = {
-                        val rsvpRequest = RSVPRequest(
-                            eventId = event.id,
-                            firstName = firstName,
-                            lastName = lastName,
-                            email = email,
-                            phoneNumber = phoneNumber,
-                            allowUpdates = allowUpdates,
-                            guestsCount = guestsCount
-                        )
-//                        viewModel.submitRSVP(rsvpRequest) { success ->
-//                            if (success) {
-//                                window.alert(message = "RSVP submitted successfully")
-//                                showRegistrationForm.value = false
-//                                onDismissRequest()
-//                            } else {
-//                                window.alert(message = "Oh oh! We were not able to submit your" +
-//                                        "RSVP. Please try again.")
-//                            }
-//                        }
-                        viewModel.mimicSubmitRSVP(rsvpRequest) { success ->
-                            if (success) {
-                                window.alert(message = "RSVP submitted successfully")
-                                showRegistrationForm.value = false
-                            } else {
-                                window.alert(message = "Oh oh! We were not able to submit your" +
-                                        "RSVP. Please try again.")
-                            }
+                        allowUpdates = allowUpdates,
+                        onAllowUpdatesToggle = { allowUpdates = it },
+                        firstNameError = firstNameError,
+                        lastNameError = lastNameError,
+                        emailError = emailError,
+                        phoneError = phoneError,
+                        guestsError = guestsError,
+                        onSubmit = {
+                            val rsvp = RSVPRequest(
+                                eventId = event.id,
+                                firstName = firstName,
+                                lastName = lastName,
+                                email = email,
+                                phoneNumber = phoneNumber,
+                                allowUpdates = allowUpdates,
+                                guestsCount = guestsCount
+                            )
+                            onSubmit(rsvp)
                         }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFF7F33),
-                        contentColor = Color.White
                     )
-                ) {
-                    Text("Submit")
+
+                } else {
+                    CompactScreenReservationFields(
+                        event = event,
+                        firstName = firstName,
+                        onFirstNameChange = {
+                            firstName = it
+                            firstNameError = ""
+                        },
+                        lastName = lastName,
+                        onLastNameChange = {
+                            lastName = it
+                            lastNameError = ""
+                        },
+                        email = email,
+                        onEmailChange = {
+                            email = it
+                            emailError = ""
+                        },
+                        phoneNumber = phoneNumber,
+                        onPhoneNumberChange = {
+                            phoneNumber = it
+                            phoneError = ""
+                        },
+                        guestsCountText = guestsCountText,
+                        onGuestsCountChange = { newVal ->
+                            guestsError = ""
+                            if (newVal.isEmpty()) {
+                                guestsCountText = ""
+                                guestsCount = 1
+                            } else {
+                                newVal.toIntOrNull()?.let { parsed ->
+                                    if (parsed in 1..10) {
+                                        guestsCountText = newVal
+                                        guestsCount = parsed
+                                    }
+                                }
+                            }
+                        },
+                        allowUpdates = allowUpdates,
+                        onAllowUpdatesToggle = { allowUpdates = it },
+                        firstNameError = firstNameError,
+                        lastNameError = lastNameError,
+                        emailError = emailError,
+                        phoneError = phoneError,
+                        guestsError = guestsError,
+                        onSubmit = {
+                            val rsvp = RSVPRequest(
+                                eventId = event.id,
+                                firstName = firstName,
+                                lastName = lastName,
+                                email = email,
+                                phoneNumber = phoneNumber,
+                                allowUpdates = allowUpdates,
+                                guestsCount = guestsCount
+                            )
+                            onSubmit(rsvp)
+                        }
+                    )
                 }
+
+//                Row(verticalAlignment = Alignment.CenterVertically) {
+//                    Text("Number of guests: ", style = MaterialTheme.typography.bodyLarge)
+//                    Spacer(modifier = Modifier.width(8.dp))
+//                    OutlinedTextField(
+//                        value = guestsCountText,
+//                        onValueChange = { newVal ->
+//                            guestsError = ""
+//                            if (newVal.isEmpty()) {
+//                                guestsCountText = ""
+//                                guestsCount = 1
+//                            } else {
+//                                val parsedInt = newVal.toIntOrNull()
+//                                if (parsedInt != null && parsedInt in 1..10) {
+//                                    guestsCountText = newVal
+//                                    guestsCount = parsedInt
+//                                }
+//                            }
+//                        },
+//                        label = { Text("Guests") },
+//                        isError = guestsError.isNotEmpty(),
+//                        supportingText = {
+//                            if (guestsError.isNotEmpty()) {
+//                                Text(text = guestsError, color = MaterialTheme.colorScheme.error)
+//                            }
+//                        },
+//                        singleLine = true,
+//                        modifier = Modifier.width(80.dp)
+//                    )
+//                }
+//
+//                Button(
+//                    onClick = {
+//                        val rsvp = RSVPRequest(
+//                            eventId = event.id,
+//                            firstName = firstName,
+//                            lastName = lastName,
+//                            email = email,
+//                            phoneNumber = phoneNumber,
+//                            allowUpdates = allowUpdates,
+//                            guestsCount = guestsCount
+//                        )
+//                        onSubmit(rsvp)
+//                    },
+//                    modifier = Modifier.fillMaxWidth(),
+//                    colors = ButtonDefaults.buttonColors(
+//                        containerColor = Color(0xFFFF7F33),
+//                        contentColor = Color.White
+//                    )
+//                ) {
+//                    Text("Submit")
+//                }
             }
         }
     }
 }
+
+@Composable
+fun CompactScreenReservationFields(
+    event: Event,
+    firstName: String,
+    onFirstNameChange: (String) -> Unit,
+    lastName: String,
+    onLastNameChange: (String) -> Unit,
+    email: String,
+    onEmailChange: (String) -> Unit,
+    phoneNumber: String,
+    onPhoneNumberChange: (String) -> Unit,
+    guestsCountText: String,
+    onGuestsCountChange: (String) -> Unit,
+    allowUpdates: Boolean,
+    onAllowUpdatesToggle: (Boolean) -> Unit,
+    firstNameError: String,
+    lastNameError: String,
+    emailError: String,
+    phoneError: String,
+    guestsError: String,
+    onSubmit: () -> Unit
+) {
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        item {
+            Card(
+                elevation = CardDefaults.elevatedCardElevation(4.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = event.imageUrl,
+                        contentDescription = "${event.name}'s picture",
+                        alignment = Alignment.Center,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+        }
+
+        item {
+            Text(
+                text = "RSVP for ${event.name}",
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier
+                    .padding(8.dp)
+                    .fillMaxWidth()
+            )
+        }
+
+        item {
+            Text(
+                text = "Your contact information",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+            )
+        }
+
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .toggleable(
+                        value = allowUpdates,
+                        onValueChange = onAllowUpdatesToggle,
+                        role = Role.Checkbox
+                    )
+                    .padding(horizontal = 8.dp)
+                    .height(56.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = allowUpdates,
+                    onCheckedChange = onAllowUpdatesToggle
+                )
+                Text(
+                    text = "Keep me updated on WDW events",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
+        }
+
+        item {
+            OutlinedTextField(
+                value = firstName,
+                onValueChange = {
+                    onFirstNameChange(it)
+                },
+                label = { Text("First Name", color = Color.White) },
+                isError = firstNameError.isNotEmpty(),
+                supportingText = {
+                    if (firstNameError.isNotEmpty()) {
+                        Text(text = firstNameError, color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        item {
+            OutlinedTextField(
+                value = lastName,
+                onValueChange = {
+                    onLastNameChange(it)
+                },
+                label = { Text("Last Name", color = Color.White) },
+                isError = lastNameError.isNotEmpty(),
+                supportingText = {
+                    if (lastNameError.isNotEmpty()) {
+                        Text(text = lastNameError, color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        item {
+            OutlinedTextField(
+                value = email,
+                onValueChange = {
+                    onEmailChange(it)
+                },
+                label = { Text("Email", color = Color.White) },
+                isError = emailError.isNotEmpty(),
+                supportingText = {
+                    if (emailError.isNotEmpty()) {
+                        Text(text = emailError, color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        item {
+            OutlinedTextField(
+                value = phoneNumber,
+                onValueChange = {
+                    onPhoneNumberChange(it)
+                },
+                label = { Text("Phone number", color = Color.White) },
+                isError = phoneError.isNotEmpty(),
+                supportingText = {
+                    if (phoneError.isNotEmpty()) {
+                        Text(text = phoneError, color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Number of guests: ", style = MaterialTheme.typography.bodyLarge)
+                Spacer(modifier = Modifier.width(8.dp))
+                OutlinedTextField(
+                    value = guestsCountText,
+                    onValueChange = { newVal ->
+                        onGuestsCountChange(newVal)
+                    },
+                    label = { Text("Guests") },
+                    singleLine = true,
+                    modifier = Modifier.width(80.dp),
+                    isError = guestsError.isNotEmpty(),
+                    supportingText = {
+                        if (guestsError.isNotEmpty()) {
+                            Text(text = guestsError, color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                )
+            }
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = onSubmit,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFFF7F33),
+                    contentColor = Color.White
+                )
+            ) {
+                Text("Submit")
+            }
+        }
+    }
+}
+
+@Composable
+fun NonCompactReservationFields(
+    event: Event,
+    firstName: String,
+    onFirstNameChange: (String) -> Unit,
+    lastName: String,
+    onLastNameChange: (String) -> Unit,
+    email: String,
+    onEmailChange: (String) -> Unit,
+    phoneNumber: String,
+    onPhoneNumberChange: (String) -> Unit,
+    guestsCountText: String,
+    onGuestsCountChange: (String) -> Unit,
+    allowUpdates: Boolean,
+    onAllowUpdatesToggle: (Boolean) -> Unit,
+    firstNameError: String,
+    lastNameError: String,
+    emailError: String,
+    phoneError: String,
+    guestsError: String,
+    onSubmit: () -> Unit
+) {
+    Card(
+        elevation = CardDefaults.elevatedCardElevation(4.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            AsyncImage(
+                model = event.imageUrl,
+                contentDescription = "${event.name}'s picture",
+                alignment = Alignment.Center,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+    }
+
+    Text(
+        text = "RSVP for ${event.name}",
+        textAlign = TextAlign.Center,
+        style = MaterialTheme.typography.headlineSmall,
+        modifier = Modifier
+            .padding(8.dp)
+            .fillMaxWidth()
+    )
+
+    Text(
+        text = "Your contact information",
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .toggleable(
+                value = allowUpdates,
+                onValueChange = onAllowUpdatesToggle,
+                role = Role.Checkbox
+            )
+            .padding(horizontal = 8.dp)
+            .height(56.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Checkbox(
+            checked = allowUpdates,
+            onCheckedChange = onAllowUpdatesToggle
+        )
+        Text(
+            text = "Keep me updated on WDW events",
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(start = 8.dp)
+        )
+    }
+
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            value = firstName,
+            onValueChange = { onFirstNameChange(it) },
+            label = { Text("First Name", color = Color.White) },
+            isError = firstNameError.isNotEmpty(),
+            supportingText = {
+                if (firstNameError.isNotEmpty()) {
+                    Text(firstNameError, color = MaterialTheme.colorScheme.error)
+                }
+            },
+            modifier = Modifier.weight(1f)
+        )
+        OutlinedTextField(
+            value = lastName,
+            onValueChange = { onLastNameChange(it) },
+            label = { Text("Last Name", color = Color.White) },
+            isError = lastNameError.isNotEmpty(),
+            supportingText = {
+                if (lastNameError.isNotEmpty()) {
+                    Text(lastNameError, color = MaterialTheme.colorScheme.error)
+                }
+            },
+            modifier = Modifier.weight(1f)
+        )
+    }
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            value = email,
+            onValueChange = { onEmailChange(it) },
+            label = { Text("Email", color = Color.White) },
+            isError = emailError.isNotEmpty(),
+            supportingText = {
+                if (emailError.isNotEmpty()) {
+                    Text(emailError, color = MaterialTheme.colorScheme.error)
+                }
+            },
+            modifier = Modifier.weight(1f)
+        )
+        OutlinedTextField(
+            value = phoneNumber,
+            onValueChange = { onPhoneNumberChange(it) },
+            label = { Text("Phone Number", color = Color.White) },
+            isError = phoneError.isNotEmpty(),
+            supportingText = {
+                if (phoneError.isNotEmpty()) {
+                    Text(phoneError, color = MaterialTheme.colorScheme.error)
+                }
+            },
+            modifier = Modifier.weight(1f)
+        )
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("Number of guests: ", style = MaterialTheme.typography.bodyLarge)
+        Spacer(modifier = Modifier.width(8.dp))
+        OutlinedTextField(
+            value = guestsCountText,
+            onValueChange = onGuestsCountChange,
+            label = { Text("Guests") },
+            isError = guestsError.isNotEmpty(),
+            supportingText = {
+                if (guestsError.isNotEmpty()) {
+                    Text(guestsError, color = MaterialTheme.colorScheme.error)
+                }
+            },
+            singleLine = true,
+            modifier = Modifier.width(80.dp)
+        )
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+    Button(
+        onClick = onSubmit,
+        modifier = Modifier.fillMaxWidth(),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFFFF7F33),
+            contentColor = Color.White
+        )
+    ) {
+        Text("Submit")
+    }
+}
+
 
 fun stringToDate(date: String): LocalDate {
     val (year, month, day) = date.split(", ").map { it.toInt() }
@@ -938,32 +1287,4 @@ private fun formatDate(date: LocalDate): String {
     }
 
     return "$month ${date.dayOfMonth}, ${date.year}"
-}
-
-fun validateEmailInput(
-    emailValue: String,
-    isEmailError: MutableState<Boolean>,
-    emailError: MutableState<String>,
-) {
-    val emailAddressRegex = Regex(
-        "[a-zA-Z0-9+._%\\-]{1,256}" +
-                "@" +
-                "[a-zA-Z0-9][a-zA-Z0-9\\-]{0,64}" +
-                "(" +
-                "\\." +
-                "[a-zA-Z0-9][a-zA-Z0-9\\-]{0,25}" +
-                ")+"
-    )
-    val email = emailValue.trim()
-    var isValid = true
-    var errorMessage = ""
-    if (email.isBlank() || email.isEmpty()) {
-        errorMessage = "Please fill email field"
-        isValid = false
-    } else if (!email.matches(emailAddressRegex)) {
-        errorMessage = "Wrong email Format"
-        isValid = false
-    }
-    emailError.value = errorMessage
-    isEmailError.value = isValid
 }

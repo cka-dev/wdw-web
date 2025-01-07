@@ -74,8 +74,13 @@ kotlin {
 //            implementation(project(":libraries:Kotlin-Wasm-Html-Interop-master"))
 
             implementation("dev.chrisbanes.material3:material3-window-size-class-multiplatform:0.5.0")
+            implementation("org.jetbrains.kotlinx:kotlinx-browser:0.3")
+        }
+        wasmJsMain.dependencies {
+            implementation("org.jetbrains.kotlinx:kotlinx-browser:0.3")
         }
     }
+
 
     sourceSets.named("commonMain").configure {
         kotlin.srcDir("build/generated/ksp/metadata/commonMain/kotlin")
