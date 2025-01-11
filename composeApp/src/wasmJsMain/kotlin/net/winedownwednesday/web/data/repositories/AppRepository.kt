@@ -4,6 +4,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import net.winedownwednesday.web.data.AboutItem
@@ -16,6 +17,7 @@ import net.winedownwednesday.web.data.models.PublicKeyCredentialCreationOptions
 import net.winedownwednesday.web.data.models.PublicKeyCredentialRequestOptions
 import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.data.models.RegistrationResponse
+import net.winedownwednesday.web.data.models.UserProfileData
 import net.winedownwednesday.web.data.network.RemoteDataSource
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.Single
@@ -42,6 +44,9 @@ class AppRepository (
     val wineList = _wineList.asStateFlow()
 
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    private val _profileData = MutableStateFlow<UserProfileData?>(null)
+    val profileData: StateFlow<UserProfileData?> = _profileData.asStateFlow()
 
     init {
         repositoryScope.launch {
@@ -138,6 +143,14 @@ class AppRepository (
 
     suspend fun verifyPasskeyAuthentication(credential: AuthenticationResponse,email: String): Boolean {
         return remoteDataSource.verifyPasskeyAuthentication(credential, email)
+    }
+
+    suspend fun fetchProfileFromServer(userEmail: String): UserProfileData? {
+        return remoteDataSource.fetchUserProfile(userEmail)
+    }
+
+    suspend fun saveProfileToServer(userProfileData: UserProfileData): Boolean {
+        return remoteDataSource.updateProfile(userProfileData)
     }
 
     companion object{

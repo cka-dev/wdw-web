@@ -2,14 +2,16 @@ package net.winedownwednesday.web.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.browser.window
 import kotlinx.coroutines.await
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import net.winedownwednesday.web.PublicKeyCredential
 import net.winedownwednesday.web.data.models.AuthenticationResponse
 import net.winedownwednesday.web.data.models.RegistrationResponse
+import net.winedownwednesday.web.data.models.UserProfileData
 import net.winedownwednesday.web.data.repositories.AppRepository
 import net.winedownwednesday.web.myWebAuthnBridge
 import net.winedownwednesday.web.toBase64Url
@@ -19,6 +21,33 @@ class AuthPageViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<LoginUIState>(LoginUIState.Idle)
     val uiState = _uiState.asStateFlow()
+
+    private val _isNewUser = MutableStateFlow(false)
+    val isNewUser = _isNewUser.asStateFlow()
+
+    private val _email = MutableStateFlow("")
+    val email = _email.asStateFlow()
+
+    private val _profileData = MutableStateFlow<UserProfileData?>(null)
+    val profileData: StateFlow<UserProfileData?> = _profileData.asStateFlow()
+
+    fun fetchProfile(userEmail: String) {
+        viewModelScope.launch {
+            val dto = repository.fetchProfileFromServer(userEmail = userEmail)
+            println("$TAG Fetched profile: $dto")
+            _profileData.value = dto
+        }
+    }
+
+    fun saveProfile(userProfileData: UserProfileData, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val success = repository.saveProfileToServer(userProfileData)
+            if (success) {
+                _profileData.value = userProfileData
+            }
+            onResult(success)
+        }
+    }
 
     fun registerPasskey(email: String) {
         viewModelScope.launch {
@@ -63,8 +92,6 @@ class AuthPageViewModel(
             }
         }
     }
-
-
 
     fun authenticateWithPasskey(email: String) {
         viewModelScope.launch {
@@ -162,16 +189,35 @@ class AuthPageViewModel(
         return authenticationResponse
     }
 
-    private fun ByteArray.encode(): String {
-        return this.joinToString("") { byte ->
-            byte.toInt().and(0xFF).toString(16).padStart(2, '0')
+    fun simulateAuthentication() {
+        viewModelScope.launch {
+            delay(500)
+            _uiState.value = LoginUIState.Authenticated
         }
     }
 
-    fun checkSecureContext() {
+    fun simulateRegistration() {
         viewModelScope.launch {
-            val isSecure = myWebAuthnBridge.isSecureContext()
-            println("Is secure context: $isSecure")
+            delay(500)
+            _uiState.value = LoginUIState.Authenticated
+        }
+    }
+
+    fun checkIsNewUser(isNewUser: Boolean) {
+        viewModelScope.launch {
+            _isNewUser.value = isNewUser
+        }
+    }
+
+    fun logout() {
+        viewModelScope.launch {
+            _uiState.value = LoginUIState.Idle
+        }
+    }
+
+    fun setEmail(email: String) {
+        viewModelScope.launch {
+            _email.value = email
         }
     }
 
@@ -186,11 +232,4 @@ sealed class LoginUIState {
     object Loading : LoginUIState()
     object Authenticated : LoginUIState()
     data class Error(val message: String) : LoginUIState()
-}
-
-fun ByteArray.toBase64Url(): String {
-    return window.btoa(this.decodeToString())
-        .replace('+', '-')
-        .replace('/', '_')
-        .replace("=", "")
 }

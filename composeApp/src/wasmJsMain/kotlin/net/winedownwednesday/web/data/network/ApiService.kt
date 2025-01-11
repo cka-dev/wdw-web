@@ -10,6 +10,7 @@ import net.winedownwednesday.web.data.models.PublicKeyCredentialCreationOptions
 import net.winedownwednesday.web.data.models.PublicKeyCredentialRequestOptions
 import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.data.models.RegistrationResponse
+import net.winedownwednesday.web.data.models.UserProfileData
 
 interface ApiService {
 
@@ -40,5 +41,9 @@ interface ApiService {
         credential: AuthenticationResponse,
         email: String,
     ): Boolean
+
+    suspend fun fetchUserProfile(userEmail: String): UserProfileData?
+    suspend fun updateProfile(profileData: UserProfileData): Boolean
+
 
 }

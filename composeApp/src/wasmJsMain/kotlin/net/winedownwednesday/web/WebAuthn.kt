@@ -36,6 +36,8 @@ external object myWebAuthnBridge {
 
     fun isSecureContext(): Boolean
 
+//    fun isLocalhost(): Boolean
+
     fun encodeBase64(bytes: Uint8Array): String
     fun decodeBase64(encoded: String): Uint8Array
     fun arrayBufferToBase64Url(buffer: ArrayBuffer): String

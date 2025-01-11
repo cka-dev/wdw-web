@@ -75,6 +75,15 @@ kotlin {
 
             implementation("dev.chrisbanes.material3:material3-window-size-class-multiplatform:0.5.0")
             implementation("org.jetbrains.kotlinx:kotlinx-browser:0.3")
+
+            // File Picker
+            // Enables FileKit without Compose dependencies
+            implementation("io.github.vinceglb:filekit-core:0.8.8")
+
+            // Enables FileKit with Composable utilities
+            implementation("io.github.vinceglb:filekit-compose:0.8.8")
+
+            implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
         }
         wasmJsMain.dependencies {
             implementation("org.jetbrains.kotlinx:kotlinx-browser:0.3")

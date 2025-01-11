@@ -13,8 +13,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -30,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.browser.window
+import net.winedownwednesday.web.viewmodels.LoginUIState
 import org.jetbrains.compose.resources.painterResource
 import wdw_web.composeapp.generated.resources.Res
 import wdw_web.composeapp.generated.resources.ig_logo_96
@@ -40,8 +44,13 @@ import wdw_web.composeapp.generated.resources.yt_logo_96
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopNavBar(
-    appBarState: MutableState<AppBarState>
+    appBarState: MutableState<AppBarState>,
+    uiState: LoginUIState,
+    onLogout: () -> Unit
 ) {
+//    val authViewModel: AuthPageViewModel = koinInject()
+//    val uiState by authViewModel.uiState.collectAsState()
+
     Surface {
         TopAppBar(title = {
             Row {
@@ -125,18 +134,34 @@ fun TopNavBar(
                             }
                     )
                 }
-                item {
-                    Spacer(modifier = Modifier.width(16.dp))
-                }
-                item {
-                    Text(
-                        text = "Member Login",
-                        modifier = Modifier
-                            .padding(horizontal = 8.dp)
-                            .clickable {
-                                appBarState.value = AppBarState.LOGIN
+
+                if(uiState is LoginUIState.Authenticated) {
+                    item {
+                        Spacer(modifier = Modifier.width(16.dp))
+                        IconButton(
+                            onClick = {
+                                appBarState.value = AppBarState.PROFILE
                             }
-                    )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AccountCircle,
+                                contentDescription = "Account Circle",
+                                tint = Color.White
+                            )
+                        }
+                    }
+                } else if (uiState is LoginUIState.Idle) {
+                    item {
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(
+                            text = "Member Login",
+                            modifier = Modifier
+                                .padding(horizontal = 8.dp)
+                                .clickable {
+                                    appBarState.value = AppBarState.LOGIN
+                                }
+                        )
+                    }
                 }
             }
         })

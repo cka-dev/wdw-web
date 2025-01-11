@@ -68,5 +68,5 @@ val appModule  =
         provideAboutPageViewModel,
         provideWinePageViewModel,
         provideAuthPageViewModel,
-        provideHomePageViewModel
+        provideHomePageViewModel,
     )

@@ -8,6 +8,7 @@ import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
@@ -15,6 +16,7 @@ import io.ktor.http.headers
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.serialization.json.Json
 import net.winedownwednesday.web.data.AboutItem
 import net.winedownwednesday.web.data.Episode
 import net.winedownwednesday.web.data.Event
@@ -26,6 +28,7 @@ import net.winedownwednesday.web.data.models.PublicKeyCredentialRequestOptions
 import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.data.models.RegistrationOptionsRequest
 import net.winedownwednesday.web.data.models.RegistrationResponse
+import net.winedownwednesday.web.data.models.UserProfileData
 import net.winedownwednesday.web.data.models.VerifyAuthenticationRequest
 import net.winedownwednesday.web.data.models.VerifyRegistrationRequest
 import org.koin.core.annotation.InjectedParam
@@ -219,6 +222,36 @@ class RemoteDataSource (
             false
         } finally {
             _isLoading.value = false
+        }
+    }
+
+    override suspend fun fetchUserProfile(userEmail: String): UserProfileData? {
+        return try {
+            val response = client.post("$SERVER_URL/fetchUserProfile"){
+                contentType(ContentType.Application.Json)
+                url {
+                    parameters.append("email", userEmail)
+                }
+            }
+            val jsonString = response.bodyAsText()
+            println("Received JSON from server: $jsonString")
+            Json.decodeFromString<UserProfileData>(jsonString)
+        } catch (e: Exception) {
+            println("Error fetching profile: ${e.message}")
+            null
+        }
+    }
+
+    override suspend fun updateProfile(profileData: UserProfileData): Boolean {
+        return try {
+            val response: HttpResponse = client.post("$SERVER_URL/updateUserProfile") {
+                contentType(ContentType.Application.Json)
+                setBody(profileData)
+            }
+            response.status.isSuccess()
+        } catch (e: Exception) {
+            println("Error updating profile: ${e.message}")
+            false
         }
     }
 

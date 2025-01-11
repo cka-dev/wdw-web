@@ -21,7 +21,6 @@ async function _startRegistration(options) {
     }
 }
 
-
 async function _startAuthentication(options) {
     try {
         const assertion = await navigator.credentials.get({ publicKey: options });
@@ -47,7 +46,6 @@ window.myWebAuthnBridge = {
         requireResidentKey,
         userVerification
     ) {
-        console.log("startRegistration called");
         const decodedChallenge = Uint8Array.from(base64urlDecode(challenge), c => c.charCodeAt(0));
         const decodedUserId = Uint8Array.from(base64urlDecode(userId), c => c.charCodeAt(0));
 
@@ -126,5 +124,13 @@ window.myWebAuthnBridge = {
     isSecureContext: function() {
         console.log("Secure context:", window.isSecureContext);
         return window.isSecureContext;
-    }
+    },
+
+//    isLocalhost = function() {
+//        return window.location.hostname === 'localhost' ||
+//        window.location.hostname === '[::1]' ||
+//        window.location.hostname.match(
+//            /^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/
+//        );
+//    }
 };

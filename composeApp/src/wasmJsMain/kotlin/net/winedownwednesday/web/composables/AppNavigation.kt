@@ -34,14 +34,15 @@ enum class AppBarState {
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
-fun AppNavigation() {
+fun AppNavigation(
+    authViewModel: AuthPageViewModel = koinInject()
+) {
     val appBarState = remember { mutableStateOf(AppBarState.HOME) }
-    val authViewModel: AuthPageViewModel = koinInject()
-    val loginState by authViewModel.uiState.collectAsState()
+    val uiState by authViewModel.uiState.collectAsState()
     var isLoggedIn by remember { mutableStateOf(false) }
-
+    val isNewUser by authViewModel.isNewUser.collectAsState()
+    val userEmil by authViewModel.email.collectAsState()
     val windowSizeClass = calculateWindowSizeClass()
-
     val isCompactScreen = windowSizeClass.widthSizeClass ==
             WindowWidthSizeClass.Compact
 
@@ -60,7 +61,15 @@ fun AppNavigation() {
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
-                TopNavBar(appBarState)
+                TopNavBar(
+                    appBarState = appBarState,
+                    uiState = uiState,
+                    onLogout = {
+                        isLoggedIn = false
+                        appBarState.value = AppBarState.HOME
+                        authViewModel.logout()
+                    }
+                )
 
                 Box(
                     modifier = Modifier.weight(1f)
@@ -93,14 +102,28 @@ fun AppNavigation() {
                                 LoginScreen(
                                     isCompactScreen = isCompactScreen,
                                     onLoginSuccess = {
-                                    appBarState.value = AppBarState.PROFILE
-                                    isLoggedIn = true
-                                })
+                                        appBarState.value = AppBarState.PROFILE
+                                        isLoggedIn = true
+                                    },
+                                    viewModel = authViewModel
+                                )
                             } else {
                                 appBarState.value = AppBarState.HOME
                             }
                         }
-                        AppBarState.PROFILE -> {}
+                        AppBarState.PROFILE -> {
+                            ProfilePage(
+                                isCompactScreen = isCompactScreen,
+                                onLogout = {
+                                    isLoggedIn = false
+                                    appBarState.value = AppBarState.HOME
+                                    authViewModel.logout()
+                                },
+                                isNewUser = isNewUser,
+                                viewModel = authViewModel,
+                                userEmail = userEmil
+                            )
+                        }
                     }
 
                 }
