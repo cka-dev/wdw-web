@@ -34,7 +34,6 @@ class AuthPageViewModel(
     fun fetchProfile(userEmail: String) {
         viewModelScope.launch {
             val dto = repository.fetchProfileFromServer(userEmail = userEmail)
-            println("$TAG Fetched profile: $dto")
             _profileData.value = dto
         }
     }
@@ -65,13 +64,12 @@ class AuthPageViewModel(
                     userDisplayName = options.user.displayName,
                     timeout = options.timeout ?: 60000,
                     attestationType = options.attestation,
-                    authenticatorAttachment = options.authenticatorSelection.authenticatorAttachment,
+                    authenticatorAttachment = options
+                        .authenticatorSelection.authenticatorAttachment,
                     residentKey = options.authenticatorSelection.residentKey,
                     requireResidentKey = options.authenticatorSelection.requireResidentKey,
                     userVerification = options.authenticatorSelection.userVerification
                 ).await<PublicKeyCredential>()
-
-                println("$TAG: Credential: $credential")
 
                 val registrationResponse = try {
                     credential.toRegistrationResponse()
@@ -88,7 +86,6 @@ class AuthPageViewModel(
                 }
             } catch (e: Exception) {
                 _uiState.value = LoginUIState.Error("Error during registration: ${e.message}")
-                println("$TAG: Caught exception: $e")
             }
         }
     }
@@ -100,7 +97,8 @@ class AuthPageViewModel(
                 val options = repository.generatePasskeyAuthenticationOptions(email)
                     ?: throw Exception("Failed to generate authentication options")
 
-                val allowCredentialIds = options.allowCredentials?.joinToString(",", "[", "]") {
+                val allowCredentialIds =
+                    options.allowCredentials?.joinToString(",", "[", "]") {
                     "\"" + it.id.toBase64Url() + "\""
                 } ?: "[]"
 
@@ -113,16 +111,14 @@ class AuthPageViewModel(
                         allowCredentialIds = allowCredentialIds
                     ).await<PublicKeyCredential>()
 
-                    println("$TAG: Credential: $credential")
-
                     val authenticationResponse = try {
                         credential.toAuthenticationResponse()
                     } catch (e: Exception) {
-                        println("$TAG: Caught exception: $e")
                         throw e
                     }
 
-                    val verified = repository.verifyPasskeyAuthentication(authenticationResponse, email)
+                    val verified = repository
+                        .verifyPasskeyAuthentication(authenticationResponse, email)
                     if (verified) {
                         _uiState.value = LoginUIState.Authenticated
                     } else {
@@ -140,10 +136,9 @@ class AuthPageViewModel(
     }
 
     private fun JsAny.toRegistrationResponse(): RegistrationResponse {
-        println("$TAG: Converting to RegistrationResponse")
         val credential = this as? PublicKeyCredential ?: run {
-            println("$TAG: this is not a PublicKeyCredential")
-            throw IllegalStateException("Expected PublicKeyCredential but was ${this::class.simpleName}")
+            throw IllegalStateException(
+                "Expected PublicKeyCredential but was ${this::class.simpleName}")
         }
 
         val response = credential.response
@@ -164,7 +159,6 @@ class AuthPageViewModel(
 
         val response = credential.response
         if (response.authenticatorData == null || response.signature == null) {
-            println("$TAG: Response is null")
             throw IllegalStateException("AuthenticatorResponse is null")
         }
 

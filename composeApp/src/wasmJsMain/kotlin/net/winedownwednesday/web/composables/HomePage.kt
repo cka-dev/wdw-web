@@ -109,17 +109,7 @@ fun MainContent(
     val upcomingEvents by viewModel.upcomingEvents.collectAsState()
     val featuredWines by viewModel.featuredWines.collectAsState()
     val highlightedMember by viewModel.highlightedMember.collectAsState()
-
-
-
-    if(isMobile){
-        println("Mobile size detected")
-    } else {
-        println("Larger size detected")
-    }
-
     var sharedIndex by remember { mutableIntStateOf(0) }
-
     val maxListSize = maxOf(upcomingEvents.size, featuredWines.size)
 
     LaunchedEffect(maxListSize) {

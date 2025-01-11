@@ -64,13 +64,10 @@ class AppRepository (
 
             if (!remoteMemberList.isNullOrEmpty()) {
                 _members.value = remoteMemberList
-            } else {
-                println("$TAG: Returned member list is empty.")
             }
         } catch (e: Exception) {
             println("$TAG: Error fetching members.")
         }
-
     }
 
     private suspend fun fetchEvents() {
@@ -78,8 +75,6 @@ class AppRepository (
             val remoteEventList = remoteDataSource.fetchEvents()
             if (!remoteEventList.isNullOrEmpty()) {
                 _events.value = remoteEventList
-            } else {
-                println("$TAG: Returned event list is empty.")
             }
         } catch (e: Exception) {
             println("$TAG: Error fetching events.")
@@ -91,8 +86,6 @@ class AppRepository (
             val remoteEpisodeList = remoteDataSource.fetchEpisodes()
             if (!remoteEpisodeList.isNullOrEmpty()) {
                 _episodes.value = remoteEpisodeList
-            } else {
-                println("$TAG: Returned episode list is empty.")
             }
         } catch (e: Exception) {
             println("$TAG: Error fetching episodes.")
@@ -104,8 +97,6 @@ class AppRepository (
             val remoteAboutItemList = remoteDataSource.fetchAboutItems()
             if (remoteAboutItemList.isNotEmpty()) {
                 _aboutItems.value = remoteAboutItemList
-            } else {
-                println("$TAG: Returned about item list is empty.")
             }
         } catch (e: Exception) {
             println("$TAG: Error fetching about items.")
@@ -117,8 +108,6 @@ class AppRepository (
             val remoteWineList = remoteDataSource.fetchWines()
             if (!remoteWineList.isNullOrEmpty()){
                 _wineList.value = remoteWineList
-            } else {
-                println("$TAG: Returned wine list is empty.")
             }
         } catch (e: Exception) {
             println("$TAG: Error fetching wine list with message: ${e.message}")

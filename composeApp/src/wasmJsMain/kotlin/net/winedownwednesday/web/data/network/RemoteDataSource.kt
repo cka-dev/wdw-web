@@ -56,7 +56,6 @@ class RemoteDataSource (
             }.body()
         } catch (e: Exception) {
             _error.value = e.message ?: "Unknown error occurred"
-            println("Error fetching episodes: ${e.message}")
             e.message?.let { Logger.SIMPLE.log(it) }
             null
         } finally {
@@ -75,7 +74,6 @@ class RemoteDataSource (
             }.body()
         } catch (e: Exception) {
             _error.value = e.message ?: "Unknown error occurred"
-            println("Error fetching about items: ${e.message}")
             e.message?.let { Logger.SIMPLE.log(it) }
             listOf()
         } finally {
@@ -94,7 +92,6 @@ class RemoteDataSource (
             }.body()
         } catch (e: Exception) {
             _error.value = e.message ?: "Unknown error occurred"
-            println("Error fetching wines: ${e.message}")
             e.message?.let { Logger.SIMPLE.log(it) }
             null
         } finally {
@@ -113,7 +110,6 @@ class RemoteDataSource (
             }.body()
         } catch (e: Exception) {
             _error.value = e.message ?: "Unknown error occurred"
-            println("Error fetching members: ${e.message}")
             e.message?.let { Logger.SIMPLE.log(it) }
         } finally {
             _isLoading.value = false
@@ -132,7 +128,6 @@ class RemoteDataSource (
             }.body()
         } catch (e: Exception) {
             _error.value = e.message ?: "Unknown error occurred"
-            println("Error fetching events: ${e.message}")
             e.message?.let { Logger.SIMPLE.log(it) }
             null
         } finally {
@@ -152,7 +147,6 @@ class RemoteDataSource (
             response.status.isSuccess()
         } catch (e: Exception) {
             _error.value = e.message
-            println("Error posting RSVP: ${e.message}")
             false
         } finally {
             _isLoading.value = false
@@ -168,7 +162,6 @@ class RemoteDataSource (
             }.body()
         } catch (e: Exception) {
             _error.value = e.message
-            println("Error generating registration options: ${e.message}")
             null
         } finally {
             _isLoading.value = false
@@ -185,7 +178,6 @@ class RemoteDataSource (
             response.body<Map<String, Boolean>>()["verified"] ?: false
         } catch (e: Exception) {
             _error.value = e.message
-            println("Error verifying registration: ${e.message}")
             false
         } finally {
             _isLoading.value = false
@@ -201,7 +193,6 @@ class RemoteDataSource (
             }.body()
         } catch (e: Exception) {
             _error.value = e.message
-            println("Error generating authentication options: ${e.message}")
             null
         } finally {
             _isLoading.value = false
@@ -218,7 +209,6 @@ class RemoteDataSource (
             response.body<Map<String, Boolean>>()["verified"] ?: false
         } catch (e: Exception) {
             _error.value = e.message
-            println("Error verifying authentication: ${e.message}")
             false
         } finally {
             _isLoading.value = false
@@ -234,7 +224,6 @@ class RemoteDataSource (
                 }
             }
             val jsonString = response.bodyAsText()
-            println("Received JSON from server: $jsonString")
             Json.decodeFromString<UserProfileData>(jsonString)
         } catch (e: Exception) {
             println("Error fetching profile: ${e.message}")
