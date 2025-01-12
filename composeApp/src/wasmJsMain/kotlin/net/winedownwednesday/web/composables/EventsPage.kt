@@ -85,13 +85,15 @@ import net.winedownwednesday.web.data.MediaItem
 import net.winedownwednesday.web.data.MediaType
 import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.viewmodels.EventsPageViewModel
+import net.winedownwednesday.web.viewmodels.LoginUIState
 import org.koin.compose.koinInject
 import kotlin.contracts.ExperimentalContracts
 
 
 @Composable
 fun EventsPage(
-    isCompactScreen: Boolean
+    isCompactScreen: Boolean,
+    uiState: LoginUIState
 ) {
     val viewModel: EventsPageViewModel = koinInject()
 
@@ -166,7 +168,8 @@ fun EventsPage(
                         },
                         viewModel = viewModel,
                         showUpcoming = showUpcoming,
-                        isCompactScreen = isCompactScreen
+                        isCompactScreen = isCompactScreen,
+                        uiState = uiState
                     )
                 }
             }
@@ -198,6 +201,7 @@ fun EventCard(
     viewModel: EventsPageViewModel,
     showUpcoming: Boolean,
     isCompactScreen: Boolean,
+    uiState: LoginUIState,
     modifier: Modifier = Modifier
 ) {
     val showRegistrationForm = remember {
@@ -279,6 +283,11 @@ fun EventCard(
                 Button(
                     enabled = showUpcoming,
                     onClick = {
+                        if (uiState == LoginUIState.Authenticated) {
+                            showRegistrationForm.value = true
+                        } else {
+                            window.alert("You need to login in to RSVP")
+                        }
                         showRegistrationForm.value = true
                     },
                     colors = ButtonDefaults.buttonColors(
@@ -298,6 +307,7 @@ fun EventCard(
             onDismissRequest = { showRegistrationForm.value = false},
             event = event,
             isCompactScreen = isCompactScreen,
+            uiState = uiState,
             onSubmit = { rsvpRequest ->
                 viewModel.mimicValidateAndSubmitRSVP(rsvpRequest) { success, errors ->
                     if (!success) {
@@ -700,6 +710,7 @@ fun RSVPComponent(
     onDismissRequest: () -> Unit,
     onSubmit: (RSVPRequest) -> Unit,
     isCompactScreen: Boolean,
+    uiState: LoginUIState,
     modifier: Modifier = Modifier
 ) {
     var firstName by rememberSaveable { mutableStateOf("") }
@@ -784,7 +795,8 @@ fun RSVPComponent(
                                 guestsCount = guestsCount
                             )
                             onSubmit(rsvp)
-                        }
+                        },
+                        uiState = uiState
                     )
 
                 } else {
@@ -846,58 +858,6 @@ fun RSVPComponent(
                         }
                     )
                 }
-
-//                Row(verticalAlignment = Alignment.CenterVertically) {
-//                    Text("Number of guests: ", style = MaterialTheme.typography.bodyLarge)
-//                    Spacer(modifier = Modifier.width(8.dp))
-//                    OutlinedTextField(
-//                        value = guestsCountText,
-//                        onValueChange = { newVal ->
-//                            guestsError = ""
-//                            if (newVal.isEmpty()) {
-//                                guestsCountText = ""
-//                                guestsCount = 1
-//                            } else {
-//                                val parsedInt = newVal.toIntOrNull()
-//                                if (parsedInt != null && parsedInt in 1..10) {
-//                                    guestsCountText = newVal
-//                                    guestsCount = parsedInt
-//                                }
-//                            }
-//                        },
-//                        label = { Text("Guests") },
-//                        isError = guestsError.isNotEmpty(),
-//                        supportingText = {
-//                            if (guestsError.isNotEmpty()) {
-//                                Text(text = guestsError, color = MaterialTheme.colorScheme.error)
-//                            }
-//                        },
-//                        singleLine = true,
-//                        modifier = Modifier.width(80.dp)
-//                    )
-//                }
-//
-//                Button(
-//                    onClick = {
-//                        val rsvp = RSVPRequest(
-//                            eventId = event.id,
-//                            firstName = firstName,
-//                            lastName = lastName,
-//                            email = email,
-//                            phoneNumber = phoneNumber,
-//                            allowUpdates = allowUpdates,
-//                            guestsCount = guestsCount
-//                        )
-//                        onSubmit(rsvp)
-//                    },
-//                    modifier = Modifier.fillMaxWidth(),
-//                    colors = ButtonDefaults.buttonColors(
-//                        containerColor = Color(0xFFFF7F33),
-//                        contentColor = Color.White
-//                    )
-//                ) {
-//                    Text("Submit")
-//                }
             }
         }
     }
@@ -1121,7 +1081,9 @@ fun NonCompactReservationFields(
     emailError: String,
     phoneError: String,
     guestsError: String,
-    onSubmit: () -> Unit
+    onSubmit: () -> Unit,
+    uiState: LoginUIState,
+    modifier: Modifier = Modifier
 ) {
     Card(
         elevation = CardDefaults.elevatedCardElevation(4.dp),
@@ -1253,14 +1215,18 @@ fun NonCompactReservationFields(
     Spacer(modifier = Modifier.height(16.dp))
     Button(
         onClick = onSubmit,
-        modifier = Modifier.fillMaxWidth(),
+        enabled = uiState is LoginUIState.Authenticated,
         colors = ButtonDefaults.buttonColors(
             containerColor = Color(0xFFFF7F33),
             contentColor = Color.White
-        )
+        ),
+        modifier = Modifier.fillMaxWidth(),
     ) {
-        Text("Submit")
+        Text(
+            text = if (uiState is LoginUIState.Authenticated) "Submit" else "Log in to RSVP"
+        )
     }
+
 }
 
 

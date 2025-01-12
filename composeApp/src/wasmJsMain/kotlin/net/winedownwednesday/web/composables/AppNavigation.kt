@@ -92,7 +92,8 @@ fun AppNavigation(
                             isCompactScreen = isCompactScreen
                         )
                         AppBarState.EVENTS -> EventsPage(
-                            isCompactScreen = isCompactScreen
+                            isCompactScreen = isCompactScreen,
+                            uiState = uiState,
                         )
                         AppBarState.WINES -> WinePage(
                             isCompactScreen = isCompactScreen
