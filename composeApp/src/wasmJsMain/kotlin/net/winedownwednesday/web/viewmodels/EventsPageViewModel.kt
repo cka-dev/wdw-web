@@ -112,6 +112,18 @@ class EventsPageViewModel(
         onResult(true, emptyMap())
     }
 
+    fun addRsvpToEvent(rsvp: RSVPRequest, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val success = repository.addRsvpToEvent(rsvp)
+                onResult(success)
+            } catch (e: Exception) {
+                println("$TAG: Error adding RSVP to event: ${e.message}")
+                onResult(false)
+            }
+        }
+    }
+
     companion object {
         private const val TAG = "EventsPageViewModel"
     }

@@ -45,7 +45,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import kotlinx.browser.window
 import kotlinx.coroutines.delay
 import net.winedownwednesday.web.data.Event
 import net.winedownwednesday.web.data.Member
@@ -589,9 +588,7 @@ fun HomePageEventCard(
             {
                 Button(
                     onClick = {
-                        event.registrationLink?.let {
-                            window.open(it, "_blank")
-                        }
+                        // TODO: show RSVP dialog
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color.White,

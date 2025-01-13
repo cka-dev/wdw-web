@@ -45,5 +45,6 @@ interface ApiService {
     suspend fun fetchUserProfile(userEmail: String): UserProfileData?
     suspend fun updateProfile(profileData: UserProfileData): Boolean
 
+    suspend fun addRsvpToEvent(rsvp: RSVPRequest): Boolean
 
 }

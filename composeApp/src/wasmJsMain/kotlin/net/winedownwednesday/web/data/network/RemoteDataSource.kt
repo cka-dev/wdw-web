@@ -244,6 +244,19 @@ class RemoteDataSource (
         }
     }
 
+    override suspend fun addRsvpToEvent(rsvp: RSVPRequest): Boolean {
+        return try {
+            val response: HttpResponse = client.post("$SERVER_URL/addRsvpToEvent") {
+                contentType(ContentType.Application.Json)
+                setBody(rsvp)
+            }
+            response.status.isSuccess()
+        } catch (e: Exception) {
+            println("Error adding RSVP to event: ${e.message}")
+            false
+        }
+    }
+
     companion object{
         private const val SERVER_URL =
             "https://us-central1-wdw-app-52a3c.cloudfunctions.net"

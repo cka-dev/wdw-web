@@ -672,30 +672,3 @@ fun ProfilePictureSection(
         }
     }
 }
-
-@Composable
-fun Toast(message: String) {
-    var showToast by remember { mutableStateOf(true) }
-
-    LaunchedEffect(key1 = message) {
-        delay(3000)
-        showToast = false
-    }
-
-    if (showToast) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            contentAlignment = Alignment.BottomCenter
-        ) {
-            Box(
-                modifier = Modifier
-                    .background(Color.Black.copy(alpha = 0.8f))
-                    .padding(16.dp)
-            ) {
-                Text(text = message, color = Color.White)
-            }
-        }
-    }
-}

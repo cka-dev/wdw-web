@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import net.winedownwednesday.web.PublicKeyCredential
 import net.winedownwednesday.web.data.models.AuthenticationResponse
+import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.data.models.RegistrationResponse
 import net.winedownwednesday.web.data.models.UserProfileData
 import net.winedownwednesday.web.data.repositories.AppRepository
@@ -212,6 +213,38 @@ class AuthPageViewModel(
     fun setEmail(email: String) {
         viewModelScope.launch {
             _email.value = email
+        }
+    }
+
+    fun hasUserRsvped(eventId: Int): Boolean {
+        val currentProfile = _profileData.value ?: return false
+        return currentProfile.eventRsvps?.containsKey(eventId) ?: false
+    }
+
+    fun getRsvpForEvent(eventId: Int): RSVPRequest? {
+        return _profileData.value?.eventRsvps?.get(eventId)
+    }
+
+    fun saveRsvpInProfile(
+        rsvp: RSVPRequest,
+        onResult: (Boolean) -> Unit
+    ) {
+        val oldProfile = _profileData.value ?: return
+        val newMap = oldProfile.eventRsvps?.toMutableMap()?.apply {
+            put(rsvp.eventId, rsvp)
+        }
+        val updatedProfile = oldProfile.copy(eventRsvps = newMap)
+        _profileData.value = updatedProfile
+        try{
+            saveProfile(updatedProfile) { success ->
+                if (!success) {
+                    _profileData.value = oldProfile
+                }
+            }
+            onResult(true)
+        } catch (e: Exception) {
+            println("$TAG: Error saving RSVP: ${e.message}")
+            onResult(false)
         }
     }
 

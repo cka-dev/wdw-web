@@ -84,6 +84,9 @@ kotlin {
             implementation("io.github.vinceglb:filekit-compose:0.8.8")
 
             implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
+
+            // Icons Extension
+            implementation("org.jetbrains.compose.material:material-icons-extended:1.6.11")
         }
         wasmJsMain.dependencies {
             implementation("org.jetbrains.kotlinx:kotlinx-browser:0.3")

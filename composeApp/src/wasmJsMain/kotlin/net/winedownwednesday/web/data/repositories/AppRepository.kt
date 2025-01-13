@@ -142,6 +142,10 @@ class AppRepository (
         return remoteDataSource.updateProfile(userProfileData)
     }
 
+    suspend fun addRsvpToEvent(rsvp: RSVPRequest): Boolean {
+        return remoteDataSource.addRsvpToEvent(rsvp)
+    }
+
     companion object{
         private const val TAG = "AppRepository"
     }

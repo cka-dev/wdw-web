@@ -1,12 +1,10 @@
 package net.winedownwednesday.web.data.models
 
-import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import net.winedownwednesday.web.ImageBitmapSerializer
 import org.jetbrains.skia.Bitmap
 
-@OptIn(ExperimentalSerializationApi::class)
-//@JsonIgnoreUnknownKeys
+
 @Serializable
 data class UserProfileData(
     val name: String?,
@@ -18,5 +16,6 @@ data class UserProfileData(
     val profileImageUrl: String? = null,
     val birthDate: String? = null,
     val isVerified: Boolean? = false,
-    val isMember: Boolean? = false
+    val isMember: Boolean? = false,
+    val eventRsvps: Map<Int, RSVPRequest>? = emptyMap()
 )
