@@ -44,7 +44,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -109,6 +108,10 @@ fun EventsPage(
     var showUpcoming by remember { mutableStateOf(true) }
 
     val selectedEvent by viewModel.selectedEvent.collectAsState()
+
+    val showRegistrationForm = remember {
+        mutableStateOf(false)
+    }
 
     Column(
         modifier = Modifier
@@ -176,7 +179,14 @@ fun EventsPage(
                         showUpcoming = showUpcoming,
                         isCompactScreen = isCompactScreen,
                         uiState = uiState,
-                        authPageViewModel = authPageViewModel
+                        authPageViewModel = authPageViewModel,
+                        onRsvpClick = {
+                            showRegistrationForm.value = true
+                        },
+                        onDismissRequest = {
+                            showRegistrationForm.value = false
+                        },
+                        showRegistrationForm = showRegistrationForm.value
                     )
                 }
             }
@@ -189,6 +199,9 @@ fun EventsPage(
                 event = selectedEvent!!,
                 onDismissRequest = {
                     viewModel.setSelectedEvent(null)
+                },
+                onRsvpClick = {
+                    showRegistrationForm.value = true
                 }
             )
         } else {
@@ -196,7 +209,11 @@ fun EventsPage(
                 selectedEvent = selectedEvent!!,
                 onDismissRequest = {
                     viewModel.setSelectedEvent(null)
-                })
+                },
+                onRsvpClick = {
+                    showRegistrationForm.value = true
+                }
+            )
         }
     }
 }
@@ -210,11 +227,12 @@ fun EventCard(
     showUpcoming: Boolean,
     isCompactScreen: Boolean,
     uiState: LoginUIState,
+    onRsvpClick: () -> Unit,
+    onDismissRequest: () -> Unit,
+    showRegistrationForm: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val showRegistrationForm = remember {
-        mutableStateOf(false)
-    }
+
     val userProfileData by authPageViewModel.profileData.collectAsState()
 
     val isUserAuthenticated = (uiState is LoginUIState.Authenticated)
@@ -222,7 +240,7 @@ fun EventCard(
     val userHasRsvped = authPageViewModel.hasUserRsvped(event.id)
 
     val buttonLabel = when {
-        userHasRsvped -> "Modify RSVP"
+        userHasRsvped -> "Modify Your RSVP"
         else -> "RSVP"
     }
 
@@ -308,11 +326,10 @@ fun EventCard(
                     enabled = showUpcoming,
                     onClick = {
                         if (isUserAuthenticated) {
-                            showRegistrationForm.value = true
+                            onRsvpClick()
                         } else {
-                            window.alert("You need to login in to RSVP")
+                            window.alert("You need to register or log in in to RSVP")
                         }
-                        showRegistrationForm.value = true
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color.White,
@@ -328,32 +345,33 @@ fun EventCard(
         }
     }
 
-    AnimatedVisibility (showRegistrationForm.value) {
+    AnimatedVisibility (showRegistrationForm) {
         RSVPComponent(
-            onDismissRequest = { showRegistrationForm.value = false},
+            onDismissRequest = { onDismissRequest() },
             event = event,
-            existingRsvp = if (userHasRsvped) authPageViewModel.getRsvpForEvent(event.id) else null,
+            existingRsvp = if (userHasRsvped) authPageViewModel.getRsvpForEvent(
+                event.id) else null,
             isCompactScreen = isCompactScreen,
             uiState = uiState,
             userProfileData = userProfileData,
             showProgressBar = showProgressBar.value,
-            showSuccessToast = showSuccessToast.value,
-            showErrorToast = showErrorToast.value,
             onSubmit = { rsvpRequest ->
-                var submissionStatus = mutableStateOf<SubmissionStatus>(SubmissionStatus.InProgress)
-
+                val submissionStatus =
+                    mutableStateOf<SubmissionStatus>(SubmissionStatus.InProgress)
                 authPageViewModel.saveRsvpInProfile(rsvpRequest) { profileSaveSuccess ->
                     if (profileSaveSuccess) {
                         viewModel.addRsvpToEvent(rsvpRequest) { eventUpdateSuccess ->
                             if (eventUpdateSuccess) {
                                 submissionStatus.value = SubmissionStatus.Success
-                                showRegistrationForm.value = false
+                                onDismissRequest()
                             } else {
-                                submissionStatus.value = SubmissionStatus.Failure("Failed to update event RSVP.")
+                                submissionStatus.value = SubmissionStatus.Failure(
+                                    "Failed to update event RSVP.")
                             }
                         }
                     } else {
-                        submissionStatus.value = SubmissionStatus.Failure("Failed to save RSVP in your profile.")
+                        submissionStatus.value = SubmissionStatus.Failure(
+                            "Failed to save RSVP in your profile.")
                     }
                 }
 
@@ -379,30 +397,22 @@ fun EventCard(
                         }
                     }
                     is SubmissionStatus.Idle -> {
-                        // do nothing
+                        showProgressBar.value = false
                     }
                 }
             }
-//            onSubmit = { rsvpRequest ->
-//                authPageViewModel.saveRsvpInProfile(rsvpRequest) { success ->
-//                    if (success) {
-//                        showRegistrationForm.value = false
-//                    } else {
-//                        window.alert("We couldn't submit your RSVP. Try again.")
-//                    }
-//
-//                }
-//                viewModel.addRsvpToEvent(rsvpRequest) { success ->
-//                    if (success) {
-//                        println("addRsvpToEvent succeeded")
-////                        showRegistrationForm.value = false
-//                    } else {
-//                        println("addRsvpToEvent failed")
-////                        window.alert("We couldn't submit your RSVP. Try again.")
-//                    }
-//                }
-//            }
         )
+        if (showSuccessToast.value){
+            Toast(
+                message = "RSVP submitted successfully!"
+            )
+        }
+
+        if (showErrorToast.value){
+            Toast(
+                message = "Failed to submit RSVP. Please try again."
+            )
+        }
 
     }
 }
@@ -411,6 +421,7 @@ fun EventCard(
 fun LargeScreenEventDetailPopup(
     selectedEvent: Event,
     onDismissRequest: () -> Unit,
+    onRsvpClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -427,7 +438,11 @@ fun LargeScreenEventDetailPopup(
                 .fillMaxWidth(0.4f)
                 .padding(16.dp)
         ) {
-            EventDetailContent(event = selectedEvent, onCloseClick = onDismissRequest)
+            EventDetailContent(
+                event = selectedEvent,
+                onCloseClick = onDismissRequest,
+                onRsvpClick = onRsvpClick
+            )
         }
     }
 }
@@ -436,6 +451,7 @@ fun LargeScreenEventDetailPopup(
 fun CompactScreenEventDetailPopup(
     event: Event,
     onDismissRequest: () -> Unit,
+    onRsvpClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -452,7 +468,11 @@ fun CompactScreenEventDetailPopup(
                 .fillMaxWidth(0.9f)
                 .padding(16.dp)
         ) {
-            EventDetailContent(event = event, onCloseClick = onDismissRequest)
+            EventDetailContent(
+                event = event,
+                onCloseClick = onDismissRequest,
+                onRsvpClick = onRsvpClick
+            )
         }
     }
 }
@@ -461,6 +481,7 @@ fun CompactScreenEventDetailPopup(
 fun EventDetailContent(
     event: Event,
     onCloseClick: () -> Unit,
+    onRsvpClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
 
@@ -513,7 +534,8 @@ fun EventDetailContent(
         if (!event.time.isNullOrBlank()) {
             EventDetailRow(label = "Time", value = event.time)
         }
-        EventDetailRow(label = "Event Type", value = event.eventType.toString().replace('_', ' '))
+        EventDetailRow(label = "Event Type", value = event
+            .eventType.toString().replace('_', ' '))
         EventDetailRow(label = "Location", value = event.location)
         EventDetailRow(label = "Description", value = event.description)
 
@@ -535,7 +557,7 @@ fun EventDetailContent(
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
-                    // TODO: show registration form
+                    onRsvpClick()
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -641,7 +663,8 @@ fun GalleryViewer(
                     ) { page ->
                         val mediaItem = mediaItems[page]
                         when {
-                            mediaItem.type == MediaType.IMAGE && !mediaItem.contentUrl.isNullOrEmpty() -> {
+                            mediaItem.type == MediaType.IMAGE &&
+                                    !mediaItem.contentUrl.isNullOrEmpty() -> {
                                 AsyncImage(
                                     model = mediaItem.contentUrl,
                                     contentDescription = "Image ${mediaItem.contentUrl}",
@@ -650,7 +673,8 @@ fun GalleryViewer(
                                 )
                             }
 
-                            mediaItem.type == MediaType.VIDEO && !mediaItem.contentUrl.isNullOrEmpty() -> {
+                            mediaItem.type == MediaType.VIDEO &&
+                                    !mediaItem.contentUrl.isNullOrEmpty() -> {
                                 KmpVideoPlayer(mediaItem.contentUrl)
                             }
 
@@ -790,8 +814,6 @@ fun RSVPComponent(
     userProfileData: UserProfileData?,
     existingRsvp: RSVPRequest?,
     showProgressBar: Boolean,
-    showSuccessToast: Boolean,
-    showErrorToast: Boolean,
     modifier: Modifier = Modifier
 ) {
     val safeName = (userProfileData?.name ?: "").trim()
@@ -802,13 +824,20 @@ fun RSVPComponent(
         else -> ""
     }
 
-    var firstName by rememberSaveable { mutableStateOf(existingRsvp?.firstName ?: profileDataFirstName) }
-    var lastName by rememberSaveable { mutableStateOf(existingRsvp?.lastName ?: profileDataLastName) }
-    var email by rememberSaveable { mutableStateOf(existingRsvp?.email ?: userProfileData?.email) }
-    var phoneNumber by rememberSaveable { mutableStateOf(existingRsvp?.phoneNumber ?: userProfileData?.phone) }
-    var guestsCount by rememberSaveable { mutableStateOf(existingRsvp?.guestsCount ?: 1) }
-    var allowUpdates by rememberSaveable { mutableStateOf(true) }
-    var guestsCountText by rememberSaveable { mutableStateOf(existingRsvp?.guestsCount ?: "1") }
+    var firstName by rememberSaveable {
+        mutableStateOf(existingRsvp?.firstName ?: profileDataFirstName) }
+    var lastName by rememberSaveable {
+        mutableStateOf(existingRsvp?.lastName ?: profileDataLastName) }
+    var email by rememberSaveable {
+        mutableStateOf(existingRsvp?.email ?: userProfileData?.email) }
+    var phoneNumber by rememberSaveable {
+        mutableStateOf(existingRsvp?.phoneNumber ?: userProfileData?.phone) }
+    var guestsCount by rememberSaveable {
+        mutableStateOf(existingRsvp?.guestsCount ?: 1) }
+    var allowUpdates by rememberSaveable {
+        mutableStateOf(true) }
+    var guestsCountText by rememberSaveable {
+        mutableStateOf(existingRsvp?.guestsCount ?: "1") }
 
     var firstNameError by rememberSaveable { mutableStateOf("") }
     var lastNameError by rememberSaveable { mutableStateOf("") }
@@ -817,152 +846,143 @@ fun RSVPComponent(
     var guestsError by rememberSaveable { mutableStateOf("") }
 
     Dialog(onDismissRequest = onDismissRequest) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+        Column {
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
-                if (!isCompactScreen) {
-                    NonCompactReservationFields(
-                        event = event,
-                        firstName = firstName,
-                        onFirstNameChange = {
-                            firstName = it
-                            firstNameError = ""
-                        },
-                        lastName = lastName,
-                        onLastNameChange = {
-                            lastName = it
-                            lastNameError = ""
-                        },
-                        email = email,
-                        onEmailChange = {
-                            email = it
-                            emailError = ""
-                        },
-                        phoneNumber = phoneNumber,
-                        onPhoneNumberChange = {
-                            phoneNumber = it
-                            phoneError = ""
-                        },
-                        guestsCountText = guestsCountText.toString(),
-                        guestCount = guestsCount,
-                        onGuestsCountChange = { newVal ->
-                            guestsError = ""
-                            if (newVal.isEmpty()) {
-                                guestsCountText = ""
-                                guestsCount = 1
-                            } else {
-                                newVal.toIntOrNull()?.let { parsed ->
-                                    if (parsed in 1..10) {
-                                        guestsCountText = newVal
-                                        guestsCount = parsed
-                                    }
-                                }
-                            }
-                        },
-                        allowUpdates = allowUpdates,
-                        onAllowUpdatesToggle = { allowUpdates = it },
-                        firstNameError = firstNameError,
-                        lastNameError = lastNameError,
-                        emailError = emailError,
-                        phoneError = phoneError,
-                        guestsError = guestsError,
-                        onSubmit = {
-                            val rsvp = RSVPRequest(
-                                eventId = event.id,
-                                firstName = firstName,
-                                lastName = lastName,
-                                email = email ?: "",
-                                phoneNumber = phoneNumber ?: "",
-                                allowUpdates = allowUpdates,
-                                guestsCount = guestsCount
-                            )
-                            onSubmit(rsvp)
-                        },
-                        uiState = uiState
-                    )
 
-                } else {
-                    CompactScreenReservationFields(
-                        event = event,
-                        firstName = firstName,
-                        onFirstNameChange = {
-                            firstName = it
-                            firstNameError = ""
-                        },
-                        lastName = lastName,
-                        onLastNameChange = {
-                            lastName = it
-                            lastNameError = ""
-                        },
-                        email = email,
-                        onEmailChange = {
-                            email = it
-                            emailError = ""
-                        },
-                        phoneNumber = phoneNumber,
-                        onPhoneNumberChange = {
-                            phoneNumber = it
-                            phoneError = ""
-                        },
-                        guestsCountText = guestsCountText.toString(),
-                        onGuestsCountChange = { newVal ->
-                            guestsError = ""
-                            if (newVal.isEmpty()) {
-                                guestsCountText = ""
-                                guestsCount = 1
-                            } else {
-                                newVal.toIntOrNull()?.let { parsed ->
-                                    if (parsed in 1..10) {
-                                        guestsCountText = newVal
-                                        guestsCount = parsed
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    if (!isCompactScreen) {
+                        NonCompactReservationFields(
+                            event = event,
+                            firstName = firstName,
+                            onFirstNameChange = {
+                                firstName = it
+                                firstNameError = ""
+                            },
+                            lastName = lastName,
+                            onLastNameChange = {
+                                lastName = it
+                                lastNameError = ""
+                            },
+                            email = email,
+                            onEmailChange = {
+                                email = it
+                                emailError = ""
+                            },
+                            phoneNumber = phoneNumber,
+                            onPhoneNumberChange = {
+                                phoneNumber = it
+                                phoneError = ""
+                            },
+                            guestsCountText = guestsCountText.toString(),
+                            guestCount = guestsCount,
+                            onGuestsCountChange = { newVal ->
+                                guestsError = ""
+                                if (newVal.isEmpty()) {
+                                    guestsCountText = ""
+                                    guestsCount = 1
+                                } else {
+                                    newVal.toIntOrNull()?.let { parsed ->
+                                        if (parsed in 1..10) {
+                                            guestsCountText = newVal
+                                            guestsCount = parsed
+                                        }
                                     }
                                 }
+                            },
+                            allowUpdates = allowUpdates,
+                            onAllowUpdatesToggle = { allowUpdates = it },
+                            firstNameError = firstNameError,
+                            lastNameError = lastNameError,
+                            emailError = emailError,
+                            phoneError = phoneError,
+                            guestsError = guestsError,
+                            onSubmit = {
+                                val rsvp = RSVPRequest(
+                                    eventId = event.id,
+                                    firstName = firstName,
+                                    lastName = lastName,
+                                    email = email ?: "",
+                                    phoneNumber = phoneNumber ?: "",
+                                    allowUpdates = allowUpdates,
+                                    guestsCount = guestsCount
+                                )
+                                onSubmit(rsvp)
+                            },
+                            uiState = uiState
+                        )
+
+                    } else {
+                        CompactScreenReservationFields(
+                            event = event,
+                            firstName = firstName,
+                            onFirstNameChange = {
+                                firstName = it
+                                firstNameError = ""
+                            },
+                            lastName = lastName,
+                            onLastNameChange = {
+                                lastName = it
+                                lastNameError = ""
+                            },
+                            email = email,
+                            onEmailChange = {
+                                email = it
+                                emailError = ""
+                            },
+                            phoneNumber = phoneNumber,
+                            onPhoneNumberChange = {
+                                phoneNumber = it
+                                phoneError = ""
+                            },
+                            guestsCountText = guestsCountText.toString(),
+                            onGuestsCountChange = { newVal ->
+                                guestsError = ""
+                                if (newVal.isEmpty()) {
+                                    guestsCountText = ""
+                                    guestsCount = 1
+                                } else {
+                                    newVal.toIntOrNull()?.let { parsed ->
+                                        if (parsed in 1..10) {
+                                            guestsCountText = newVal
+                                            guestsCount = parsed
+                                        }
+                                    }
+                                }
+                            },
+                            allowUpdates = allowUpdates,
+                            onAllowUpdatesToggle = { allowUpdates = it },
+                            firstNameError = firstNameError,
+                            lastNameError = lastNameError,
+                            emailError = emailError,
+                            phoneError = phoneError,
+                            guestsError = guestsError,
+                            onSubmit = {
+                                val rsvp = RSVPRequest(
+                                    eventId = event.id,
+                                    firstName = firstName,
+                                    lastName = lastName,
+                                    email = email ?: "",
+                                    phoneNumber = phoneNumber ?: "",
+                                    allowUpdates = allowUpdates,
+                                    guestsCount = guestsCount
+                                )
+                                onSubmit(rsvp)
                             }
-                        },
-                        allowUpdates = allowUpdates,
-                        onAllowUpdatesToggle = { allowUpdates = it },
-                        firstNameError = firstNameError,
-                        lastNameError = lastNameError,
-                        emailError = emailError,
-                        phoneError = phoneError,
-                        guestsError = guestsError,
-                        onSubmit = {
-                            val rsvp = RSVPRequest(
-                                eventId = event.id,
-                                firstName = firstName,
-                                lastName = lastName,
-                                email = email ?: "",
-                                phoneNumber = phoneNumber ?: "",
-                                allowUpdates = allowUpdates,
-                                guestsCount = guestsCount
-                            )
-                            onSubmit(rsvp)
-                        }
-                    )
+                        )
+                    }
+                    AnimatedVisibility(showProgressBar) {
+                        LinearProgressBar()
+                    }
                 }
-            }
-            if (showProgressBar){
-                CircularProgressIndicator()
-            }
-
-            if (showSuccessToast){
-                Toast(
-                    message = "RSVP submitted successfully!"
-                )
-            }
-
-            if (showErrorToast){
-                Toast(
-                    message = "Failed to submit RSVP. Please try again."
-                )
             }
         }
     }

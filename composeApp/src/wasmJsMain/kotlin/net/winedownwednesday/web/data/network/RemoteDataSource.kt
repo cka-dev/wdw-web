@@ -127,6 +127,7 @@ class RemoteDataSource (
                 }
             }.body()
         } catch (e: Exception) {
+            println("Error fetching events: ${e.message}")
             _error.value = e.message ?: "Unknown error occurred"
             e.message?.let { Logger.SIMPLE.log(it) }
             null
@@ -153,7 +154,8 @@ class RemoteDataSource (
         }
     }
 
-    override suspend fun generatePasskeyRegistrationOptions(email: String): PublicKeyCredentialCreationOptions? {
+    override suspend fun generatePasskeyRegistrationOptions(email: String):
+            PublicKeyCredentialCreationOptions? {
         _isLoading.value = true
         return try {
             client.post("$SERVER_URL/generatePasskeyRegistrationOptions") {
@@ -168,10 +170,12 @@ class RemoteDataSource (
         }
     }
 
-    override suspend fun verifyPasskeyRegistration(credential: RegistrationResponse, email: String): Boolean {
+    override suspend fun verifyPasskeyRegistration(
+        credential: RegistrationResponse, email: String): Boolean {
         _isLoading.value = true
         return try {
-            val response: HttpResponse = client.post("$SERVER_URL/verifyPasskeyRegistration") {
+            val response: HttpResponse = client.post(
+                "$SERVER_URL/verifyPasskeyRegistration") {
                 contentType(ContentType.Application.Json)
                 setBody(VerifyRegistrationRequest(credential, email))
             }
@@ -184,7 +188,8 @@ class RemoteDataSource (
         }
     }
 
-    override suspend fun generatePasskeyAuthenticationOptions(email: String): PublicKeyCredentialRequestOptions? {
+    override suspend fun generatePasskeyAuthenticationOptions(
+        email: String): PublicKeyCredentialRequestOptions? {
         _isLoading.value = true
         return try {
             client.post("$SERVER_URL/generatePasskeyAuthenticationOptions") {
@@ -199,10 +204,12 @@ class RemoteDataSource (
         }
     }
 
-    override suspend fun verifyPasskeyAuthentication(credential: AuthenticationResponse, email: String): Boolean {
+    override suspend fun verifyPasskeyAuthentication(
+        credential: AuthenticationResponse, email: String): Boolean {
         _isLoading.value = true
         return try {
-            val response: HttpResponse = client.post("$SERVER_URL/verifyPasskeyAuthentication") {
+            val response: HttpResponse = client.post(
+                "$SERVER_URL/verifyPasskeyAuthentication") {
                 contentType(ContentType.Application.Json)
                 setBody(VerifyAuthenticationRequest(credential, email))
             }

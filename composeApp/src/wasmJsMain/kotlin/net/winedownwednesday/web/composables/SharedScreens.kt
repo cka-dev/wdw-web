@@ -19,8 +19,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -182,8 +184,8 @@ fun Footer(
     isMobile: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val instagram_link = "https://www.instagram.com/uncorked.conversations/"
-    val youtube_link = "https://www.youtube.com/@FreeHDvideosnocopyright"
+    val instagramLink = "https://www.instagram.com/uncorked.conversations/"
+    val youtubeLink = "https://www.youtube.com/@FreeHDvideosnocopyright"
 
     MaterialTheme(
         colorScheme = darkColorScheme(
@@ -213,17 +215,19 @@ fun Footer(
                         Icon(
                             painter = painterResource(Res.drawable.ig_logo_96),
                             contentDescription = "Instagram logo",
+                            tint = Color.White,
                             modifier = Modifier
                                 .clickable {
-                                    window.open(instagram_link)
+                                    window.open(instagramLink)
                                 }
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Icon(
                             painter = painterResource(Res.drawable.yt_logo_96),
                             contentDescription = "Youtube logo",
+                            tint = Color.White,
                             modifier = Modifier.clickable {
-                                window.open(youtube_link)
+                                window.open(youtubeLink)
                             }
                         )
                     }
@@ -244,7 +248,7 @@ fun Footer(
             }
         }
     }
-    }
+}
 
 @Composable
 fun FooterColumn(
@@ -306,6 +310,7 @@ fun SearchBar(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Toast(message: String) {
     var showToast by remember { mutableStateOf(true) }
@@ -316,19 +321,40 @@ fun Toast(message: String) {
     }
 
     if (showToast) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            contentAlignment = Alignment.BottomCenter
+        BasicAlertDialog(
+            onDismissRequest = { showToast = false },
         ) {
             Box(
                 modifier = Modifier
-                    .background(Color.Black.copy(alpha = 0.8f))
-                    .padding(16.dp)
+                    .fillMaxSize()
+                    .padding(16.dp),
+                contentAlignment = Alignment.BottomCenter
             ) {
-                Text(text = message, color = Color.White)
+                Box(
+                    modifier = Modifier
+                        .background(Color.Black.copy(alpha = 0.8f))
+                        .padding(16.dp)
+                ) {
+                    Text(text = message, color = Color.White)
+                }
             }
         }
+
     }
+}
+
+@Composable
+fun LinearProgressBar(
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        LinearProgressIndicator(
+            color = Color(0xFFFF7F33),
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+
 }

@@ -216,12 +216,14 @@ class AuthPageViewModel(
         }
     }
 
-    fun hasUserRsvped(eventId: Int): Boolean {
+    fun hasUserRsvped(eventId: Int?): Boolean {
         val currentProfile = _profileData.value ?: return false
+        if (eventId == null) return false
         return currentProfile.eventRsvps?.containsKey(eventId) ?: false
     }
 
-    fun getRsvpForEvent(eventId: Int): RSVPRequest? {
+    fun getRsvpForEvent(eventId: Int?): RSVPRequest? {
+        if (eventId == null) return null
         return _profileData.value?.eventRsvps?.get(eventId)
     }
 
@@ -255,8 +257,8 @@ class AuthPageViewModel(
 }
 
 sealed class LoginUIState {
-    object Idle : LoginUIState()
-    object Loading : LoginUIState()
-    object Authenticated : LoginUIState()
+    data object Idle : LoginUIState()
+    data object Loading : LoginUIState()
+    data object Authenticated : LoginUIState()
     data class Error(val message: String) : LoginUIState()
 }

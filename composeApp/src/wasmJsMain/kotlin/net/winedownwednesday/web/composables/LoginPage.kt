@@ -105,7 +105,9 @@ fun LoginScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = if (isRegistering) "Register with Passkey" else "Login with Passkey",
+                            text = if (isRegistering)
+                                "Register with Passkey" else
+                                    "Login with Passkey",
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.headlineSmall
@@ -173,7 +175,8 @@ fun LoginScreen(
                                 viewModel.checkIsNewUser(isRegistering)
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF800020))
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = Color(0xFF800020))
                         ) {
                             Text(
                                 text = if (isRegistering)
