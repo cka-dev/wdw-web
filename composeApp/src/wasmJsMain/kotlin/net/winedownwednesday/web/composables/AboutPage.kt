@@ -58,7 +58,6 @@ fun AboutPage(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(vertical = 24.dp)
                 .background(Color.Black)
         ) {
             item {
@@ -258,6 +257,7 @@ fun AutoScrollingImageCarousel(
             .clip(RectangleShape),
         contentAlignment = Alignment.Center
     ) {
+        Spacer(modifier = Modifier.height(16.dp))
         Card(
             modifier = Modifier.fillMaxSize(),
             elevation = CardDefaults.cardElevation(4.dp)

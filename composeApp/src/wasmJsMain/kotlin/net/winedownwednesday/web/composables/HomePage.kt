@@ -54,55 +54,10 @@ import org.koin.compose.koinInject
 import kotlin.math.abs
 
 
-@Composable
-fun PageBody(
-    content: @Composable () -> Unit
-) {
-    content()
-}
-
-@Composable
-fun HeroSection(
-    isMobile: Boolean
-) {
-    val padding = if (isMobile) {
-        20.dp
-    } else {
-        50.dp
-    }
-
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = padding, vertical = 40.dp)
-            .background(Color.Transparent),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        item {
-            Text(
-                text = "Welcome to the Wine Down Wednesday Social Club",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-        }
-        item {
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-        item {
-            Text(
-                text = "Connecting wine enthusiasts from around Atlanta and the world.",
-                fontSize = 16.sp,
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun MainContent(
-    isMobile: Boolean
+fun HomePage(
+    isCompactScreen: Boolean
 ) {
     val viewModel: HomePageViewModel = koinInject()
     val upcomingEvents by viewModel.upcomingEvents.collectAsState()
@@ -120,14 +75,17 @@ fun MainContent(
         }
     }
 
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = Color.Black
-        )
+    val padding = if (isCompactScreen) {
+        20.dp
+    } else {
+        50.dp
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black),
     ) {
-        HeroSection(
-            isMobile = isMobile
-        )
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
@@ -135,6 +93,27 @@ fun MainContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            item {
+                Text(
+                    text = "Welcome to the Wine Down Wednesday Social Club",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+            }
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+            item {
+                Text(
+                    text = "Connecting wine enthusiasts from around Atlanta and the world.",
+                    fontSize = 16.sp,
+                    textAlign = TextAlign.Center
+                )
+            }
+            item {
+                Spacer(modifier = Modifier.height(padding))
+            }
             item {
                 FlowRow (
                     modifier = Modifier
@@ -146,23 +125,24 @@ fun MainContent(
                     AutoScrollingEventDisplay(
                         events = upcomingEvents,
                         sharedIndex = sharedIndex,
-                        isMobile = isMobile
+                        isCompactScreen = isCompactScreen
                     )
 
                     AutoScrollingWineListHorizontal(
                         wines = featuredWines,
                         sharedIndex = sharedIndex,
-                        isMobile = isMobile
+                        isCompactScreen = isCompactScreen
                     )
 
                     MemberSpotlightCard(
                         title = "Member Spotlight",
                         member = highlightedMember,
-                        isMobile = isMobile
+                        isCompactScreen = isCompactScreen
                     )
                 }
             }
         }
+
 
     }
 }
@@ -171,13 +151,13 @@ fun MainContent(
 fun MemberSpotlightCard(
     title: String = "Member Spotlight",
     member: Member?,
-    isMobile: Boolean,
+    isCompactScreen: Boolean,
     modifier: Modifier = Modifier
 ) {
     Card(
         shape = RoundedCornerShape(16.dp),
         modifier = modifier
-            .then(if (!isMobile) Modifier.fillMaxWidth(0.3f) else Modifier.fillMaxWidth())
+            .then(if (!isCompactScreen) Modifier.fillMaxWidth(0.3f) else Modifier.fillMaxWidth())
             .height(600.dp),
         elevation = CardDefaults.cardElevation(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
@@ -287,7 +267,7 @@ fun AutoScrollingEventDisplay(
     events: List<Event>,
     onEventSelectedChange: (Event) -> Unit = {},
     sharedIndex: Int,
-    isMobile: Boolean,
+    isCompactScreen: Boolean,
     modifier: Modifier = Modifier
 ) {
     if (events.size <= 1) {
@@ -300,7 +280,7 @@ fun AutoScrollingEventDisplay(
     Card(
         shape = RoundedCornerShape(16.dp),
         modifier = modifier
-            .then(if (!isMobile) Modifier.fillMaxWidth(0.3f) else Modifier.fillMaxWidth())
+            .then(if (!isCompactScreen) Modifier.fillMaxWidth(0.3f) else Modifier.fillMaxWidth())
             .height(600.dp),
         elevation = CardDefaults.cardElevation(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
@@ -403,7 +383,7 @@ fun AutoScrollingWineListHorizontal(
     wines: List<Wine>,
     onWineSelectedChange: (Wine) -> Unit = {},
     sharedIndex: Int,
-    isMobile: Boolean,
+    isCompactScreen: Boolean,
     modifier: Modifier = Modifier
 ) {
     if (wines.size <= 1) {
@@ -416,7 +396,7 @@ fun AutoScrollingWineListHorizontal(
     Card(
         shape = RoundedCornerShape(16.dp),
         modifier = modifier
-            .then(if (!isMobile) Modifier.fillMaxWidth(0.3f) else Modifier.fillMaxWidth())
+            .then(if (!isCompactScreen) Modifier.fillMaxWidth(0.3f) else Modifier.fillMaxWidth())
             .height(600.dp),
         elevation = CardDefaults.cardElevation(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))

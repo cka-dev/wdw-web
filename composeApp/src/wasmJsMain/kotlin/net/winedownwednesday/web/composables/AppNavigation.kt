@@ -75,13 +75,11 @@ fun AppNavigation(
                     modifier = Modifier.weight(1f)
                 ){
                     when (appBarState.value) {
-                        AppBarState.HOME -> PageBody (
-                            content = {
-                                MainContent(
-                                    isMobile = isCompactScreen
-                                )
-                            }
+                        AppBarState.HOME -> HomePage(
+                            isCompactScreen = isCompactScreen
                         )
+
+
                         AppBarState.ABOUT -> AboutPage(
                             isCompactScreen = isCompactScreen
                         )
@@ -132,7 +130,8 @@ fun AppNavigation(
 
                 Footer(
                     isMobile = isCompactScreen,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
                 )
             }
         }
