@@ -964,6 +964,7 @@ fun RSVPComponent(
                             lastNameError = lastNameError,
                             emailError = emailError,
                             phoneError = phoneError,
+                            guestCount = guestsCount,
                             guestsError = guestsError,
                             onSubmit = {
                                 val rsvp = RSVPRequest(
@@ -1009,6 +1010,7 @@ fun CompactScreenReservationFields(
     lastNameError: String,
     emailError: String,
     phoneError: String,
+    guestCount: Int,
     guestsError: String,
     onSubmit: () -> Unit
 ) {
@@ -1154,21 +1156,45 @@ fun CompactScreenReservationFields(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Number of guests: ", style = MaterialTheme.typography.bodyLarge)
                 Spacer(modifier = Modifier.width(8.dp))
+                Card (
+                    modifier = Modifier.clickable {
+                        if (guestCount > 1) {
+                            onGuestsCountChange((guestCount - 1).toString())
+                        }
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Remove,
+                        contentDescription = "Decrease guests count",
+                        tint = Color.White
+                    )
+                }
                 OutlinedTextField(
                     value = guestsCountText,
-                    onValueChange = { newVal ->
-                        onGuestsCountChange(newVal)
-                    },
+                    onValueChange = onGuestsCountChange,
                     label = { Text("Guests") },
-                    singleLine = true,
-                    modifier = Modifier.width(80.dp),
                     isError = guestsError.isNotEmpty(),
                     supportingText = {
                         if (guestsError.isNotEmpty()) {
-                            Text(text = guestsError, color = MaterialTheme.colorScheme.error)
+                            Text(guestsError, color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    singleLine = true,
+                    modifier = Modifier.width(80.dp)
+                )
+                Card (
+                    modifier = Modifier.clickable {
+                        if (guestCount < 10) {
+                            onGuestsCountChange((guestCount + 1).toString())
                         }
                     }
-                )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Increase guests count",
+                        tint = Color.White
+                    )
+                }
             }
         }
 
