@@ -13,6 +13,7 @@ import net.winedownwednesday.web.data.Event
 import net.winedownwednesday.web.data.Member
 import net.winedownwednesday.web.data.Wine
 import net.winedownwednesday.web.data.models.AuthenticationResponse
+import net.winedownwednesday.web.data.models.FcmInstanceRegistrationRequest
 import net.winedownwednesday.web.data.models.PublicKeyCredentialCreationOptions
 import net.winedownwednesday.web.data.models.PublicKeyCredentialRequestOptions
 import net.winedownwednesday.web.data.models.RSVPRequest
@@ -144,6 +145,14 @@ class AppRepository (
 
     suspend fun addRsvpToEvent(rsvp: RSVPRequest): Boolean {
         return remoteDataSource.addRsvpToEvent(rsvp)
+    }
+
+    suspend fun registerFcmInstanceId(request: FcmInstanceRegistrationRequest): Boolean {
+        return remoteDataSource.registerFcmInstanceId(request)
+    }
+
+    suspend fun unRegisterFcmInstanceId(request: FcmInstanceRegistrationRequest): Boolean {
+        return remoteDataSource.unregisterFcmInstanceId(request)
     }
 
     companion object{

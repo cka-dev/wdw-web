@@ -104,6 +104,7 @@ fun AppNavigation(
                                     onLoginSuccess = {
                                         appBarState.value = AppBarState.PROFILE
                                         isLoggedIn = true
+                                        authViewModel.requestNotificationPermissionAndGetToken()
                                     },
                                     viewModel = authViewModel
                                 )

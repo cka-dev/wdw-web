@@ -23,6 +23,7 @@ import net.winedownwednesday.web.data.Event
 import net.winedownwednesday.web.data.Member
 import net.winedownwednesday.web.data.Wine
 import net.winedownwednesday.web.data.models.AuthenticationResponse
+import net.winedownwednesday.web.data.models.FcmInstanceRegistrationRequest
 import net.winedownwednesday.web.data.models.PublicKeyCredentialCreationOptions
 import net.winedownwednesday.web.data.models.PublicKeyCredentialRequestOptions
 import net.winedownwednesday.web.data.models.RSVPRequest
@@ -264,10 +265,46 @@ class RemoteDataSource (
         }
     }
 
+    override suspend fun registerFcmInstanceId(request: FcmInstanceRegistrationRequest): Boolean {
+        try {
+            val response = client.post("$SERVER_URL/registerFcmInstanceId") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+            if (response.status.isSuccess()) {
+                return true
+            } else {
+                println("$TAG:Error registering FCM token: ${response.status}")
+            }
+        } catch (e: Exception) {
+            println("$TAG:Exception while registering FCM token: $e")
+        }
+        return false
+    }
+
+    override suspend fun unregisterFcmInstanceId(request: FcmInstanceRegistrationRequest): Boolean {
+        try {
+            val response = client.post("$SERVER_URL/unregisterFcmInstanceId") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+            if (response.status.isSuccess()) {
+                return true
+            } else {
+                println("$TAG: Error unregistering FCM token: ${response.status}")
+            }
+        } catch (e: Exception) {
+            println("$TAG:Exception whilst unregistering FCM token: $e")
+        }
+        return false
+    }
+
     companion object{
-        private const val SERVER_URL =
-            "https://us-central1-wdw-app-52a3c.cloudfunctions.net"
 //        private const val SERVER_URL =
-//            "http://127.0.0.1:5001/wdw-app-52a3c/us-central1"
+//            "https://us-central1-wdw-app-52a3c.cloudfunctions.net"
+        private const val SERVER_URL =
+            "http://127.0.0.1:5001/wdw-app-52a3c/us-central1"
+
+        private const val TAG = "RemoteDataSource"
     }
 }

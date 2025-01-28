@@ -7,6 +7,35 @@
     <link type="text/css" rel="stylesheet" href="styles.css">
     <script type="application/javascript" src="composeApp.js"></script>
     <script type="application/javascript" src="webauthn-bridge.js"></script>
+    <script type="module">
+        const firebaseAppPromise = new Promise((resolve, reject) => {
+            import('https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js')
+                .then(firebaseApp => {
+                    window.firebase = firebaseApp;
+                    resolve();
+                })
+                .catch(reject);
+        });
+
+        const firebaseMessagingPromise = new Promise((resolve, reject) => {
+            import('https://www.gstatic.com/firebasejs/11.2.0/firebase-messaging.js')
+                .then(() => {
+                    resolve();
+                })
+                .catch(reject);
+        });
+
+        Promise.all([firebaseAppPromise, firebaseMessagingPromise])
+            .then(() => {
+                const script = document.createElement('script');
+                script.src = 'firebase-bridge.js';
+                script.type = 'application/javascript';
+                document.head.appendChild(script);
+            })
+            .catch(error => {
+                console.error("Error loading Firebase modules:", error);
+            });
+    </script>
 </head>
 <body>
 </body>

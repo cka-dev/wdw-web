@@ -6,6 +6,7 @@ import net.winedownwednesday.web.data.Event
 import net.winedownwednesday.web.data.Member
 import net.winedownwednesday.web.data.Wine
 import net.winedownwednesday.web.data.models.AuthenticationResponse
+import net.winedownwednesday.web.data.models.FcmInstanceRegistrationRequest
 import net.winedownwednesday.web.data.models.PublicKeyCredentialCreationOptions
 import net.winedownwednesday.web.data.models.PublicKeyCredentialRequestOptions
 import net.winedownwednesday.web.data.models.RSVPRequest
@@ -43,8 +44,12 @@ interface ApiService {
     ): Boolean
 
     suspend fun fetchUserProfile(userEmail: String): UserProfileData?
+
     suspend fun updateProfile(profileData: UserProfileData): Boolean
 
     suspend fun addRsvpToEvent(rsvp: RSVPRequest): Boolean
 
+    suspend fun registerFcmInstanceId(request: FcmInstanceRegistrationRequest): Boolean
+
+    suspend fun unregisterFcmInstanceId(request: FcmInstanceRegistrationRequest): Boolean
 }

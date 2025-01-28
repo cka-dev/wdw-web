@@ -8,8 +8,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import net.winedownwednesday.web.FirebaseBridge
 import net.winedownwednesday.web.PublicKeyCredential
 import net.winedownwednesday.web.data.models.AuthenticationResponse
+import net.winedownwednesday.web.data.models.FcmInstanceRegistrationRequest
 import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.data.models.RegistrationResponse
 import net.winedownwednesday.web.data.models.UserProfileData
@@ -31,6 +33,9 @@ class AuthPageViewModel(
 
     private val _profileData = MutableStateFlow<UserProfileData?>(null)
     val profileData: StateFlow<UserProfileData?> = _profileData.asStateFlow()
+
+    private val _fcmToken = MutableStateFlow<String?>(null)
+    val fcmToken: StateFlow<String?> = _fcmToken.asStateFlow()
 
     fun fetchProfile(userEmail: String) {
         viewModelScope.launch {
@@ -122,6 +127,7 @@ class AuthPageViewModel(
                         .verifyPasskeyAuthentication(authenticationResponse, email)
                     if (verified) {
                         _uiState.value = LoginUIState.Authenticated
+                        fetchProfile(userEmail = email)
                     } else {
                         _uiState.value = LoginUIState.Error("Passkey authentication failed")
                     }
@@ -184,10 +190,11 @@ class AuthPageViewModel(
         return authenticationResponse
     }
 
-    fun simulateAuthentication() {
+    fun simulateAuthentication(email: String) {
         viewModelScope.launch {
             delay(500)
             _uiState.value = LoginUIState.Authenticated
+            fetchProfile(userEmail = email)
         }
     }
 
@@ -207,6 +214,12 @@ class AuthPageViewModel(
     fun logout() {
         viewModelScope.launch {
             _uiState.value = LoginUIState.Idle
+
+            try {
+                unregisterFcmInstanceId()
+            } catch (e: Exception) {
+                println("Error unregistering FCM instance ID: $e")
+            }
         }
     }
 
@@ -247,6 +260,58 @@ class AuthPageViewModel(
         } catch (e: Exception) {
             println("$TAG: Error saving RSVP: ${e.message}")
             onResult(false)
+        }
+    }
+
+    fun requestNotificationPermissionAndGetToken() {
+        viewModelScope.launch {
+            try {
+                val permissionResultJsAny: JsAny? = FirebaseBridge.requestNotificationPermission().await()
+                val permissionResult = permissionResultJsAny?.unsafeCast<JsAny>()
+
+                if (permissionResult.toString() == "granted") {
+                    val tokenJsAny: JsAny? = FirebaseBridge.getFcmToken().await()
+                    val token = tokenJsAny?.unsafeCast<JsAny>()
+                    _fcmToken.value = token.toString()
+                    if (token != null) {
+                        try {
+                            registerFcmInstanceId()
+                        } catch (e: Exception) {
+                            println("Error registering FCM instance ID: $e")
+                        }
+                    }
+                } else {
+                    println("Notifications not granted, permissionResult=$permissionResult")
+                }
+            } catch (e: Exception) {
+                println("Error while requesting permission or getting token: $e")
+            }
+        }
+    }
+
+    private fun registerFcmInstanceId() {
+        viewModelScope.launch {
+            val requestBody = FcmInstanceRegistrationRequest(
+                instanceId = fcmToken.value ?: "",
+                email = email.value
+            )
+            val request= repository.registerFcmInstanceId(requestBody)
+            if (!request) {
+                println("$TAG: Error registering FCM instance ID")
+            }
+        }
+    }
+
+    private fun unregisterFcmInstanceId() {
+        viewModelScope.launch {
+            val requestBody = FcmInstanceRegistrationRequest(
+                instanceId = fcmToken.value ?: "",
+                email = email.value
+            )
+            val request = repository.unRegisterFcmInstanceId(requestBody)
+            if (!request) {
+                println("$TAG: Error unregistering FCM instance ID")
+            }
         }
     }
 
