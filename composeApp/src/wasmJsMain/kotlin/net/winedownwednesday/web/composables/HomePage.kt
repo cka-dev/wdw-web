@@ -131,7 +131,7 @@ fun HomePage(
                     AutoScrollingWineListHorizontal(
                         wines = featuredWines,
                         sharedIndex = sharedIndex,
-                        isCompactScreen = isCompactScreen
+                        isCompactScreen = isCompactScreen,
                     )
 
                     MemberSpotlightCard(
@@ -169,7 +169,8 @@ fun MemberSpotlightCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             if (member == null) {
-                Text("No member selected", color = Color.LightGray)
+                Text("Fetching featured member", color = Color.LightGray)
+                LinearProgressBar()
             } else {
                 Card(
                     elevation = CardDefaults.cardElevation(8.dp)
@@ -365,7 +366,8 @@ private fun SingleEventOrEmptyHorizontal(
             Spacer(modifier = Modifier.height(8.dp))
 
             if (events.isEmpty()) {
-                Text("No upcoming events", color = Color.LightGray)
+                Text("Fetching upcoming events", color = Color.LightGray)
+                LinearProgressBar()
             } else {
                 HomePageEventCard(
                     event = events.first(),
@@ -477,7 +479,8 @@ private fun SingleWineOrEmptyHorizontal(
             Spacer(modifier = Modifier.height(8.dp))
 
             if (wines.isEmpty()) {
-                Text("No wines", color = Color.LightGray)
+                Text("Fetching wines", color = Color.LightGray)
+                LinearProgressBar()
             } else {
                 WineCard(
                     wine = wines.first(),
