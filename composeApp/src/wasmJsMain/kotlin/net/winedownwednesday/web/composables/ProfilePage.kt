@@ -1,5 +1,6 @@
 package net.winedownwednesday.web.composables
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -82,6 +83,7 @@ fun ProfilePage(
     modifier: Modifier = Modifier
 ) {
     val userProfile by viewModel.profileData.collectAsStateWithLifecycle()
+    val isProfileLoading by viewModel.isFetchingProfile.collectAsStateWithLifecycle()
     var editMode by remember { mutableStateOf(isNewUser) }
     var showSuccessToast by remember { mutableStateOf(false) }
     var showFailureToast by remember { mutableStateOf(false) }
@@ -178,6 +180,10 @@ fun ProfilePage(
                                         editMode = editMode,
                                         onEdit = { editMode = true }
                                     )
+                                }
+                                AnimatedVisibility(visible = isProfileLoading) {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    LinearProgressBar()
                                 }
                             }
                         }

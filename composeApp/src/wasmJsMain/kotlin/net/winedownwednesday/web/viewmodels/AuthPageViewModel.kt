@@ -37,10 +37,20 @@ class AuthPageViewModel(
     private val _fcmToken = MutableStateFlow<String?>(null)
     private val fcmToken: StateFlow<String?> = _fcmToken.asStateFlow()
 
+    private val _isFetchingProfile = MutableStateFlow(false)
+    val isFetchingProfile: StateFlow<Boolean> = _isFetchingProfile.asStateFlow()
+
     fun fetchProfile(userEmail: String) {
         viewModelScope.launch {
-            val dto = repository.fetchProfileFromServer(userEmail = userEmail)
-            _profileData.value = dto
+            _isFetchingProfile.value = true
+            try {
+                val profile = repository.fetchProfileFromServer(userEmail)
+                _profileData.value = profile
+            } catch (e: Exception) {
+                println("$TAG: Error fetching profile: ${e.message}")
+            } finally {
+                _isFetchingProfile.value = false
+            }
         }
     }
 
