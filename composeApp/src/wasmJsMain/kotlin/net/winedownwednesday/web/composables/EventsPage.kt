@@ -358,48 +358,33 @@ fun EventCard(
             userProfileData = userProfileData,
             showProgressBar = showProgressBar.value,
             onSubmit = { rsvpRequest ->
-                val submissionStatus =
-                    mutableStateOf<SubmissionStatus>(SubmissionStatus.InProgress)
+                showProgressBar.value = true
                 authPageViewModel.saveRsvpInProfile(rsvpRequest) { profileSaveSuccess ->
                     if (profileSaveSuccess) {
                         viewModel.addRsvpToEvent(rsvpRequest) { eventUpdateSuccess ->
+                            showProgressBar.value = false
                             if (eventUpdateSuccess) {
-                                submissionStatus.value = SubmissionStatus.Success
+                                showSuccessToast.value = true
+                                coroutineScope.launch {
+                                    delay(2000)
+                                    showSuccessToast.value = false
+                                }
                                 onDismissRequest()
                             } else {
-                                submissionStatus.value = SubmissionStatus.Failure(
-                                    "Failed to update event RSVP.")
+                                showErrorToast.value = true
+                                coroutineScope.launch {
+                                    delay(2000)
+                                    showErrorToast.value = false
+                                }
                             }
                         }
                     } else {
-                        submissionStatus.value = SubmissionStatus.Failure(
-                            "Failed to save RSVP in your profile.")
-                    }
-                }
-
-                when (submissionStatus.value) {
-                    is SubmissionStatus.InProgress -> {
-                        showProgressBar.value = true
-                    }
-                    is SubmissionStatus.Success -> {
-                        showProgressBar.value = false
-                        submissionStatus.value = SubmissionStatus.Idle
-                        showSuccessToast.value = true
-                        coroutineScope.launch {
-                            delay(2000)
-                            showSuccessToast.value = false
-                        }
-                    }
-                    is SubmissionStatus.Failure -> {
                         showProgressBar.value = false
                         showErrorToast.value = true
                         coroutineScope.launch {
                             delay(2000)
                             showErrorToast.value = false
                         }
-                    }
-                    is SubmissionStatus.Idle -> {
-                        showProgressBar.value = false
                     }
                 }
             }
