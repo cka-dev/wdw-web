@@ -282,9 +282,9 @@ class RemoteDataSource (
         return false
     }
 
-    override suspend fun unregisterFcmInstanceId(request: FcmInstanceRegistrationRequest): Boolean {
+    override suspend fun unRegisterFcmInstanceId(request: FcmInstanceRegistrationRequest): Boolean {
         try {
-            val response = client.post("$SERVER_URL/unregisterFcmInstanceId") {
+            val response = client.post("$SERVER_URL/unRegisterFcmInstanceId") {
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }
@@ -300,10 +300,10 @@ class RemoteDataSource (
     }
 
     companion object{
-//        private const val SERVER_URL =
-//            "https://us-central1-wdw-app-52a3c.cloudfunctions.net"
         private const val SERVER_URL =
-            "http://127.0.0.1:5001/wdw-app-52a3c/us-central1"
+            "https://us-central1-wdw-app-52a3c.cloudfunctions.net"
+//        private const val SERVER_URL =
+//            "http://127.0.0.1:5001/wdw-app-52a3c/us-central1"
 
         private const val TAG = "RemoteDataSource"
     }

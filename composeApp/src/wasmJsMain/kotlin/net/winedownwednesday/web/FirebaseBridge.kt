@@ -6,9 +6,7 @@ import kotlin.js.Promise
 external object FirebaseBridge {
     fun initFirebase()
 
-
     fun requestNotificationPermission(): Promise<JsAny?>
-
 
     fun getFcmToken(): Promise<JsAny?>
 }

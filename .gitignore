@@ -18,3 +18,6 @@ captures
 **/xcshareddata/WorkspaceSettings.xcsettings
 
 .fleet/*
+
+composeApp/src/wasmJsMain/resources/firebase-bridge.js
+composeApp/src/wasmJsMain/resources/firebase-messaging-sw.js

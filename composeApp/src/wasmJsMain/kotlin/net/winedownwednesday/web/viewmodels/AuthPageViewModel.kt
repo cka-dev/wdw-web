@@ -35,7 +35,7 @@ class AuthPageViewModel(
     val profileData: StateFlow<UserProfileData?> = _profileData.asStateFlow()
 
     private val _fcmToken = MutableStateFlow<String?>(null)
-    val fcmToken: StateFlow<String?> = _fcmToken.asStateFlow()
+    private val fcmToken: StateFlow<String?> = _fcmToken.asStateFlow()
 
     fun fetchProfile(userEmail: String) {
         viewModelScope.launch {
@@ -213,13 +213,14 @@ class AuthPageViewModel(
 
     fun logout() {
         viewModelScope.launch {
-            _uiState.value = LoginUIState.Idle
-
             try {
-                unregisterFcmInstanceId()
+                unRegisterFcmInstanceId()
             } catch (e: Exception) {
                 println("Error unregistering FCM instance ID: $e")
             }
+
+            _uiState.value = LoginUIState.Idle
+
         }
     }
 
@@ -275,7 +276,7 @@ class AuthPageViewModel(
                     _fcmToken.value = token.toString()
                     if (token != null) {
                         try {
-                            registerFcmInstanceId()
+                            registerFcmInstanceId(token.toString())
                         } catch (e: Exception) {
                             println("Error registering FCM instance ID: $e")
                         }
@@ -289,10 +290,10 @@ class AuthPageViewModel(
         }
     }
 
-    private fun registerFcmInstanceId() {
+    private fun registerFcmInstanceId(token: String) {
         viewModelScope.launch {
             val requestBody = FcmInstanceRegistrationRequest(
-                instanceId = fcmToken.value ?: "",
+                instanceId = token,
                 email = email.value
             )
             val request= repository.registerFcmInstanceId(requestBody)
@@ -302,7 +303,7 @@ class AuthPageViewModel(
         }
     }
 
-    private fun unregisterFcmInstanceId() {
+    private fun unRegisterFcmInstanceId() {
         viewModelScope.launch {
             val requestBody = FcmInstanceRegistrationRequest(
                 instanceId = fcmToken.value ?: "",

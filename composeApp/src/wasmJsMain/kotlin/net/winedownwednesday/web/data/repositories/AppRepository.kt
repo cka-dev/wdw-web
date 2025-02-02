@@ -152,7 +152,7 @@ class AppRepository (
     }
 
     suspend fun unRegisterFcmInstanceId(request: FcmInstanceRegistrationRequest): Boolean {
-        return remoteDataSource.unregisterFcmInstanceId(request)
+        return remoteDataSource.unRegisterFcmInstanceId(request)
     }
 
     companion object{

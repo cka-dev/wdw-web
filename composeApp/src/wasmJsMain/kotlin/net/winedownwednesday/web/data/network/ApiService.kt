@@ -51,5 +51,5 @@ interface ApiService {
 
     suspend fun registerFcmInstanceId(request: FcmInstanceRegistrationRequest): Boolean
 
-    suspend fun unregisterFcmInstanceId(request: FcmInstanceRegistrationRequest): Boolean
+    suspend fun unRegisterFcmInstanceId(request: FcmInstanceRegistrationRequest): Boolean
 }

@@ -1,13 +1,13 @@
 window.wdwFirebaseBridge = {
  firebaseConfig: {
-   apiKey: "REDACTED",
-   authDomain: "REDACTED",
-   projectId: "REDACTED",
-   storageBucket: "REDACTED",
-   messagingSenderId: "REDACTED",
-   appId: "REDACTED",
-   measurementId: "REDACTED"
- },
+  apiKey: "AIzaSyA3Pq3Xkl4seIVYUJeWngBUKIEIisloRK0",
+  authDomain: "wdw-app-52a3c.firebaseapp.com",
+  projectId: "wdw-app-52a3c",
+  storageBucket: "wdw-app-52a3c.firebasestorage.app",
+  messagingSenderId: "321889980783",
+  appId: "1:321889980783:web:8dd7ef9b8d265e2660589a",
+  measurementId: "G-4374PRF0WF"
+},
 
   app: null,
   messaging: null,
@@ -45,7 +45,7 @@ window.wdwFirebaseBridge = {
 
       navigator.serviceWorker.register("firebase-messaging-sw.js")
         .then((registration) => {
-          console.log("ServiceWorker registered:", registration);
+//          console.log("ServiceWorker registered:", registration);
         })
         .catch((err) => {
           console.error("ServiceWorker registration failed:", err);
@@ -55,9 +55,9 @@ window.wdwFirebaseBridge = {
     },
 
   requestNotificationPermission: async function() {
-   console.log("requestNotificationPermission called");
+//   console.log("requestNotificationPermission called");
    const permission = await Notification.requestPermission();
-   console.log("Notification.requestPermission result:", permission);
+//   console.log("Notification.requestPermission result:", permission);
    return permission;
  },
 
