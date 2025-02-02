@@ -5,8 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,12 +16,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,7 +42,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -412,7 +407,6 @@ fun MemberDetailRow(label: String, value: String) {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun LargeScreenMemberPage(
     memberSections: List<MemberSection>,
@@ -420,77 +414,53 @@ fun LargeScreenMemberPage(
     onSelectedMemberChange: (Member?) -> Unit,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize()
-                .background(Color.Black),
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.Black)
-                    .weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                item {
-                    Text(
-                        text = "Meet our Members",
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "The people and the stories behind Wine Down.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center
-                    )
-                }
-
-                if (memberSections.isEmpty()) {
-                    item {
-                        Text(
-                            text = "Loading...",
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    }
-                } else {
-                    items(memberSections) { section ->
+            memberSections.forEach { section ->
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 200.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    contentPadding = PaddingValues(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
                         Text(
                             text = section.title,
                             style = MaterialTheme.typography.headlineMedium,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            color = Color.White,
+                            modifier = Modifier.padding(bottom = 8.dp)
                         )
-                        FlowRow(
+                    }
+                    items(section.members) { member ->
+                        MemberCard(
+                            member = member,
+                            onClick = { onSelectedMemberChange(member) },
                             modifier = Modifier
-                                .padding(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            section.members.forEach { member ->
-                                MemberCard(
-                                    member = member,
-                                    modifier = Modifier.width(200.dp),
-                                    onClick = { onSelectedMemberChange(member) }
-                                )
-                            }
-                        }
+                                .aspectRatio(1f)
+                        )
                     }
                 }
-
-
-
-            }
-            if (selectedMember != null) {
-                MemberDetailPopup(
-                    member = selectedMember,
-                    onDismissRequest = { onDismissRequest() }
-                )
             }
         }
+        if (selectedMember != null) {
+            MemberDetailPopup(
+                member = selectedMember,
+                onDismissRequest = onDismissRequest
+            )
+        }
+    }
 }
 
