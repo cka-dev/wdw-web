@@ -91,7 +91,10 @@ import net.winedownwednesday.web.data.models.UserProfileData
 import net.winedownwednesday.web.viewmodels.AuthPageViewModel
 import net.winedownwednesday.web.viewmodels.EventsPageViewModel
 import net.winedownwednesday.web.viewmodels.LoginUIState
+import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.koinInject
+import wdw_web.composeapp.generated.resources.Res
+import wdw_web.composeapp.generated.resources.placeholder
 
 
 @Composable
@@ -109,9 +112,8 @@ fun EventsPage(
 
     val selectedEvent by viewModel.selectedEvent.collectAsState()
 
-    val showRegistrationForm = remember {
-        mutableStateOf(false)
-    }
+    var eventForRsvp by remember { mutableStateOf<Event?>(null) }
+
 
     Column(
         modifier = Modifier
@@ -181,12 +183,12 @@ fun EventsPage(
                         uiState = uiState,
                         authPageViewModel = authPageViewModel,
                         onRsvpClick = {
-                            showRegistrationForm.value = true
+                            eventForRsvp = event
                         },
                         onDismissRequest = {
-                            showRegistrationForm.value = false
+                            eventForRsvp = null
                         },
-                        showRegistrationForm = showRegistrationForm.value
+                        eventForRsvp = eventForRsvp,
                     )
                 }
             }
@@ -201,7 +203,7 @@ fun EventsPage(
                     viewModel.setSelectedEvent(null)
                 },
                 onRsvpClick = {
-                    showRegistrationForm.value = true
+                    eventForRsvp = selectedEvent
                 }
             )
         } else {
@@ -211,7 +213,7 @@ fun EventsPage(
                     viewModel.setSelectedEvent(null)
                 },
                 onRsvpClick = {
-                    showRegistrationForm.value = true
+                    eventForRsvp = selectedEvent
                 }
             )
         }
@@ -229,7 +231,7 @@ fun EventCard(
     uiState: LoginUIState,
     onRsvpClick: () -> Unit,
     onDismissRequest: () -> Unit,
-    showRegistrationForm: Boolean,
+    eventForRsvp: Event?,
     modifier: Modifier = Modifier
 ) {
 
@@ -345,7 +347,7 @@ fun EventCard(
         }
     }
 
-    AnimatedVisibility (showRegistrationForm) {
+    if (eventForRsvp != null && eventForRsvp.id == event.id) {
         RSVPComponent(
             onDismissRequest = { onDismissRequest() },
             event = event,
@@ -514,7 +516,7 @@ fun EventDetailContent(
         Image(
             painter = rememberAsyncImagePainter(
                 model = event.imageUrl,
-//                placeholder = painterResource(R.drawable.placeholder),
+                placeholder = painterResource(Res.drawable.placeholder),
 //                error = painterResource(R.drawable.error_placeholder)
             ),
             contentDescription = "${event.name} Image",
