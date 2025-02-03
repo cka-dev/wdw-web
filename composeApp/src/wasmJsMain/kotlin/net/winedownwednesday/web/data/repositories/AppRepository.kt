@@ -19,6 +19,7 @@ import net.winedownwednesday.web.data.models.PublicKeyCredentialRequestOptions
 import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.data.models.RegistrationResponse
 import net.winedownwednesday.web.data.models.UserProfileData
+import net.winedownwednesday.web.data.network.ApiResult
 import net.winedownwednesday.web.data.network.RemoteDataSource
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.Single
@@ -119,23 +120,28 @@ class AppRepository (
         return remoteDataSource.postRSVP(rsvpRequest)
     }
 
-    suspend fun generatePasskeyRegistrationOptions(email: String): PublicKeyCredentialCreationOptions? {
+    suspend fun generatePasskeyRegistrationOptions(email: String):
+            ApiResult<PublicKeyCredentialCreationOptions> {
         return remoteDataSource.generatePasskeyRegistrationOptions(email)
     }
 
-    suspend fun verifyPasskeyRegistration(credential: RegistrationResponse, email: String): Boolean {
+    suspend fun verifyPasskeyRegistration(credential: RegistrationResponse, email: String):
+            Boolean {
         return remoteDataSource.verifyPasskeyRegistration(credential, email)
     }
 
-    suspend fun generatePasskeyAuthenticationOptions(email: String): PublicKeyCredentialRequestOptions? {
+    suspend fun generatePasskeyAuthenticationOptions(email: String):
+            ApiResult<PublicKeyCredentialRequestOptions> {
         return remoteDataSource.generatePasskeyAuthenticationOptions(email)
     }
 
-    suspend fun verifyPasskeyAuthentication(credential: AuthenticationResponse,email: String): Boolean {
+    suspend fun verifyPasskeyAuthentication(credential:
+                                            AuthenticationResponse,email: String): Boolean {
         return remoteDataSource.verifyPasskeyAuthentication(credential, email)
     }
 
-    suspend fun fetchProfileFromServer(userEmail: String): UserProfileData? {
+    suspend fun fetchProfileFromServer(userEmail: String):
+            UserProfileData? {
         return remoteDataSource.fetchUserProfile(userEmail)
     }
 

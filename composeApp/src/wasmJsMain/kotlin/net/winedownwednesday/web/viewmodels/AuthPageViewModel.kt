@@ -15,6 +15,7 @@ import net.winedownwednesday.web.data.models.FcmInstanceRegistrationRequest
 import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.data.models.RegistrationResponse
 import net.winedownwednesday.web.data.models.UserProfileData
+import net.winedownwednesday.web.data.network.ApiResult
 import net.winedownwednesday.web.data.repositories.AppRepository
 import net.winedownwednesday.web.myWebAuthnBridge
 import net.winedownwednesday.web.toBase64Url
@@ -67,41 +68,47 @@ class AuthPageViewModel(
     fun registerPasskey(email: String) {
         viewModelScope.launch {
             _uiState.value = LoginUIState.Loading
-            try {
-                val options = repository.generatePasskeyRegistrationOptions(email)
-                    ?: throw Exception("Failed to generate registration options")
 
-                val credential = myWebAuthnBridge.startRegistration(
-                    challenge = options.challenge,
-                    rpId = options.rp.id,
-                    rpName = options.rp.name,
-                    userId = options.user.id,
-                    userName = options.user.name,
-                    userDisplayName = options.user.displayName,
-                    timeout = options.timeout ?: 60000,
-                    attestationType = options.attestation,
-                    authenticatorAttachment = options
-                        .authenticatorSelection.authenticatorAttachment,
-                    residentKey = options.authenticatorSelection.residentKey,
-                    requireResidentKey = options.authenticatorSelection.requireResidentKey,
-                    userVerification = options.authenticatorSelection.userVerification
-                ).await<PublicKeyCredential>()
-
-                val registrationResponse = try {
-                    credential.toRegistrationResponse()
-                } catch (e: Exception) {
-                    println("$TAG: Caught exception: $e")
-                    throw e
+            when (val result = repository.generatePasskeyRegistrationOptions(email)) {
+                is ApiResult.Error -> {
+                    _uiState.value = LoginUIState.Error(result.message)
                 }
+                is ApiResult.Success -> {
+                    val options = result.data
 
-                val verified = repository.verifyPasskeyRegistration(registrationResponse, email)
-                if (verified) {
-                    _uiState.value = LoginUIState.Authenticated
-                } else {
-                    _uiState.value = LoginUIState.Error("Passkey registration failed")
+                    try {
+                        val credential = myWebAuthnBridge.startRegistration(
+                            challenge = options.challenge,
+                            rpId = options.rp.id,
+                            rpName = options.rp.name,
+                            userId = options.user.id,
+                            userName = options.user.name,
+                            userDisplayName = options.user.displayName,
+                            timeout = options.timeout ?: 60000,
+                            attestationType = options.attestation,
+                            authenticatorAttachment = options.authenticatorSelection.authenticatorAttachment,
+                            residentKey = options.authenticatorSelection.residentKey,
+                            requireResidentKey = options.authenticatorSelection.requireResidentKey,
+                            userVerification = options.authenticatorSelection.userVerification
+                        ).await<PublicKeyCredential>()
+
+                        val registrationResponse = try {
+                            credential.toRegistrationResponse()
+                        } catch (e: Exception) {
+                            throw e
+                        }
+
+                        val verified = repository.verifyPasskeyRegistration(registrationResponse, email)
+                        if (verified) {
+                            _uiState.value = LoginUIState.Authenticated
+                        } else {
+                            _uiState.value = LoginUIState.Error("Passkey registration failed")
+                        }
+                    } catch (e: Exception) {
+                        println("$TAG: Exception during registration: $e")
+                        _uiState.value = LoginUIState.Error("Error during registration: ${e.message}")
+                    }
                 }
-            } catch (e: Exception) {
-                _uiState.value = LoginUIState.Error("Error during registration: ${e.message}")
             }
         }
     }
@@ -109,45 +116,43 @@ class AuthPageViewModel(
     fun authenticateWithPasskey(email: String) {
         viewModelScope.launch {
             _uiState.value = LoginUIState.Loading
-            try {
-                val options = repository.generatePasskeyAuthenticationOptions(email)
-                    ?: throw Exception("Failed to generate authentication options")
 
-                val allowCredentialIds =
-                    options.allowCredentials?.joinToString(",", "[", "]") {
-                    "\"" + it.id.toBase64Url() + "\""
-                } ?: "[]"
-
-                try {
-                    val credential = myWebAuthnBridge.startAuthentication(
-                        challenge = options.challenge,
-                        rpId = options.rpId,
-                        timeout = options.timeout ?: 60000,
-                        userVerification = options.userVerification,
-                        allowCredentialIds = allowCredentialIds
-                    ).await<PublicKeyCredential>()
-
-                    val authenticationResponse = try {
-                        credential.toAuthenticationResponse()
-                    } catch (e: Exception) {
-                        throw e
-                    }
-
-                    val verified = repository
-                        .verifyPasskeyAuthentication(authenticationResponse, email)
-                    if (verified) {
-                        _uiState.value = LoginUIState.Authenticated
-                        fetchProfile(userEmail = email)
-                    } else {
-                        _uiState.value = LoginUIState.Error("Passkey authentication failed")
-                    }
-
-                } catch (e: Exception) {
-                    println("Error during authentication: ${e.message}")
+            when (val result = repository.generatePasskeyAuthenticationOptions(email)) {
+                is ApiResult.Error -> {
+                    _uiState.value = LoginUIState.Error(result.message)
                 }
+                is ApiResult.Success -> {
+                    val options = result.data
 
-            } catch (e: Exception) {
-                _uiState.value = LoginUIState.Error("Error during authentication: ${e.message}")
+                    val allowCredentialIds = options.allowCredentials?.joinToString(",", "[", "]") {
+                        "\"" + it.id.toBase64Url() + "\""
+                    } ?: "[]"
+
+                    try {
+                        val credential = myWebAuthnBridge.startAuthentication(
+                            challenge = options.challenge,
+                            rpId = options.rpId,
+                            timeout = options.timeout ?: 60000,
+                            userVerification = options.userVerification,
+                            allowCredentialIds = allowCredentialIds
+                        ).await<PublicKeyCredential>()
+
+                        val authenticationResponse = try {
+                            credential.toAuthenticationResponse()
+                        } catch (e: Exception) {
+                            throw e
+                        }
+
+                        val verified = repository.verifyPasskeyAuthentication(authenticationResponse, email)
+                        if (verified) {
+                            _uiState.value = LoginUIState.Authenticated
+                        } else {
+                            _uiState.value = LoginUIState.Error("Passkey authentication failed")
+                        }
+                    } catch (e: Exception) {
+                        _uiState.value = LoginUIState.Error("Error during authentication: ${e.message}")
+                    }
+                }
             }
         }
     }
@@ -205,6 +210,22 @@ class AuthPageViewModel(
             delay(500)
             _uiState.value = LoginUIState.Authenticated
             fetchProfile(userEmail = email)
+        }
+    }
+
+    fun simulateAuthenticationError(email: String) {
+        viewModelScope.launch {
+            delay(500)
+            _uiState.value = LoginUIState.Error("Email is not registered. Please double check" +
+                    " for typos or register a new account.")
+        }
+    }
+
+    fun simulateRegistrationError(email: String) {
+        viewModelScope.launch {
+            delay(500)
+            _uiState.value = LoginUIState.Error("An account already exists with that email." +
+                    "Please log in instead.")
         }
     }
 
@@ -277,7 +298,8 @@ class AuthPageViewModel(
     fun requestNotificationPermissionAndGetToken() {
         viewModelScope.launch {
             try {
-                val permissionResultJsAny: JsAny? = FirebaseBridge.requestNotificationPermission().await()
+                val permissionResultJsAny: JsAny? =
+                    FirebaseBridge.requestNotificationPermission().await()
                 val permissionResult = permissionResultJsAny?.unsafeCast<JsAny>()
 
                 if (permissionResult.toString() == "granted") {

@@ -28,7 +28,7 @@ interface ApiService {
     suspend fun postRSVP(rsvp: RSVPRequest): Boolean
 
     suspend fun generatePasskeyRegistrationOptions(email: String):
-            PublicKeyCredentialCreationOptions?
+            ApiResult<PublicKeyCredentialCreationOptions>
 
     suspend fun verifyPasskeyRegistration(
         credential: RegistrationResponse,
@@ -36,7 +36,7 @@ interface ApiService {
     ): Boolean
 
     suspend fun generatePasskeyAuthenticationOptions(email: String):
-            PublicKeyCredentialRequestOptions?
+            ApiResult<PublicKeyCredentialRequestOptions>
 
     suspend fun verifyPasskeyAuthentication(
         credential: AuthenticationResponse,

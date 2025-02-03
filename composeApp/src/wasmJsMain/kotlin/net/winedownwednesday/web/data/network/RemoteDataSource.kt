@@ -11,6 +11,7 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.headers
 import io.ktor.http.isSuccess
@@ -156,18 +157,27 @@ class RemoteDataSource (
     }
 
     override suspend fun generatePasskeyRegistrationOptions(email: String):
-            PublicKeyCredentialCreationOptions? {
-        _isLoading.value = true
+            ApiResult<PublicKeyCredentialCreationOptions> {
         return try {
-            client.post("$SERVER_URL/generatePasskeyRegistrationOptions") {
+            val response: HttpResponse = client.post(
+                "$SERVER_URL/generatePasskeyRegistrationOptions") {
                 contentType(ContentType.Application.Json)
                 setBody(RegistrationOptionsRequest(email))
-            }.body()
+            }
+            if (!response.status.isSuccess()) {
+                val errorBody = response.bodyAsText()
+                if (response.status == HttpStatusCode.Conflict) {
+                    ApiResult.Error("An account already exists with that email. " +
+                            "Please log in instead.")
+                } else {
+                    ApiResult.Error("Failed to generate registration options: $errorBody")
+                }
+            } else {
+                val options: PublicKeyCredentialCreationOptions = response.body()
+                ApiResult.Success(options)
+            }
         } catch (e: Exception) {
-            _error.value = e.message
-            null
-        } finally {
-            _isLoading.value = false
+            ApiResult.Error(e.message ?: "Unknown error occurred")
         }
     }
 
@@ -190,20 +200,33 @@ class RemoteDataSource (
     }
 
     override suspend fun generatePasskeyAuthenticationOptions(
-        email: String): PublicKeyCredentialRequestOptions? {
-        _isLoading.value = true
+        email: String
+    ): ApiResult<PublicKeyCredentialRequestOptions> {
         return try {
-            client.post("$SERVER_URL/generatePasskeyAuthenticationOptions") {
+            val response: HttpResponse = client.post(
+                "$SERVER_URL/generatePasskeyAuthenticationOptions") {
                 contentType(ContentType.Application.Json)
                 setBody(mapOf("email" to email))
-            }.body()
+            }
+            if (!response.status.isSuccess()) {
+                if (response.status == HttpStatusCode.NotFound) {
+                    val errorMessage = "Email is not registered. Please double check for typos" +
+                            " or register a new account"
+                    ApiResult.Error(errorMessage)
+                } else {
+                    println("$TAG: response status: ${response.status}")
+                    ApiResult.Error(
+                        "Failed to generate authentication options: ${response.bodyAsText()}")
+                }
+            } else {
+                val options: PublicKeyCredentialRequestOptions = response.body()
+                ApiResult.Success(options)
+            }
         } catch (e: Exception) {
-            _error.value = e.message
-            null
-        } finally {
-            _isLoading.value = false
+            ApiResult.Error(e.message ?: "Unknown error occurred")
         }
     }
+
 
     override suspend fun verifyPasskeyAuthentication(
         credential: AuthenticationResponse, email: String): Boolean {
@@ -307,4 +330,9 @@ class RemoteDataSource (
 
         private const val TAG = "RemoteDataSource"
     }
+}
+
+sealed class ApiResult<out T> {
+    data class Success<out T>(val data: T) : ApiResult<T>()
+    data class Error(val message: String) : ApiResult<Nothing>()
 }

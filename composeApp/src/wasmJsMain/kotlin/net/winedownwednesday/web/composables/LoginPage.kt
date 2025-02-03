@@ -144,12 +144,19 @@ fun LoginScreen(
                             onClick = {
                                 coroutineScope.launch {
                                     if (isRegistering) {
-//                                        viewModel.registerPasskey(email)
-                                        viewModel.simulateRegistration()
+                                        viewModel.registerPasskey(email)
+//                                        viewModel.simulateRegistration()
                                     } else {
+                                        kotlin.runCatching {
+                                            viewModel.authenticateWithPasskey(email)
+                                        }.onSuccess {
+                                            viewModel.fetchProfile(userEmail = email)
+                                        }
 //                                        viewModel.authenticateWithPasskey(email)
-                                        viewModel.simulateAuthentication(email = email)
+//                                        viewModel.simulateAuthentication(email = email)
 //                                        viewModel.fetchProfile(userEmail = email)
+
+//                                        viewModel.simulateAuthenticationError(email)
                                     }
                                 }
                             },
