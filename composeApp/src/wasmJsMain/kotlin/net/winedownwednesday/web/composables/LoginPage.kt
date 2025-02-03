@@ -34,6 +34,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -129,7 +132,22 @@ fun LoginScreen(
                             value = email,
                             onValueChange = { viewModel.setEmail(it) },
                             label = { Text("Email") },
-                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onKeyEvent { event ->
+                                    return@onKeyEvent if (event.key.keyCode == Key.Enter.keyCode){
+                                        if (isRegistering) {
+                                            viewModel.registerPasskey(email = email)
+                                        } else {
+                                            viewModel.authenticateWithPasskey(email = email)
+                                        }
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                }
+                            ,
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = Color(0xFF800020),
                                 unfocusedBorderColor = Color.LightGray,
@@ -145,18 +163,12 @@ fun LoginScreen(
                                 coroutineScope.launch {
                                     if (isRegistering) {
                                         viewModel.registerPasskey(email)
-//                                        viewModel.simulateRegistration()
                                     } else {
                                         kotlin.runCatching {
                                             viewModel.authenticateWithPasskey(email)
                                         }.onSuccess {
                                             viewModel.fetchProfile(userEmail = email)
                                         }
-//                                        viewModel.authenticateWithPasskey(email)
-//                                        viewModel.simulateAuthentication(email = email)
-//                                        viewModel.fetchProfile(userEmail = email)
-
-//                                        viewModel.simulateAuthenticationError(email)
                                     }
                                 }
                             },
@@ -212,7 +224,7 @@ fun LoginScreen(
                             is LoginUIState.Authenticated -> {
                                 onLoginSuccess()
                             }
-                            else -> { /* No-op */ }
+                            else -> { /* Nothing to do */ }
                         }
                     }
                 }
