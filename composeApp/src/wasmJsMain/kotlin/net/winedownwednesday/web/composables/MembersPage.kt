@@ -1,5 +1,6 @@
 package net.winedownwednesday.web.composables
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -47,13 +48,17 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import net.winedownwednesday.web.data.Member
 import net.winedownwednesday.web.data.MemberSection
+import net.winedownwednesday.web.data.models.UserProfileData
+import net.winedownwednesday.web.viewmodels.LoginUIState
 import net.winedownwednesday.web.viewmodels.MembersPageViewModel
 import net.winedownwednesday.web.viewmodels.matchesQuery
 import org.koin.compose.koinInject
 
 @Composable
 fun MembersPage(
-    isCompactScreen: Boolean
+    isCompactScreen: Boolean,
+    uiState: LoginUIState,
+    userProfileData: UserProfileData?
 ) {
 
     val viewModel: MembersPageViewModel = koinInject()
@@ -71,6 +76,8 @@ fun MembersPage(
             } },
             onDismissRequest = {viewModel.clearSelectedMember()},
             onSearchQueryChange = {viewModel.setSearchQuery(it)},
+            uiState = uiState,
+            userProfileData = userProfileData,
         )
     } else {
         LargeScreenMemberPage(
@@ -80,6 +87,8 @@ fun MembersPage(
                 viewModel.setSelectedMember(it)
             } },
             onDismissRequest = {viewModel.clearSelectedMember()},
+            uiState = uiState,
+            userProfileData = userProfileData,
         )
     }
 
@@ -133,7 +142,13 @@ fun MemberCard(
 }
 
 @Composable
-fun MemberDetailPopup(member: Member, onDismissRequest: () -> Unit) {
+fun MemberDetailPopup(
+    member: Member,
+    onDismissRequest: () -> Unit,
+    uiState: LoginUIState,
+    userProfileData: UserProfileData?,
+    modifier: Modifier = Modifier
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -184,8 +199,16 @@ fun MemberDetailPopup(member: Member, onDismissRequest: () -> Unit) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 MemberDetailRow("Email", member.email)
-                MemberDetailRow("Phone", member.phoneNumber)
-                MemberDetailRow("Birthday", member.birthday)
+                AnimatedVisibility(
+                    visible = (userProfileData?.isMember == true && uiState == LoginUIState.Authenticated)
+                ) {
+                    MemberDetailRow("Phone", member.phoneNumber)
+                }
+                AnimatedVisibility(
+                    visible = (userProfileData?.isMember == true && uiState == LoginUIState.Authenticated)
+                ) {
+                    MemberDetailRow("Birthday", member.birthday)
+                }
                 MemberDetailRow("Profession", member.profession)
                 MemberDetailRow("Company", member.company)
                 member.business?.takeIf { it.isNotEmpty() }?.let {
@@ -214,6 +237,8 @@ fun CompactScreenMembersPage(
     onSelectedMemberChange: (Member?) -> Unit = {},
     onDismissRequest: () -> Unit,
     onSearchQueryChange: (String) -> Unit = {},
+    uiState: LoginUIState,
+    userProfileData: UserProfileData?,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -262,7 +287,9 @@ fun CompactScreenMembersPage(
     if (selectedMember != null) {
         CompactMemberDetailPopup(
             member = selectedMember,
-            onDismissRequest = { onDismissRequest() }
+            onDismissRequest = { onDismissRequest() },
+            uiState = uiState,
+            userProfileData = userProfileData,
         )
     }
 }
@@ -314,7 +341,13 @@ fun CompactMemberCard(
 }
 
 @Composable
-fun CompactMemberDetailPopup(member: Member, onDismissRequest: () -> Unit) {
+fun CompactMemberDetailPopup(
+    member: Member,
+    onDismissRequest: () -> Unit,
+    uiState: LoginUIState,
+    userProfileData: UserProfileData?,
+    modifier: Modifier = Modifier
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -329,13 +362,24 @@ fun CompactMemberDetailPopup(member: Member, onDismissRequest: () -> Unit) {
                 .fillMaxWidth(0.9f)
                 .padding(16.dp)
         ) {
-            MemberDetailContent(member = member, onCloseClick = onDismissRequest)
+            MemberDetailContent(
+                member = member,
+                onCloseClick = onDismissRequest,
+                uiState = uiState,
+                userProfileData = userProfileData
+            )
         }
     }
 }
 
 @Composable
-fun MemberDetailContent(member: Member, onCloseClick: () -> Unit) {
+fun MemberDetailContent(
+    member: Member,
+    onCloseClick: () -> Unit,
+    uiState: LoginUIState,
+    userProfileData: UserProfileData?,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier = Modifier
             .padding(16.dp)
@@ -374,8 +418,16 @@ fun MemberDetailContent(member: Member, onCloseClick: () -> Unit) {
 
         MemberDetailRow(label = "Role", value = member.role)
         MemberDetailRow(label = "Email", value = member.email)
-        MemberDetailRow(label = "Phone", value = member.phoneNumber)
-        MemberDetailRow(label = "Birthday", value = member.birthday)
+        AnimatedVisibility(
+            visible = (userProfileData?.isMember == true && uiState == LoginUIState.Authenticated)
+        ) {
+            MemberDetailRow(label = "Phone", value = member.phoneNumber)
+        }
+        AnimatedVisibility(
+            visible = (userProfileData?.isMember == true && uiState == LoginUIState.Authenticated)
+        ) {
+            MemberDetailRow(label = "Birthday", value = member.birthday)
+        }
         MemberDetailRow(label = "Profession", value = member.profession)
         MemberDetailRow(label = "Company", value = member.company)
         if (!member.business.isNullOrEmpty()) {
@@ -413,6 +465,8 @@ fun LargeScreenMemberPage(
     selectedMember: Member?,
     onSelectedMemberChange: (Member?) -> Unit,
     onDismissRequest: () -> Unit,
+    uiState: LoginUIState,
+    userProfileData: UserProfileData?,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -458,7 +512,9 @@ fun LargeScreenMemberPage(
         if (selectedMember != null) {
             MemberDetailPopup(
                 member = selectedMember,
-                onDismissRequest = onDismissRequest
+                onDismissRequest = onDismissRequest,
+                uiState = uiState,
+                userProfileData = userProfileData
             )
         }
     }

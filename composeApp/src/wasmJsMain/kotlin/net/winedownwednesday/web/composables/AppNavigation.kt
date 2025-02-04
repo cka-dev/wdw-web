@@ -42,6 +42,7 @@ fun AppNavigation(
     var isLoggedIn by remember { mutableStateOf(false) }
     val isNewUser by authViewModel.isNewUser.collectAsState()
     val userEmil by authViewModel.email.collectAsState()
+    val userProfileData by authViewModel.profileData.collectAsState()
     val windowSizeClass = calculateWindowSizeClass()
     val isCompactScreen = windowSizeClass.widthSizeClass ==
             WindowWidthSizeClass.Compact
@@ -84,7 +85,9 @@ fun AppNavigation(
                             isCompactScreen = isCompactScreen
                         )
                         AppBarState.MEMBERS -> MembersPage(
-                            isCompactScreen = isCompactScreen
+                            isCompactScreen = isCompactScreen,
+                            uiState = uiState,
+                            userProfileData = userProfileData
                         )
                         AppBarState.PODCASTS -> PodcastsPage(
                             isCompactScreen = isCompactScreen
