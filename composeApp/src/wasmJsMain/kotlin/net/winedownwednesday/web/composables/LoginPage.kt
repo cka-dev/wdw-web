@@ -140,7 +140,8 @@ fun LoginScreen(
                                         if (isRegistering) {
                                             viewModel.registerPasskey(email = email)
                                         } else {
-                                            viewModel.authenticateWithPasskey(email = email)
+//                                            viewModel.authenticateWithPasskey(email = email)
+                                            viewModel.simulateAuthentication(email = email)
                                         }
                                         true
                                     } else {
@@ -152,7 +153,7 @@ fun LoginScreen(
                                 focusedBorderColor = Color(0xFF800020),
                                 unfocusedBorderColor = Color.LightGray,
                                 focusedLabelColor = Color(0xFF800020),
-                                cursorColor = Color(0xFF800020)
+                                cursorColor = Color.White
                             )
                         )
 
@@ -165,7 +166,8 @@ fun LoginScreen(
                                         viewModel.registerPasskey(email)
                                     } else {
                                         kotlin.runCatching {
-                                            viewModel.authenticateWithPasskey(email)
+//                                            viewModel.authenticateWithPasskey(email)
+                                            viewModel.simulateAuthentication(email = email)
                                         }.onSuccess {
                                             viewModel.fetchProfile(userEmail = email)
                                         }

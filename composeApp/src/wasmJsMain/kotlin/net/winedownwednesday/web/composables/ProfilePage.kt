@@ -21,8 +21,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -84,6 +84,7 @@ fun ProfilePage(
 ) {
     val userProfile by viewModel.profileData.collectAsStateWithLifecycle()
     val isProfileLoading by viewModel.isFetchingProfile.collectAsStateWithLifecycle()
+    val isProfileSaving by viewModel.isSavingProfile.collectAsStateWithLifecycle()
     var editMode by remember { mutableStateOf(isNewUser) }
     var showSuccessToast by remember { mutableStateOf(false) }
     var showFailureToast by remember { mutableStateOf(false) }
@@ -182,6 +183,10 @@ fun ProfilePage(
                                         }
                                     }
                                 )
+                                AnimatedVisibility(visible = isProfileSaving) {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    LinearProgressBar()
+                                }
                             } else {
                                 userProfile?.let {
                                     ProfileReadSection(
@@ -304,16 +309,53 @@ fun ProfileReadSection(
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            Text(
-                text = "Verified: ${if (profile.isVerified == true) "Yes" else "No"}",
-                color = Color.LightGray
-            )
-            Text(
-                text = "Member: ${if (profile.isMember == true) "Yes" else "No"}",
-                color = Color.LightGray
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Verified: ",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+
+                if (profile.isVerified == true) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Verified",
+                        tint = Color(0xFF00FF00),
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Cancel,
+                        contentDescription = "Not Verified",
+                        tint = Color(0xFFFF0000)
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
+
+            Row {
+                Text(
+                    text = "Member:      ",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                if (profile.isMember == true) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Member",
+                        tint = Color(0xFF00FF00),
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Cancel,
+                        contentDescription = "Not Member",
+                        tint = Color(0xFFFF0000)
+                    )
+                }
+            }
 
             Text(
                 text = "About Me",
@@ -346,9 +388,9 @@ fun ProfileEditSection(
     var aboutMe by remember { mutableStateOf(profile?.aboutMe ?: "") }
     var profileImageBitmap by remember { mutableStateOf(profile?.profileImageBitmap) }
     var birthDate by remember { mutableStateOf(profile?.birthDate) }
-    var isVerified by remember { mutableStateOf(profile?.isVerified ?: false) }
-    var isMember by remember { mutableStateOf(profile?.isMember ?: false) }
-    var showDatePicker = remember { mutableStateOf(false) }
+    val isVerified by remember { mutableStateOf(profile?.isVerified ?: false) }
+    val isMember by remember { mutableStateOf(profile?.isMember ?: false) }
+    val showDatePicker = remember { mutableStateOf(false) }
 
     val updatedProfile = UserProfileData(
         name = name,
@@ -447,7 +489,7 @@ fun ProfileEditSection(
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.Default.Warning,
+                        imageVector = Icons.Default.Cancel,
                         contentDescription = "Not Verified",
                         tint = Color(0xFFFF0000)
                     )
@@ -468,15 +510,23 @@ fun ProfileEditSection(
 
             Row {
                 Text(
-                    text = "Member: ",
+                    text = "Member:      ",
                     color = Color.White,
                     style = MaterialTheme.typography.bodyMedium
                 )
-                Text(
-                    text = if (isMember) "Yes" else "No",
-                    color = Color.LightGray,
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                if (isMember) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Member",
+                        tint = Color(0xFF00FF00),
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Cancel,
+                        contentDescription = "Not Member",
+                        tint = Color(0xFFFF0000)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))

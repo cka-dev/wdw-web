@@ -238,12 +238,42 @@ fun Footer(
                     onLinkClicked = {}
                 )
                 AnimatedVisibility(!isMobile){
-                    FooterColumn(
-                        title = "Resources",
-                        items = listOf("Privacy Policy", "Terms of Service"),
-                        isLinks = true,
-                        {}
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "Get our Apps",
+                            fontWeight = FontWeight.Bold,
+                        )
+
+                        Text(
+                            text = "Coming Soon",
+                            modifier = Modifier.selectable(
+                                selected = false,
+                                enabled = true,
+                                onClick = {}
+                            )
+                        )
+
+//                        Row {
+//                            Icon(
+//                                painter = painterResource(Res.drawable.Google_Play_App),
+//                                contentDescription = "Get it on Google Play",
+//                                tint = Color.White,
+//                                modifier = Modifier
+//                                    .clickable {
+//                                        window.open(instagramLink)
+//                                    }
+//                            )
+//                            Spacer(modifier = Modifier.width(4.dp))
+//                            Icon(
+//                                painter = painterResource(Res.drawable.yt_logo_96),
+//                                contentDescription = "Youtube logo",
+//                                tint = Color.White,
+//                                modifier = Modifier.clickable {
+//                                    window.open(youtubeLink)
+//                                }
+//                            )
+//                        }
+                    }
                 }
             }
         }
