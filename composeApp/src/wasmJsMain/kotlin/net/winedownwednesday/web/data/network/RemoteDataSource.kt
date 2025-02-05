@@ -322,6 +322,24 @@ class RemoteDataSource (
         return false
     }
 
+    override suspend fun sendEmailVerification(email: String): Boolean {
+        try {
+            val response = client.post("$SERVER_URL/sendEmailVerification") {
+                contentType(ContentType.Application.Json)
+                setBody(mapOf("email" to email))
+            }
+            if (response.status.isSuccess()) {
+                return true
+            } else {
+                println("$TAG, Error sending verification email: ${response.status}")
+            }
+        } catch (e: Exception) {
+            println("$TAG, Exception while sending verification email: $e")
+        } finally {
+        }
+        return false
+    }
+
     companion object{
         private const val SERVER_URL =
             "https://us-central1-wdw-app-52a3c.cloudfunctions.net"

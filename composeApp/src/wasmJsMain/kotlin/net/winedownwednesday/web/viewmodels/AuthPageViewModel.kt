@@ -348,6 +348,18 @@ class AuthPageViewModel(
         }
     }
 
+    fun sendVerificationEmail(email: String, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val success = repository.sendEmailVerification(email)
+                onResult(success)
+            } catch (e: Exception) {
+                println("$TAG, Error sending verification email: ${e.message}")
+                onResult(false)
+            }
+        }
+    }
+
     companion object {
         private const val TAG = "AuthPageViewModel"
     }

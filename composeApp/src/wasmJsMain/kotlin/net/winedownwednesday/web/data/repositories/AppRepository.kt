@@ -161,6 +161,10 @@ class AppRepository (
         return remoteDataSource.unRegisterFcmInstanceId(request)
     }
 
+    suspend fun sendEmailVerification(email: String): Boolean {
+        return remoteDataSource.sendEmailVerification(email)
+    }
+
     companion object{
         private const val TAG = "AppRepository"
     }

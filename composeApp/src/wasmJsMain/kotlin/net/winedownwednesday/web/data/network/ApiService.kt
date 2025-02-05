@@ -52,4 +52,7 @@ interface ApiService {
     suspend fun registerFcmInstanceId(request: FcmInstanceRegistrationRequest): Boolean
 
     suspend fun unRegisterFcmInstanceId(request: FcmInstanceRegistrationRequest): Boolean
+
+    suspend fun sendEmailVerification(email: String): Boolean
+
 }

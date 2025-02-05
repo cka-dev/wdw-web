@@ -171,7 +171,16 @@ fun ProfilePage(
                                         viewModel.fetchProfile(userEmail)
                                     },
                                     isNewUser = isNewUser,
-                                    userEmail = userEmail
+                                    userEmail = userEmail,
+                                    onEmailVerification = {
+                                        viewModel.sendVerificationEmail(userEmail) { success ->
+                                            if (success) {
+                                                println("Email sent")
+                                            } else {
+                                                println("Error sending email")
+                                            }
+                                        }
+                                    }
                                 )
                             } else {
                                 userProfile?.let {
@@ -327,6 +336,7 @@ fun ProfileEditSection(
     editMode: Boolean,
     onSave: (UserProfileData) -> Unit,
     onCancel: () -> Unit,
+    onEmailVerification: () -> Unit,
     isNewUser: Boolean,
     userEmail: String
 ) {
@@ -443,7 +453,7 @@ fun ProfileEditSection(
                     )
                     Button(
                         onClick = {
-                            // TODO: Implement verification
+                            onEmailVerification()
                         },
                         colors = ButtonDefaults.buttonColors(
                             contentColor = Color.White
