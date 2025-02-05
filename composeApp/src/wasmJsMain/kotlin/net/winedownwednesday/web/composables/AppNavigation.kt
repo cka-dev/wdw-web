@@ -41,7 +41,7 @@ fun AppNavigation(
     val uiState by authViewModel.uiState.collectAsState()
     var isLoggedIn by remember { mutableStateOf(false) }
     val isNewUser by authViewModel.isNewUser.collectAsState()
-    val userEmil by authViewModel.email.collectAsState()
+    val userEmail by authViewModel.email.collectAsState()
     val userProfileData by authViewModel.profileData.collectAsState()
     val windowSizeClass = calculateWindowSizeClass()
     val isCompactScreen = windowSizeClass.widthSizeClass ==
@@ -125,7 +125,7 @@ fun AppNavigation(
                                 },
                                 isNewUser = isNewUser,
                                 viewModel = authViewModel,
-                                userEmail = userEmil
+                                userEmail = userEmail
                             )
                         }
                     }

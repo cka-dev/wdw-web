@@ -89,6 +89,8 @@ fun ProfilePage(
     var showSuccessToast by remember { mutableStateOf(false) }
     var showFailureToast by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+    var showVerificationEmailToast by remember { mutableStateOf(false) }
+    var showVerificationEmailFailureToast by remember { mutableStateOf(false) }
 
     val backgroundBrush = Brush.verticalGradient(
         colors = listOf(
@@ -156,6 +158,7 @@ fun ProfilePage(
                                                 editMode = false
                                                 showSuccessToast = true
                                                 showFailureToast = false
+                                                viewModel.fetchProfile(userEmail)
                                             } else {
                                                 showFailureToast = true
                                                 showSuccessToast = false
@@ -167,6 +170,7 @@ fun ProfilePage(
                                             }
                                         }
                                     },
+
                                     onCancel = {
                                         editMode = false
                                         viewModel.fetchProfile(userEmail)
@@ -176,8 +180,17 @@ fun ProfilePage(
                                     onEmailVerification = {
                                         viewModel.sendVerificationEmail(userEmail) { success ->
                                             if (success) {
-                                                println("Email sent")
+                                                showVerificationEmailToast = true
+                                                coroutineScope.launch {
+                                                    delay(3500)
+                                                    showVerificationEmailToast = false
+                                                }
                                             } else {
+                                                showVerificationEmailFailureToast = true
+                                                coroutineScope.launch {
+                                                    delay(3500)
+                                                    showVerificationEmailFailureToast = false
+                                                }
                                                 println("Error sending email")
                                             }
                                         }
@@ -251,6 +264,14 @@ fun ProfilePage(
     }
     if (showFailureToast) {
         Toast(message = "Error saving profile.")
+    }
+
+    if (showVerificationEmailToast) {
+        Toast(message = "Verification email sent. Please check your inbox.")
+    }
+
+    if (showVerificationEmailFailureToast) {
+        Toast(message = "Error sending verification email. Please try again.")
     }
 }
 

@@ -140,8 +140,7 @@ fun LoginScreen(
                                         if (isRegistering) {
                                             viewModel.registerPasskey(email = email)
                                         } else {
-//                                            viewModel.authenticateWithPasskey(email = email)
-                                            viewModel.simulateAuthentication(email = email)
+                                            viewModel.authenticateWithPasskey(email = email)
                                         }
                                         true
                                     } else {
@@ -166,8 +165,7 @@ fun LoginScreen(
                                         viewModel.registerPasskey(email)
                                     } else {
                                         kotlin.runCatching {
-//                                            viewModel.authenticateWithPasskey(email)
-                                            viewModel.simulateAuthentication(email = email)
+                                            viewModel.authenticateWithPasskey(email)
                                         }.onSuccess {
                                             viewModel.fetchProfile(userEmail = email)
                                         }

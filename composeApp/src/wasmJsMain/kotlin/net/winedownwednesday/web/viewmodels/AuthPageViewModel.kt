@@ -41,6 +41,9 @@ class AuthPageViewModel(
     private val _isFetchingProfile = MutableStateFlow(false)
     val isFetchingProfile: StateFlow<Boolean> = _isFetchingProfile.asStateFlow()
 
+    private val _isSavingProfile = MutableStateFlow(false)
+    val isSavingProfile: StateFlow<Boolean> = _isSavingProfile.asStateFlow()
+
     fun fetchProfile(userEmail: String) {
         viewModelScope.launch {
             _isFetchingProfile.value = true
@@ -48,7 +51,7 @@ class AuthPageViewModel(
                 val profile = repository.fetchProfileFromServer(userEmail)
                 _profileData.value = profile
             } catch (e: Exception) {
-                println("$TAG: Error fetching profile: ${e.message}")
+                _isFetchingProfile.value = false
             } finally {
                 _isFetchingProfile.value = false
             }
@@ -57,11 +60,19 @@ class AuthPageViewModel(
 
     fun saveProfile(userProfileData: UserProfileData, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
-            val success = repository.saveProfileToServer(userProfileData)
-            if (success) {
-                _profileData.value = userProfileData
+            _isSavingProfile.value = true
+            try {
+                val success = repository.saveProfileToServer(userProfileData)
+                if (success) {
+                    _profileData.value = userProfileData
+                }
+                onResult(success)
+            } catch (e: Exception) {
+                onResult(false)
+                _isSavingProfile.value = false
+            } finally {
+                _isSavingProfile.value = false
             }
-            onResult(success)
         }
     }
 
@@ -105,7 +116,6 @@ class AuthPageViewModel(
                             _uiState.value = LoginUIState.Error("Passkey registration failed")
                         }
                     } catch (e: Exception) {
-                        println("$TAG: Exception during registration: $e")
                         _uiState.value = LoginUIState.Error("Error during registration: ${e.message}")
                     }
                 }
