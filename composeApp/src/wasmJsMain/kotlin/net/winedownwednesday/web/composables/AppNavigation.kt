@@ -15,9 +15,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import kotlinx.coroutines.launch
 import net.winedownwednesday.web.viewmodels.AuthPageViewModel
 import org.koin.compose.koinInject
 
@@ -46,6 +48,7 @@ fun AppNavigation(
     val windowSizeClass = calculateWindowSizeClass()
     val isCompactScreen = windowSizeClass.widthSizeClass ==
             WindowWidthSizeClass.Compact
+    val scope = rememberCoroutineScope()
 
     MaterialTheme(
         colorScheme = darkColorScheme(
@@ -68,7 +71,9 @@ fun AppNavigation(
                     onLogout = {
                         isLoggedIn = false
                         appBarState.value = AppBarState.HOME
-                        authViewModel.logout()
+                        scope.launch {
+                            authViewModel.logout()
+                        }
                     }
                 )
 
@@ -121,7 +126,9 @@ fun AppNavigation(
                                 onLogout = {
                                     isLoggedIn = false
                                     appBarState.value = AppBarState.HOME
-                                    authViewModel.logout()
+                                    scope.launch {
+                                        authViewModel.logout()
+                                    }
                                 },
                                 isNewUser = isNewUser,
                                 viewModel = authViewModel,

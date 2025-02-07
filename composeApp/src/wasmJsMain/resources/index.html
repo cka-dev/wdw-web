@@ -25,7 +25,15 @@
                 .catch(reject);
         });
 
-        Promise.all([firebaseAppPromise, firebaseMessagingPromise])
+        const firebaseAuthPromise = new Promise((resolve, reject) => {
+            import('https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js')
+                .then(() => {
+                    resolve();
+                })
+                .catch(reject);
+        });
+
+        Promise.all([firebaseAppPromise, firebaseMessagingPromise, firebaseAuthPromise])
             .then(() => {
                 const script = document.createElement('script');
                 script.src = 'firebase-bridge.js';

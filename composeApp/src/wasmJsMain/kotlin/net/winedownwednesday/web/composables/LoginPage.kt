@@ -138,9 +138,9 @@ fun LoginScreen(
                                 .onKeyEvent { event ->
                                     return@onKeyEvent if (event.key.keyCode == Key.Enter.keyCode){
                                         if (isRegistering) {
-                                            viewModel.registerPasskey(email = email)
+                                                viewModel.registerPasskeyV2(email = email)
                                         } else {
-                                            viewModel.authenticateWithPasskey(email = email)
+                                            viewModel.authenticateWithPasskeyV2(email = email)
                                         }
                                         true
                                     } else {
@@ -162,13 +162,9 @@ fun LoginScreen(
                             onClick = {
                                 coroutineScope.launch {
                                     if (isRegistering) {
-                                        viewModel.registerPasskey(email)
+                                        viewModel.registerPasskeyV2(email = email)
                                     } else {
-                                        kotlin.runCatching {
-                                            viewModel.authenticateWithPasskey(email)
-                                        }.onSuccess {
-                                            viewModel.fetchProfile(userEmail = email)
-                                        }
+                                        viewModel.authenticateWithPasskeyV2(email = email)
                                     }
                                 }
                             },

@@ -14,6 +14,7 @@ import net.winedownwednesday.web.data.Member
 import net.winedownwednesday.web.data.Wine
 import net.winedownwednesday.web.data.models.AuthenticationResponse
 import net.winedownwednesday.web.data.models.FcmInstanceRegistrationRequest
+import net.winedownwednesday.web.data.models.FirebaseAuthResponse
 import net.winedownwednesday.web.data.models.PublicKeyCredentialCreationOptions
 import net.winedownwednesday.web.data.models.PublicKeyCredentialRequestOptions
 import net.winedownwednesday.web.data.models.RSVPRequest
@@ -163,6 +164,20 @@ class AppRepository (
 
     suspend fun sendEmailVerification(email: String): Boolean {
         return remoteDataSource.sendEmailVerification(email)
+    }
+
+    suspend fun verifyPasskeyRegistrationWithToken(
+        credential: RegistrationResponse,
+        email: String
+    ): ApiResult<FirebaseAuthResponse> {
+        return remoteDataSource.verifyPasskeyRegistrationWithToken(credential, email)
+    }
+
+    suspend fun verifyPasskeyAuthenticationWithToken(
+        credential: AuthenticationResponse,
+        email: String
+    ): ApiResult<FirebaseAuthResponse> {
+        return remoteDataSource.verifyPasskeyAuthenticationWithToken(credential, email)
     }
 
     companion object{

@@ -133,3 +133,9 @@ data class RegistrationOptionsRequest(
     val email: String,
 )
 
+@Serializable
+data class FirebaseAuthResponse(
+    val token: String,
+    val verified: Boolean,
+)
+

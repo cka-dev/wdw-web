@@ -18,6 +18,7 @@ import io.ktor.http.isSuccess
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.Json
+import net.winedownwednesday.web.FirebaseBridge
 import net.winedownwednesday.web.data.AboutItem
 import net.winedownwednesday.web.data.Episode
 import net.winedownwednesday.web.data.Event
@@ -25,6 +26,7 @@ import net.winedownwednesday.web.data.Member
 import net.winedownwednesday.web.data.Wine
 import net.winedownwednesday.web.data.models.AuthenticationResponse
 import net.winedownwednesday.web.data.models.FcmInstanceRegistrationRequest
+import net.winedownwednesday.web.data.models.FirebaseAuthResponse
 import net.winedownwednesday.web.data.models.PublicKeyCredentialCreationOptions
 import net.winedownwednesday.web.data.models.PublicKeyCredentialRequestOptions
 import net.winedownwednesday.web.data.models.RSVPRequest
@@ -129,7 +131,7 @@ class RemoteDataSource (
                 }
             }.body()
         } catch (e: Exception) {
-            println("Error fetching events: ${e.message}")
+//            println("Error fetching events: ${e.message}")
             _error.value = e.message ?: "Unknown error occurred"
             e.message?.let { Logger.SIMPLE.log(it) }
             null
@@ -214,7 +216,7 @@ class RemoteDataSource (
                             " or register a new account"
                     ApiResult.Error(errorMessage)
                 } else {
-                    println("$TAG: response status: ${response.status}")
+//                    println("$TAG: response status: ${response.status}")
                     ApiResult.Error(
                         "Failed to generate authentication options: ${response.bodyAsText()}")
                 }
@@ -257,7 +259,7 @@ class RemoteDataSource (
             val jsonString = response.bodyAsText()
             Json.decodeFromString<UserProfileData>(jsonString)
         } catch (e: Exception) {
-            println("Error fetching profile: ${e.message}")
+//            println("Error fetching profile: ${e.message}")
             null
         }
     }
@@ -270,7 +272,6 @@ class RemoteDataSource (
             }
             response.status.isSuccess()
         } catch (e: Exception) {
-            println("Error updating profile: ${e.message}")
             false
         }
     }
@@ -283,7 +284,6 @@ class RemoteDataSource (
             }
             response.status.isSuccess()
         } catch (e: Exception) {
-            println("Error adding RSVP to event: ${e.message}")
             false
         }
     }
@@ -297,10 +297,10 @@ class RemoteDataSource (
             if (response.status.isSuccess()) {
                 return true
             } else {
-                println("$TAG:Error registering FCM token: ${response.status}")
+//                println("$TAG:Error registering FCM token: ${response.status}")
             }
         } catch (e: Exception) {
-            println("$TAG:Exception while registering FCM token: $e")
+//            println("$TAG:Exception while registering FCM token: $e")
         }
         return false
     }
@@ -314,10 +314,10 @@ class RemoteDataSource (
             if (response.status.isSuccess()) {
                 return true
             } else {
-                println("$TAG: Error unregistering FCM token: ${response.status}")
+//                println("$TAG: Error unregistering FCM token: ${response.status}")
             }
         } catch (e: Exception) {
-            println("$TAG:Exception whilst unregistering FCM token: $e")
+//            println("$TAG:Exception whilst unregistering FCM token: $e")
         }
         return false
     }
@@ -331,13 +331,123 @@ class RemoteDataSource (
             if (response.status.isSuccess()) {
                 return true
             } else {
-                println("$TAG, Error sending verification email: ${response.status}")
+//                println("$TAG, Error sending verification email: ${response.status}")
             }
         } catch (e: Exception) {
-            println("$TAG, Exception while sending verification email: $e")
+//            println("$TAG, Exception while sending verification email: $e")
         } finally {
         }
         return false
+    }
+
+    suspend fun generatePasskeyAuthenticationOptions2(
+        email: String
+    ): ApiResult<PublicKeyCredentialRequestOptions> {
+        return try {
+            val response: HttpResponse = client.post(
+                "$SERVER_URL/generatePasskeyAuthenticationOptions2") {
+                contentType(ContentType.Application.Json)
+                setBody(mapOf("email" to email))
+            }
+            if (!response.status.isSuccess()) {
+                if (response.status == HttpStatusCode.NotFound) {
+                    val errorMessage = "Email is not registered. Please double check for typos" +
+                            " or register a new account"
+                    ApiResult.Error(errorMessage)
+                } else {
+//                    println("$TAG: response status: ${response.status}")
+                    ApiResult.Error(
+                        "Failed to generate authentication options: ${response.bodyAsText()}")
+                }
+            } else {
+                val options: PublicKeyCredentialRequestOptions = response.body()
+                ApiResult.Success(options)
+            }
+        } catch (e: Exception) {
+            ApiResult.Error(e.message ?: "Unknown error occurred")
+        }
+    }
+
+    suspend fun generatePasskeyRegistrationOptions2(email: String):
+            ApiResult<PublicKeyCredentialCreationOptions> {
+        return try {
+            val response: HttpResponse = client.post(
+                "$SERVER_URL/generatePasskeyRegistrationOptions2") {
+                contentType(ContentType.Application.Json)
+                setBody(RegistrationOptionsRequest(email))
+            }
+            if (!response.status.isSuccess()) {
+                val errorBody = response.bodyAsText()
+                if (response.status == HttpStatusCode.Conflict) {
+                    ApiResult.Error("An account already exists with that email. " +
+                            "Please log in instead.")
+                } else {
+                    ApiResult.Error("Failed to generate registration options: $errorBody")
+                }
+            } else {
+                val options: PublicKeyCredentialCreationOptions = response.body()
+                ApiResult.Success(options)
+            }
+        } catch (e: Exception) {
+            ApiResult.Error(e.message ?: "Unknown error occurred")
+        }
+    }
+
+    override suspend fun verifyPasskeyRegistrationWithToken(
+        credential: RegistrationResponse, email: String): ApiResult<FirebaseAuthResponse> {
+        _isLoading.value = true
+        return try {
+            val response: HttpResponse = client.post(
+                "$SERVER_URL/verifyPasskeyRegistrationWithFirebaseAuth") {
+                contentType(ContentType.Application.Json)
+                setBody(VerifyRegistrationRequest(credential, email))
+            }
+            if (response.status.isSuccess()) {
+                val authResponse: FirebaseAuthResponse = response.body()
+                ApiResult.Success(authResponse)
+            } else {
+                ApiResult.Error("Passkey registration failed: ${response.status}")
+            }
+        } catch (e: Exception) {
+            _error.value = e.message
+            ApiResult.Error(e.message ?: "Unknown error during registration verification")
+        } finally {
+            _isLoading.value = false
+        }
+    }
+
+
+    override suspend fun verifyPasskeyAuthenticationWithToken(
+        credential: AuthenticationResponse, email: String): ApiResult<FirebaseAuthResponse> {
+        _isLoading.value = true
+        return try {
+            val response: HttpResponse = client.post(
+                "$SERVER_URL/verifyPasskeyAuthenticationWithFirebaseAuth") {
+                contentType(ContentType.Application.Json)
+                setBody(VerifyAuthenticationRequest(credential, email))
+            }
+
+            if (response.status.isSuccess()) {
+                val authResponse : FirebaseAuthResponse = response.body()
+                try {
+                    FirebaseBridge.signInWithCustomToken(authResponse.token)
+//                    println("$TAG: Signed in with custom token")
+                } catch (e: Exception) {
+//                    println("$TAG: Error signing in with custom token: ${e.message}")
+                }
+                ApiResult.Success(authResponse)
+            }
+            else{
+                ApiResult.Error(
+                    "Passkey authentication failed with server response: ${response.status}")
+            }
+
+        } catch (e: Exception) {
+            _error.value = e.message
+            ApiResult.Error(e.message ?: "Unknown error during authentication verification")
+        } finally {
+            _isLoading.value = false
+        }
     }
 
     companion object{
