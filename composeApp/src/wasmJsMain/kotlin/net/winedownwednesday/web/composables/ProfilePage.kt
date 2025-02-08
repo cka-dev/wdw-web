@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Check
@@ -53,6 +54,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.rememberAsyncImagePainter
@@ -64,7 +66,9 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import net.winedownwednesday.web.NanpVisualTransformation
 import net.winedownwednesday.web.data.models.UserProfileData
+import net.winedownwednesday.web.formatPhoneNumber
 import net.winedownwednesday.web.viewmodels.AuthPageViewModel
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.skia.Bitmap
@@ -275,12 +279,16 @@ fun ProfilePage(
     }
 }
 
+
 @Composable
 fun ProfileReadSection(
     profile: UserProfileData,
     editMode: Boolean,
     onEdit: () -> Unit
 ) {
+    val formattedPhone = formatPhoneNumber(profile.phone ?: "")
+
+
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A)),
         shape = RoundedCornerShape(16.dp),
@@ -314,8 +322,9 @@ fun ProfileReadSection(
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.LightGray
             )
+
             Text(
-                text = profile.phone ?: "",
+                text = formattedPhone,
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.LightGray
             )
@@ -389,9 +398,16 @@ fun ProfileReadSection(
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.LightGray
             )
+
+            if (editMode) {
+                Button(onClick = onEdit) {
+                    Text("Edit")
+                }
+            }
         }
     }
 }
+
 
 @Composable
 fun ProfileEditSection(
@@ -403,9 +419,11 @@ fun ProfileEditSection(
     isNewUser: Boolean,
     userEmail: String
 ) {
+    val numericRegex = Regex("[^0-9]")
     var name by remember { mutableStateOf(profile?.name ?: "") }
     var email by remember { mutableStateOf(userEmail) }
-    var phone by remember { mutableStateOf(profile?.phone ?: "") }
+    var phone by remember { mutableStateOf(profile?.phone?.replace(
+        numericRegex, "")?.take(10) ?: "") }
     var aboutMe by remember { mutableStateOf(profile?.aboutMe ?: "") }
     var profileImageBitmap by remember { mutableStateOf(profile?.profileImageBitmap) }
     var birthDate by remember { mutableStateOf(profile?.birthDate) }
@@ -464,10 +482,20 @@ fun ProfileEditSection(
 
             OutlinedTextField(
                 value = phone,
-                onValueChange = { phone = it },
+                onValueChange = {
+                    val stripped = numericRegex.replace(it, "")
+                    phone = stripped.take(10)
+                },
                 label = { Text("Phone", color = Color.White) },
-                colors = TextFieldDefaults.colors(cursorColor = Color(0xFFFF7F33))
+                visualTransformation = NanpVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                colors = TextFieldDefaults.colors(
+                    cursorColor = Color(0xFFFF7F33),
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedContainerColor = Color.Transparent
+                )
             )
+
 
             Spacer(modifier = Modifier.height(8.dp))
 

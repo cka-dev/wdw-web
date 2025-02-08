@@ -85,6 +85,7 @@ import kotlinx.datetime.toLocalDateTime
 import kotlinx.dom.appendElement
 import net.winedownwednesday.web.HtmlView
 import net.winedownwednesday.web.LocalLayerContainer
+import net.winedownwednesday.web.NanpVisualTransformation
 import net.winedownwednesday.web.data.Event
 import net.winedownwednesday.web.data.MediaItem
 import net.winedownwednesday.web.data.MediaType
@@ -813,6 +814,8 @@ fun RSVPComponent(
         else -> ""
     }
 
+    val numericRegex = Regex("[^0-9]")
+
     var firstName by rememberSaveable {
         mutableStateOf(existingRsvp?.firstName ?: profileDataFirstName) }
     var lastName by rememberSaveable {
@@ -820,7 +823,13 @@ fun RSVPComponent(
     var email by rememberSaveable {
         mutableStateOf(existingRsvp?.email ?: userProfileData?.email) }
     var phoneNumber by rememberSaveable {
-        mutableStateOf(existingRsvp?.phoneNumber ?: userProfileData?.phone) }
+        mutableStateOf(
+            existingRsvp?.phoneNumber?.replace(
+                numericRegex, "")?.take(10)
+                ?: userProfileData?.phone?.replace(
+                    numericRegex, "")?.take(10) ?: ""
+        )
+    }
     var guestsCount by rememberSaveable {
         mutableStateOf(existingRsvp?.guestsCount ?: 1) }
     var allowUpdates by rememberSaveable {
@@ -868,7 +877,8 @@ fun RSVPComponent(
                             },
                             phoneNumber = phoneNumber,
                             onPhoneNumberChange = {
-                                phoneNumber = it
+                                val stripped = numericRegex.replace(it, "")
+                                phoneNumber = stripped.take(10)
                                 phoneError = ""
                             },
                             guestsCountText = guestsCountText.toString(),
@@ -900,7 +910,7 @@ fun RSVPComponent(
                                     firstName = firstName,
                                     lastName = lastName,
                                     email = email ?: "",
-                                    phoneNumber = phoneNumber ?: "",
+                                    phoneNumber = phoneNumber,
                                     allowUpdates = allowUpdates,
                                     guestsCount = guestsCount
                                 )
@@ -929,7 +939,8 @@ fun RSVPComponent(
                             },
                             phoneNumber = phoneNumber,
                             onPhoneNumberChange = {
-                                phoneNumber = it
+                                val stripped = numericRegex.replace(it, "")
+                                phoneNumber = stripped.take(10)
                                 phoneError = ""
                             },
                             guestsCountText = guestsCountText.toString(),
@@ -961,7 +972,7 @@ fun RSVPComponent(
                                     firstName = firstName,
                                     lastName = lastName,
                                     email = email ?: "",
-                                    phoneNumber = phoneNumber ?: "",
+                                    phoneNumber = phoneNumber,
                                     allowUpdates = allowUpdates,
                                     guestsCount = guestsCount
                                 )
@@ -1137,6 +1148,8 @@ fun CompactScreenReservationFields(
                         Text(text = phoneError, color = MaterialTheme.colorScheme.error)
                     }
                 },
+                visualTransformation = NanpVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -1364,6 +1377,8 @@ fun NonCompactReservationFields(
                             Text(phoneError, color = MaterialTheme.colorScheme.error)
                         }
                     },
+                    visualTransformation = NanpVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f)
                 )
             }
