@@ -33,6 +33,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -66,6 +67,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -1140,47 +1142,63 @@ fun CompactScreenReservationFields(
         }
 
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(
+            ) {
                 Text("Number of guests: ", style = MaterialTheme.typography.bodyLarge)
                 Spacer(modifier = Modifier.width(8.dp))
-                Card (
-                    modifier = Modifier.clickable {
-                        if (guestCount > 1) {
-                            onGuestsCountChange((guestCount - 1).toString())
-                        }
-                    }
+                Row (
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Remove,
-                        contentDescription = "Decrease guests count",
-                        tint = Color.White
-                    )
-                }
-                OutlinedTextField(
-                    value = guestsCountText,
-                    onValueChange = onGuestsCountChange,
-                    label = { Text("Guests") },
-                    isError = guestsError.isNotEmpty(),
-                    supportingText = {
-                        if (guestsError.isNotEmpty()) {
-                            Text(guestsError, color = MaterialTheme.colorScheme.error)
+                    Card (
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color.LightGray,
+                        ),
+                        elevation = CardDefaults.cardElevation(4.dp),
+                        modifier = Modifier.clickable {
+                            if (guestCount > 1) {
+                                onGuestsCountChange((guestCount - 1).toString())
+                            }
                         }
-                    },
-                    singleLine = true,
-                    modifier = Modifier.width(80.dp)
-                )
-                Card (
-                    modifier = Modifier.clickable {
-                        if (guestCount < 10) {
-                            onGuestsCountChange((guestCount + 1).toString())
-                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Remove,
+                            contentDescription = "Decrease guests count",
+                            tint = Color.Black
+                        )
                     }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Increase guests count",
-                        tint = Color.White
+                    Spacer(modifier = Modifier.width(8.dp))
+                    OutlinedTextField(
+                        value = guestsCountText,
+                        onValueChange = onGuestsCountChange,
+                        label = { Text("Guests") },
+                        isError = guestsError.isNotEmpty(),
+                        supportingText = {
+                            if (guestsError.isNotEmpty()) {
+                                Text(guestsError, color = MaterialTheme.colorScheme.error)
+                            }
+                        },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.width(80.dp)
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Card (
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color.LightGray,
+                        ),
+                        elevation = CardDefaults.elevatedCardElevation(4.dp),
+                        modifier = Modifier.clickable {
+                            if (guestCount < 10) {
+                                onGuestsCountChange((guestCount + 1).toString())
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Increase guests count",
+                            tint = Color.Black
+                        )
+                    }
                 }
             }
         }
@@ -1226,172 +1244,207 @@ fun NonCompactReservationFields(
     uiState: LoginUIState,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        elevation = CardDefaults.elevatedCardElevation(4.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            AsyncImage(
-                model = event.imageUrl,
-                contentDescription = "${event.name}'s picture",
-                alignment = Alignment.Center,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-    }
-
-    Text(
-        text = "RSVP for ${event.name}",
-        textAlign = TextAlign.Center,
-        style = MaterialTheme.typography.headlineSmall,
-        modifier = Modifier
-            .padding(8.dp)
-            .fillMaxWidth()
-    )
-
-    Text(
-        text = "Your contact information",
-        style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-    )
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .toggleable(
-                value = allowUpdates,
-                onValueChange = onAllowUpdatesToggle,
-                role = Role.Checkbox
-            )
-            .padding(horizontal = 8.dp)
-            .height(56.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Checkbox(
-            checked = allowUpdates,
-            onCheckedChange = onAllowUpdatesToggle
-        )
-        Text(
-            text = "Keep me updated on WDW events",
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(start = 8.dp)
-        )
-    }
-
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(
-            value = firstName ?: "",
-            onValueChange = { onFirstNameChange(it) },
-            label = { Text("First Name", color = Color.White) },
-            isError = firstNameError.isNotEmpty(),
-            supportingText = {
-                if (firstNameError.isNotEmpty()) {
-                    Text(firstNameError, color = MaterialTheme.colorScheme.error)
-                }
-            },
-            modifier = Modifier.weight(1f)
-        )
-        OutlinedTextField(
-            value = lastName ?: "",
-            onValueChange = { onLastNameChange(it) },
-            label = { Text("Last Name", color = Color.White) },
-            isError = lastNameError.isNotEmpty(),
-            supportingText = {
-                if (lastNameError.isNotEmpty()) {
-                    Text(lastNameError, color = MaterialTheme.colorScheme.error)
-                }
-            },
-            modifier = Modifier.weight(1f)
-        )
-    }
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(
-            value = email ?: "",
-            onValueChange = { onEmailChange(it) },
-            label = { Text("Email", color = Color.White) },
-            isError = emailError.isNotEmpty(),
-            supportingText = {
-                if (emailError.isNotEmpty()) {
-                    Text(emailError, color = MaterialTheme.colorScheme.error)
-                }
-            },
-            modifier = Modifier.weight(1f)
-        )
-        OutlinedTextField(
-            value = phoneNumber ?: "",
-            onValueChange = { onPhoneNumberChange(it) },
-            label = { Text("Phone Number", color = Color.White) },
-            isError = phoneError.isNotEmpty(),
-            supportingText = {
-                if (phoneError.isNotEmpty()) {
-                    Text(phoneError, color = MaterialTheme.colorScheme.error)
-                }
-            },
-            modifier = Modifier.weight(1f)
-        )
-    }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("Number of guests: ", style = MaterialTheme.typography.bodyLarge)
-        Spacer(modifier = Modifier.width(8.dp))
-        Card (
-            modifier = Modifier.clickable {
-                if (guestCount > 1) {
-                    onGuestsCountChange((guestCount - 1).toString())
+    LazyColumn {
+        item {
+            Card(
+                elevation = CardDefaults.elevatedCardElevation(4.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = event.imageUrl,
+                        contentDescription = "${event.name}'s picture",
+                        alignment = Alignment.Center,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
-        ) {
-            Icon(
-                imageVector = Icons.Default.Remove,
-                contentDescription = "Decrease guests count",
-                tint = Color.White
+        }
+
+        item {
+            Text(
+                text = "RSVP for ${event.name}",
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier
+                    .padding(8.dp)
+                    .fillMaxWidth()
             )
         }
-        OutlinedTextField(
-            value = guestsCountText,
-            onValueChange = onGuestsCountChange,
-            label = { Text("Guests") },
-            isError = guestsError.isNotEmpty(),
-            supportingText = {
-                if (guestsError.isNotEmpty()) {
-                    Text(guestsError, color = MaterialTheme.colorScheme.error)
+
+        item {
+            Text(
+                text = "Your contact information",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+            )
+        }
+
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .toggleable(
+                        value = allowUpdates,
+                        onValueChange = onAllowUpdatesToggle,
+                        role = Role.Checkbox
+                    )
+                    .padding(horizontal = 8.dp)
+                    .height(56.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = allowUpdates,
+                    onCheckedChange = onAllowUpdatesToggle
+                )
+                Text(
+                    text = "Keep me updated on WDW events",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
+        }
+
+        item {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = firstName ?: "",
+                    onValueChange = { onFirstNameChange(it) },
+                    label = { Text("First Name", color = Color.White) },
+                    isError = firstNameError.isNotEmpty(),
+                    supportingText = {
+                        if (firstNameError.isNotEmpty()) {
+                            Text(firstNameError, color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+                OutlinedTextField(
+                    value = lastName ?: "",
+                    onValueChange = { onLastNameChange(it) },
+                    label = { Text("Last Name", color = Color.White) },
+                    isError = lastNameError.isNotEmpty(),
+                    supportingText = {
+                        if (lastNameError.isNotEmpty()) {
+                            Text(lastNameError, color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        item {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = email ?: "",
+                    onValueChange = { onEmailChange(it) },
+                    label = { Text("Email", color = Color.White) },
+                    isError = emailError.isNotEmpty(),
+                    supportingText = {
+                        if (emailError.isNotEmpty()) {
+                            Text(emailError, color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+                OutlinedTextField(
+                    value = phoneNumber ?: "",
+                    onValueChange = { onPhoneNumberChange(it) },
+                    label = { Text("Phone Number", color = Color.White) },
+                    isError = phoneError.isNotEmpty(),
+                    supportingText = {
+                        if (phoneError.isNotEmpty()) {
+                            Text(phoneError, color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Number of guests: ", style = MaterialTheme.typography.bodyLarge)
+                Spacer(modifier = Modifier.width(8.dp))
+                Card (
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.LightGray,
+                    ),
+                    elevation = CardDefaults.cardElevation(4.dp),
+                    modifier = Modifier.clickable {
+                        if (guestCount > 1) {
+                            onGuestsCountChange((guestCount - 1).toString())
+                        }
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Remove,
+                        contentDescription = "Decrease guests count",
+                        tint = Color.Black
+                    )
                 }
-            },
-            singleLine = true,
-            modifier = Modifier.width(80.dp)
-        )
-        Card (
-            modifier = Modifier.clickable {
-                if (guestCount < 10) {
-                    onGuestsCountChange((guestCount + 1).toString())
+                Spacer(modifier = Modifier.width(8.dp))
+                OutlinedTextField(
+                    value = guestsCountText,
+                    onValueChange = onGuestsCountChange,
+                    label = { Text("Guests") },
+                    isError = guestsError.isNotEmpty(),
+                    supportingText = {
+                        if (guestsError.isNotEmpty()) {
+                            Text(guestsError, color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    singleLine = true,
+                    modifier = Modifier.width(80.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Card (
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.LightGray,
+                    ),
+                    elevation = CardDefaults.elevatedCardElevation(4.dp),
+                    modifier = Modifier.clickable {
+                        if (guestCount < 10) {
+                            onGuestsCountChange((guestCount + 1).toString())
+                        }
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Increase guests count",
+                        tint = Color.Black
+                    )
                 }
             }
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Increase guests count",
-                tint = Color.White
-            )
         }
-    }
 
-    Spacer(modifier = Modifier.height(16.dp))
-    Button(
-        onClick = onSubmit,
-        enabled = uiState is LoginUIState.Authenticated,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFFFF7F33),
-            contentColor = Color.White
-        ),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text(
-            text = if (uiState is LoginUIState.Authenticated) "Submit" else "Log in to RSVP"
-        )
+        item {
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        item {
+            Button(
+                onClick = onSubmit,
+                enabled = uiState is LoginUIState.Authenticated,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFFF7F33),
+                    contentColor = Color.White
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text =
+                    if (uiState is LoginUIState.Authenticated) "Submit" else "Log in to RSVP"
+                )
+            }
+        }
     }
 
 }
