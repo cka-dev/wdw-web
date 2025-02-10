@@ -11,7 +11,7 @@ import net.winedownwednesday.web.FirebaseBridge
 fun MainNavigation() {
     val navController = rememberNavController()
 
-    println("App version: 02/07/2025-12:55AM")
+    println("App version: 02/09/2025-09:46PM")
     LaunchedEffect(Unit) {
         kotlin.runCatching {
             FirebaseBridge.initFirebase()

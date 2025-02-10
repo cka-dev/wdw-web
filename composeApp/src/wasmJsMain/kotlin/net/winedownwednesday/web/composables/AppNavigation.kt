@@ -54,7 +54,7 @@ fun AppNavigation(
         colorScheme = darkColorScheme(
             primary = Color(0xFF1E1E1E),
             secondary = Color(0xFF333333),
-            surface = Color(0xFF141414),
+            surface = Color(0xFF2A2A2A),
             onSurface = Color.White,
             onPrimary = Color.White
         )
