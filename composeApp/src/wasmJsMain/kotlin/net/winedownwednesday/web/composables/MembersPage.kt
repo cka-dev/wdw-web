@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -41,10 +42,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import net.winedownwednesday.web.data.Member
 import net.winedownwednesday.web.data.MemberSection
@@ -142,94 +146,6 @@ fun MemberCard(
 }
 
 @Composable
-fun MemberDetailPopup(
-    member: Member,
-    onDismissRequest: () -> Unit,
-    uiState: LoginUIState,
-    userProfileData: UserProfileData?,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Transparent)
-            .clickable { onDismissRequest() }
-    ) {
-        Card(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .fillMaxWidth(0.4f)
-                .fillMaxHeight(0.8f)
-                .clickable(enabled = false) {},
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF282828)),
-            elevation = CardDefaults.cardElevation(16.dp)
-        ) {
-            IconButton(
-                onClick = { onDismissRequest() },
-                modifier = Modifier
-                    .padding(8.dp)
-                    .align(Alignment.End)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Close",
-                    tint = Color.White
-                )
-            }
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState()),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    AsyncImage(
-                        model = member.profilePictureUrl,
-                        contentDescription = "${member.name}'s profile picture",
-                        modifier = Modifier
-                            .size(180.dp)
-                            .clip(RectangleShape)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text(member.name, style = MaterialTheme.typography.headlineSmall)
-                        Text(member.role, style = MaterialTheme.typography.bodyLarge)
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-
-                MemberDetailRow("Email", member.email)
-                AnimatedVisibility(
-                    visible = (userProfileData?.isMember == true && uiState == LoginUIState.Authenticated)
-                ) {
-                    MemberDetailRow("Phone", member.phoneNumber)
-                }
-                AnimatedVisibility(
-                    visible = (userProfileData?.isMember == true && uiState == LoginUIState.Authenticated)
-                ) {
-                    MemberDetailRow("Birthday", member.birthday)
-                }
-                MemberDetailRow("Profession", member.profession)
-                MemberDetailRow("Company", member.company)
-                member.business?.takeIf { it.isNotEmpty() }?.let {
-                    MemberDetailRow("Business", it)
-                }
-                MemberDetailRow(
-                    "Interests/Hobbies",
-                    member.interests.joinToString(separator = ", ")
-                )
-                MemberDetailRow(
-                    "Favorite Wines",
-                    member.favoriteWines.joinToString(separator = ", ")
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-        }
-    }
-}
-
-
-@Composable
 fun CompactScreenMembersPage(
     allMembers: List<MemberSection>,
     selectedMember: Member?,
@@ -285,7 +201,7 @@ fun CompactScreenMembersPage(
     }
 
     if (selectedMember != null) {
-        CompactMemberDetailPopup(
+        CompactMemberDetailDialog(
             member = selectedMember,
             onDismissRequest = { onDismissRequest() },
             uiState = uiState,
@@ -320,7 +236,7 @@ fun CompactMemberCard(
                 contentDescription = "${member.name}'s profile picture",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .size(175.dp)
+                    .size(150.dp)
                     .clip(CircleShape),
                 alignment = Alignment.Center
             )
@@ -341,106 +257,90 @@ fun CompactMemberCard(
 }
 
 @Composable
-fun CompactMemberDetailPopup(
+fun CompactMemberDetailDialog(
     member: Member,
     onDismissRequest: () -> Unit,
     uiState: LoginUIState,
     userProfileData: UserProfileData?,
     modifier: Modifier = Modifier
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.5f))
-            .clickable(onClick = onDismissRequest)
-    ) {
+    Dialog(onDismissRequest = onDismissRequest, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(
+            modifier = modifier.fillMaxWidth().padding(16.dp),
             shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier
-                .align(Alignment.Center)
-                .fillMaxWidth(0.9f)
-                .padding(16.dp)
+            color = MaterialTheme.colorScheme.surfaceVariant
         ) {
-            MemberDetailContent(
-                member = member,
-                onCloseClick = onDismissRequest,
-                uiState = uiState,
-                userProfileData = userProfileData
-            )
+            CompactMemberDetailContent(member, uiState,userProfileData, onDismissRequest)
         }
     }
 }
 
 @Composable
-fun MemberDetailContent(
+fun CompactMemberDetailContent(
     member: Member,
-    onCloseClick: () -> Unit,
     uiState: LoginUIState,
     userProfileData: UserProfileData?,
-    modifier: Modifier = Modifier,
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
         ) {
             Text(
                 text = member.name,
-                style = MaterialTheme.typography.headlineSmall,
-                color = Color.White
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+
             )
-            IconButton(onClick = onCloseClick) {
+            IconButton(onClick = onDismissRequest) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Close"
+                    contentDescription = "Close",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+
         AsyncImage(
             model = member.profilePictureUrl,
             contentDescription = "${member.name}'s profile picture",
-            contentScale = ContentScale.Crop,
             modifier = Modifier
-                .size(120.dp)
-                .clip(CircleShape)
-                .align(Alignment.CenterHorizontally)
+                .fillMaxWidth()
+                .height(250.dp)
+                .clip(RoundedCornerShape(8.dp)),
+            contentScale = ContentScale.Crop,
+            alignment = Alignment.TopCenter
         )
-
         Spacer(modifier = Modifier.height(16.dp))
 
-        MemberDetailRow(label = "Role", value = member.role)
-        MemberDetailRow(label = "Email", value = member.email)
-        AnimatedVisibility(
-            visible = (userProfileData?.isMember == true && uiState == LoginUIState.Authenticated)
-        ) {
-            MemberDetailRow(label = "Phone", value = member.phoneNumber)
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            MemberDetailRow("Role", member.role)
+            MemberDetailRow("Email", member.email)
+            AnimatedVisibility(visible = (userProfileData?.isMember == true && uiState == LoginUIState.Authenticated)) {
+                MemberDetailRow("Phone", member.phoneNumber)
+            }
+            AnimatedVisibility(visible = (userProfileData?.isMember == true && uiState == LoginUIState.Authenticated)) {
+
+                MemberDetailRow("Birthday", member.birthday)
+            }
+            MemberDetailRow("Profession", member.profession)
+            MemberDetailRow("Company", member.company)
+            member.business?.takeIf { it.isNotEmpty() }?.let { MemberDetailRow("Business", it) }
+            MemberDetailRow("Interests/Hobbies", member.interests.joinToString(separator = ", "))
+            MemberDetailRow("Favorite Wines", member.favoriteWines.joinToString(separator = ", "))
         }
-        AnimatedVisibility(
-            visible = (userProfileData?.isMember == true && uiState == LoginUIState.Authenticated)
-        ) {
-            MemberDetailRow(label = "Birthday", value = member.birthday)
-        }
-        MemberDetailRow(label = "Profession", value = member.profession)
-        MemberDetailRow(label = "Company", value = member.company)
-        if (!member.business.isNullOrEmpty()) {
-            MemberDetailRow(label = "Business", value = member.business)
-        }
-        MemberDetailRow(
-            label = "Interests/Hobbies",
-            value = member.interests.joinToString(separator = ", ")
-        )
-        MemberDetailRow(
-            label = "Favorite Wines",
-            value = member.favoriteWines.joinToString(separator = ", ")
-        )
     }
 }
 
@@ -450,12 +350,119 @@ fun MemberDetailRow(label: String, value: String) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Bold
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 10,
+            overflow = TextOverflow.Ellipsis
         )
+    }
+}
+
+@Composable
+fun LargeScreenMemberDetailDialog(
+    member: Member,
+    onDismissRequest: () -> Unit,
+    uiState: LoginUIState,
+    userProfileData: UserProfileData?,
+    modifier: Modifier = Modifier
+) {
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = modifier
+                .widthIn(max = 600.dp)
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant
+        ) {
+            LargeScreenMemberDetailContent(member,uiState, userProfileData, onDismissRequest)
+        }
+    }
+}
+
+@Composable
+fun LargeScreenMemberDetailContent(
+    member: Member,
+    uiState: LoginUIState,
+    userProfileData: UserProfileData?,
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = member.name,
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            IconButton(onClick = onDismissRequest) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            AsyncImage(
+                model = member.profilePictureUrl,
+                contentDescription = "${member.name}'s profile picture",
+                modifier = Modifier
+                    .size(150.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+                contentScale = ContentScale.Crop
+            )
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                MemberDetailRow("Role", member.role)
+                MemberDetailRow("Email", member.email)
+                AnimatedVisibility(visible = (userProfileData?.isMember == true && uiState == LoginUIState.Authenticated)) {
+                    MemberDetailRow("Phone", member.phoneNumber)
+                }
+
+                AnimatedVisibility(visible = (userProfileData?.isMember == true && uiState == LoginUIState.Authenticated)) {
+                    MemberDetailRow("Birthday", member.birthday)
+                }
+            }
+        }
+
+        Column( modifier = Modifier.padding(top = 16.dp)){
+            MemberDetailRow("Profession", member.profession)
+            MemberDetailRow("Company", member.company)
+            if (!member.business.isNullOrEmpty()) {
+                MemberDetailRow("Business", member.business)
+            }
+            MemberDetailRow("Interests/Hobbies", member.interests.joinToString(separator = ", "))
+            MemberDetailRow("Favorite Wines", member.favoriteWines.joinToString(separator = ", "))
+        }
+
     }
 }
 
@@ -510,7 +517,7 @@ fun LargeScreenMemberPage(
             }
         }
         if (selectedMember != null) {
-            MemberDetailPopup(
+            LargeScreenMemberDetailDialog(
                 member = selectedMember,
                 onDismissRequest = onDismissRequest,
                 uiState = uiState,

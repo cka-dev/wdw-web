@@ -1,9 +1,13 @@
 package net.winedownwednesday.web.composables
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,9 +15,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Icon
@@ -29,6 +34,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.browser.window
 import kotlinx.coroutines.delay
 import net.winedownwednesday.web.viewmodels.LoginUIState
@@ -52,6 +59,48 @@ import wdw_web.composeapp.generated.resources.wdw_logo_2_96
 import wdw_web.composeapp.generated.resources.yt_logo_96
 
 
+@Composable
+fun TopNavItem(
+    label: String,
+    target: AppBarState,
+    currentState: AppBarState,
+    onClick: () -> Unit
+) {
+    val isSelected = currentState == target
+
+    val textColor by animateColorAsState(
+        targetValue = if (isSelected) Color(0xFFFF7F33)
+        else MaterialTheme.colorScheme.onSurface,
+        animationSpec = tween(durationMillis = 300)
+    )
+
+    val indicatorHeight by animateDpAsState(
+        targetValue = if (isSelected) 4.dp else 0.dp,
+        animationSpec = tween(durationMillis = 300)
+    )
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .padding(horizontal = 8.dp)
+            .clickable { onClick() }
+    ) {
+        Text(
+            text = label,
+            color = textColor,
+            style = MaterialTheme.typography.bodyMedium,
+            fontSize = 14.sp
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Box(
+            modifier = Modifier
+                .height(indicatorHeight)
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.primary)
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopNavBar(
@@ -59,95 +108,55 @@ fun TopNavBar(
     uiState: LoginUIState,
     onLogout: () -> Unit
 ) {
-//    val authViewModel: AuthPageViewModel = koinInject()
-//    val uiState by authViewModel.uiState.collectAsState()
-
     Surface {
-        TopAppBar(title = {
-            Row {
-                Image(
-                    painter = painterResource(Res.drawable.wdw_logo_2_96),
-                    contentDescription = "Wine Down Wednesday Logo",
+        TopAppBar(
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start,
                     modifier = Modifier.clickable {
                         appBarState.value = AppBarState.HOME
                     }
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Wine Down Wednesday",
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .clickable {
+                ) {
+                    Image(
+                        painter = painterResource(Res.drawable.wdw_logo_2_96),
+                        contentDescription = "Wine Down Wednesday Logo",
+                        modifier = Modifier.clickable {
                             appBarState.value = AppBarState.HOME
                         }
-                        .align(Alignment.CenterVertically)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Wine Down Wednesday",
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable {
+                            appBarState.value = AppBarState.HOME
+                        }
+                    )
+                }
+            },
+            actions = {
+                val navItems = listOf(
+                    "Home" to AppBarState.HOME,
+                    "About" to AppBarState.ABOUT,
+                    "Members" to AppBarState.MEMBERS,
+                    "Uncorked Conversations" to AppBarState.PODCASTS,
+                    "Events" to AppBarState.EVENTS,
+                    "Our Wine" to AppBarState.WINES
                 )
-            }
-        }, actions = {
-            LazyRow(verticalAlignment = Alignment.CenterVertically) {
-                item {
-                    Text(
-                        text = "Home",
-                        modifier = Modifier
-                            .padding(horizontal = 8.dp)
-                            .clickable {
-                                appBarState.value = AppBarState.HOME
-                            }
-                    )
-                }
-                item {
-                    Text(
-                        text = "About",
-                        modifier = Modifier
-                            .padding(horizontal = 8.dp)
-                            .clickable {
-                                appBarState.value = AppBarState.ABOUT
-                            }
-                    )
-                }
-                item {
-                    Text(
-                        text = "Members",
-                        modifier = Modifier
-                            .padding(horizontal = 8.dp)
-                            .clickable {
-                                appBarState.value = AppBarState.MEMBERS
-                            }
-                    )
-                }
-                item {
-                    Text(
-                        text = "Uncorked Conversations",
-                        modifier = Modifier
-                            .padding(horizontal = 8.dp)
-                            .clickable {
-                                appBarState.value = AppBarState.PODCASTS
-                            }
-                    )
-                }
-                item {
-                    Text(
-                        text = "Events",
-                        modifier = Modifier
-                            .padding(horizontal = 8.dp)
-                            .clickable {
-                                appBarState.value = AppBarState.EVENTS
-                            }
-                    )
-                }
-                item {
-                    Text(
-                        text = "Our Wine",
-                        modifier = Modifier
-                            .padding(horizontal = 8.dp)
-                            .clickable {
-                                appBarState.value = AppBarState.WINES
-                            }
-                    )
-                }
-
-                if(uiState is LoginUIState.Authenticated) {
-                    item {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.horizontalScroll(rememberScrollState())
+                ) {
+                    navItems.forEach { (label, state) ->
+                        TopNavItem(
+                            label = label,
+                            target = state,
+                            currentState = appBarState.value,
+                            onClick = { appBarState.value = state }
+                        )
+                    }
+                    if (uiState is LoginUIState.Authenticated) {
                         Spacer(modifier = Modifier.width(16.dp))
                         IconButton(
                             onClick = {
@@ -157,25 +166,24 @@ fun TopNavBar(
                             Icon(
                                 imageVector = Icons.Default.AccountCircle,
                                 contentDescription = "Account Circle",
-                                tint = Color.White
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
-                    }
-                } else if (uiState is LoginUIState.Idle) {
-                    item {
+                    } else if (uiState is LoginUIState.Idle) {
                         Spacer(modifier = Modifier.width(16.dp))
-                        Text(
-                            text = "Member Login",
-                            modifier = Modifier
-                                .padding(horizontal = 8.dp)
-                                .clickable {
-                                    appBarState.value = AppBarState.LOGIN
-                                }
+                        TopNavItem(
+                            label = "Member Login",
+                            target = AppBarState.LOGIN,
+                            currentState = appBarState.value,
+                            onClick = { appBarState.value = AppBarState.LOGIN }
                         )
                     }
                 }
-            }
-        })
+            },
+            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                containerColor = MaterialTheme.colorScheme.primary
+            )
+        )
     }
 }
 
@@ -234,7 +242,7 @@ fun Footer(
                 }
                 FooterColumn(
                     title = "Contact",
-                    items = listOf("info@winesocialclub.com", "+1 234 567 890"),
+                    items = listOf("info@winedownwednesday.net", "+1 (404) 939-3370"),
                     onLinkClicked = {}
                 )
                 AnimatedVisibility(!isMobile){
@@ -375,6 +383,7 @@ fun Toast(message: String) {
 
 @Composable
 fun LinearProgressBar(
+    modifier: Modifier = Modifier,
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -386,5 +395,4 @@ fun LinearProgressBar(
             modifier = Modifier.fillMaxWidth(),
         )
     }
-
 }

@@ -139,8 +139,10 @@ fun LoginScreen(
                                     return@onKeyEvent if (event.key.keyCode == Key.Enter.keyCode){
                                         if (isRegistering) {
                                                 viewModel.registerPasskeyV2(email = email)
+//                                            viewModel.simulateRegistration()
                                         } else {
                                             viewModel.authenticateWithPasskeyV2(email = email)
+//                                            viewModel.simulateAuthentication(email = email)
                                         }
                                         true
                                     } else {
@@ -163,8 +165,10 @@ fun LoginScreen(
                                 coroutineScope.launch {
                                     if (isRegistering) {
                                         viewModel.registerPasskeyV2(email = email)
+                                        viewModel.simulateRegistration()
                                     } else {
                                         viewModel.authenticateWithPasskeyV2(email = email)
+//                                        viewModel.simulateAuthentication(email = email)
                                     }
                                 }
                             },

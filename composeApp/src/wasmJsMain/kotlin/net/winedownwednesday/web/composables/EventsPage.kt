@@ -315,7 +315,7 @@ fun EventCard(
                 color = Color.LightGray
             )
             Text(
-                text = "Date: ${event.date}",
+                text = "Date: ${formatDate(stringToDate(event.date))}",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.LightGray
             )
