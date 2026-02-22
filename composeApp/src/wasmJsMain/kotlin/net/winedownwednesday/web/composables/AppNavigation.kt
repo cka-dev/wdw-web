@@ -11,6 +11,7 @@ import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSiz
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.launch
 import net.winedownwednesday.web.viewmodels.AuthPageViewModel
+import net.winedownwednesday.web.viewmodels.LoginUIState
 import org.koin.compose.koinInject
 
 enum class AppBarState {
@@ -41,7 +43,7 @@ fun AppNavigation(
 ) {
     val appBarState = remember { mutableStateOf(AppBarState.HOME) }
     val uiState by authViewModel.uiState.collectAsState()
-    var isLoggedIn by remember { mutableStateOf(false) }
+    val isLoggedIn = uiState is LoginUIState.Authenticated
     val isNewUser by authViewModel.isNewUser.collectAsState()
     val userEmail by authViewModel.email.collectAsState()
     val userProfileData by authViewModel.profileData.collectAsState()
@@ -49,6 +51,16 @@ fun AppNavigation(
     val isCompactScreen = windowSizeClass.widthSizeClass ==
             WindowWidthSizeClass.Compact
     val scope = rememberCoroutineScope()
+
+    // Sync appBarState with auth state for auto-redirection if needed
+    LaunchedEffect(isLoggedIn) {
+        if (isLoggedIn && appBarState.value == AppBarState.LOGIN) {
+            appBarState.value = AppBarState.PROFILE
+            authViewModel.requestNotificationPermissionAndGetToken()
+        } else if (!isLoggedIn && appBarState.value == AppBarState.PROFILE) {
+            appBarState.value = AppBarState.HOME
+        }
+    }
 
     MaterialTheme(
         colorScheme = darkColorScheme(
@@ -69,8 +81,6 @@ fun AppNavigation(
                     appBarState = appBarState,
                     uiState = uiState,
                     onLogout = {
-                        isLoggedIn = false
-                        appBarState.value = AppBarState.HOME
                         scope.launch {
                             authViewModel.logout()
                         }
@@ -84,8 +94,6 @@ fun AppNavigation(
                         AppBarState.HOME -> HomePage(
                             isCompactScreen = isCompactScreen
                         )
-
-
                         AppBarState.ABOUT -> AboutPage(
                             isCompactScreen = isCompactScreen
                         )
@@ -110,9 +118,7 @@ fun AppNavigation(
                                 LoginScreen(
                                     isCompactScreen = isCompactScreen,
                                     onLoginSuccess = {
-                                        appBarState.value = AppBarState.PROFILE
-                                        isLoggedIn = true
-                                        authViewModel.requestNotificationPermissionAndGetToken()
+                                        // Redirection handled by LaunchedEffect
                                     },
                                     viewModel = authViewModel
                                 )
@@ -124,8 +130,6 @@ fun AppNavigation(
                             ProfilePage(
                                 isCompactScreen = isCompactScreen,
                                 onLogout = {
-                                    isLoggedIn = false
-                                    appBarState.value = AppBarState.HOME
                                     scope.launch {
                                         authViewModel.logout()
                                     }

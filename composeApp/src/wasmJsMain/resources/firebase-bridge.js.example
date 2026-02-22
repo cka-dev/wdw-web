@@ -1,0 +1,89 @@
+// Template for firebase-bridge.js
+// Instructions: Copy this file to firebase-bridge.js and fill in your Firebase configuration keys.
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
+import { getAuth, signInWithCustomToken, signOut, onAuthStateChanged, browserLocalPersistence, setPersistence } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
+import { getMessaging, getToken, requestPermission } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-messaging.js";
+
+// REPLACE THE VALUES BELOW WITH YOUR PROJECT'S CONFIGURATION
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.firebasestorage.app",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID",
+    measurementId: "YOUR_MEASUREMENT_ID"
+};
+
+let app;
+let auth;
+let messaging;
+let initialized = false;
+let resolveInit;
+const initPromise = new Promise(resolve => {
+    resolveInit = resolve;
+});
+
+window.wdwFirebaseBridge = {
+    initFirebase: async function() {
+        if (initialized) return;
+
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+
+        try {
+            messaging = getMessaging(app);
+        } catch (e) {
+            console.error("Messaging not supported in this browser:", e);
+        }
+
+        initialized = true;
+        resolveInit();
+    },
+
+    waitUntilInitialized: function() {
+        return initPromise;
+    },
+
+    signInWithCustomToken: function(token) {
+        return signInWithCustomToken(auth, token);
+    },
+
+    signOut: function() {
+        return signOut(auth);
+    },
+
+    getCurrentUser: function() {
+        return auth?.currentUser;
+    },
+
+    observeAuthState: function(callback) {
+        if (!auth) return;
+        onAuthStateChanged(auth, (user) => {
+            callback(user);
+        });
+    },
+
+    persistSession: async function() {
+        if (!auth) return;
+        return setPersistence(auth, browserLocalPersistence);
+    },
+
+    requestNotificationPermission: async function() {
+        if (!messaging) return "unsupported";
+        return await Notification.requestPermission();
+    },
+
+    getFcmToken: async function() {
+        if (!messaging) return null;
+        try {
+            return await getToken(messaging, {
+                vapidKey: 'YOUR_VAPID_KEY' // REPLACE WITH YOUR VAPID KEY
+            });
+        } catch (error) {
+            console.error("Error getting FCM token:", error);
+            throw error;
+        }
+    }
+};

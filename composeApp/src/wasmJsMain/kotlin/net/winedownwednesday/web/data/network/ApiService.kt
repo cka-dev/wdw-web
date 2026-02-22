@@ -6,6 +6,8 @@ import net.winedownwednesday.web.data.Event
 import net.winedownwednesday.web.data.Member
 import net.winedownwednesday.web.data.Wine
 import net.winedownwednesday.web.data.models.AuthenticationResponse
+import net.winedownwednesday.web.data.models.ChangePasswordRequest
+import net.winedownwednesday.web.data.models.EmailPasswordRequest
 import net.winedownwednesday.web.data.models.FcmInstanceRegistrationRequest
 import net.winedownwednesday.web.data.models.FirebaseAuthResponse
 import net.winedownwednesday.web.data.models.PublicKeyCredentialCreationOptions
@@ -63,5 +65,15 @@ interface ApiService {
     suspend fun verifyPasskeyAuthenticationWithToken(
         credential: AuthenticationResponse, email: String
     ): ApiResult<FirebaseAuthResponse>
+
+    suspend fun registerWithEmailPassword(request: EmailPasswordRequest): ApiResult<FirebaseAuthResponse>
+
+    suspend fun signInWithEmailPassword(request: EmailPasswordRequest): ApiResult<FirebaseAuthResponse>
+
+    suspend fun linkPasswordToAccount(request: EmailPasswordRequest): Boolean
+
+    suspend fun changePassword(request: ChangePasswordRequest): Boolean
+
+    suspend fun sendPasswordResetEmail(email: String): Boolean
 
 }

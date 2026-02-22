@@ -36,6 +36,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
@@ -55,6 +56,8 @@ import androidx.compose.ui.graphics.asComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.rememberAsyncImagePainter
@@ -195,7 +198,6 @@ fun ProfilePage(
                                                     delay(3500)
                                                     showVerificationEmailFailureToast = false
                                                 }
-                                                println("Error sending email")
                                             }
                                         }
                                     }
@@ -209,7 +211,8 @@ fun ProfilePage(
                                     ProfileReadSection(
                                         profile = it,
                                         editMode = editMode,
-                                        onEdit = { editMode = true }
+                                        onEdit = { editMode = true },
+                                        viewModel = viewModel
                                     )
                                 }
                                 AnimatedVisibility(visible = isProfileLoading) {
@@ -284,10 +287,12 @@ fun ProfilePage(
 fun ProfileReadSection(
     profile: UserProfileData,
     editMode: Boolean,
-    onEdit: () -> Unit
+    onEdit: () -> Unit,
+    viewModel: AuthPageViewModel
 ) {
     val formattedPhone = formatPhoneNumber(profile.phone ?: "")
-
+    var showLinkPasswordDialog by remember { mutableStateOf(false) }
+    var showChangePasswordDialog by remember { mutableStateOf(false) }
 
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A)),
@@ -299,7 +304,8 @@ fun ProfileReadSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             ProfilePictureSection(
                 profileImageBitmap = profile.profileImageBitmap,
@@ -307,15 +313,12 @@ fun ProfileReadSection(
                 onImageUploaded = {},
                 profileImageUrl = profile.profileImageUrl
             )
-            Spacer(modifier = Modifier.height(8.dp))
-
+            
             Text(
                 text = profile.name ?: "",
                 style = MaterialTheme.typography.titleLarge,
                 color = Color.White
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = profile.email ?: "",
@@ -329,14 +332,11 @@ fun ProfileReadSection(
                 color = Color.LightGray
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
-
             if (!profile.birthDate.isNullOrEmpty()) {
                 Text(
                     text = "Birth Date: ${profile.birthDate}",
                     color = Color.LightGray
                 )
-                Spacer(modifier = Modifier.height(8.dp))
             }
 
             Row(
@@ -364,11 +364,12 @@ fun ProfileReadSection(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Text(
-                    text = "Member:      ",
+                    text = "Member: ",
                     color = Color.White,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -392,12 +393,49 @@ fun ProfileReadSection(
                 style = MaterialTheme.typography.titleMedium,
                 color = Color.White
             )
-            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = profile.aboutMe ?: "",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.LightGray
+                color = Color.LightGray,
+                textAlign = TextAlign.Center
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Security Settings Section
+            Text(
+                text = "Security Settings",
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White
+            )
+
+            if (!profile.hasPasskey) {
+                Button(
+                    onClick = { viewModel.registerPasskeyV2(profile.email ?: "") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF800020))
+                ) {
+                    Text("Add Passkey")
+                }
+            }
+
+            if (profile.hasPassword) {
+                Button(
+                    onClick = { showChangePasswordDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
+                ) {
+                    Text("Change Password")
+                }
+            } else {
+                Button(
+                    onClick = { showLinkPasswordDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
+                ) {
+                    Text("Link Password")
+                }
+            }
 
             if (editMode) {
                 Button(onClick = onEdit) {
@@ -405,6 +443,109 @@ fun ProfileReadSection(
                 }
             }
         }
+    }
+
+    if (showLinkPasswordDialog) {
+        var password by remember { mutableStateOf("") }
+        var confirmPassword by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { showLinkPasswordDialog = false },
+            title = { Text("Link Password") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Set a password for your account to use as an alternative login method.")
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text("Password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it },
+                        label = { Text("Confirm Password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (password == confirmPassword && password.isNotEmpty()) {
+                            viewModel.linkPasswordToAccount(password) { success ->
+                                if (success) showLinkPasswordDialog = false
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF800020))
+                ) {
+                    Text("Link")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLinkPasswordDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showChangePasswordDialog) {
+        var currentPassword by remember { mutableStateOf("") }
+        var newPassword by remember { mutableStateOf("") }
+        var confirmNewPassword by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { showChangePasswordDialog = false },
+            title = { Text("Change Password") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = currentPassword,
+                        onValueChange = { currentPassword = it },
+                        label = { Text("Current Password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = newPassword,
+                        onValueChange = { newPassword = it },
+                        label = { Text("New Password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = confirmNewPassword,
+                        onValueChange = { confirmNewPassword = it },
+                        label = { Text("Confirm New Password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (newPassword == confirmNewPassword && newPassword.isNotEmpty()) {
+                            viewModel.changePassword(currentPassword, newPassword) { success ->
+                                if (success) showChangePasswordDialog = false
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF800020))
+                ) {
+                    Text("Update")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showChangePasswordDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -429,6 +570,8 @@ fun ProfileEditSection(
     var birthDate by remember { mutableStateOf(profile?.birthDate) }
     val isVerified by remember { mutableStateOf(profile?.isVerified ?: false) }
     val isMember by remember { mutableStateOf(profile?.isMember ?: false) }
+    val hasPassword by remember { mutableStateOf(profile?.hasPassword ?: false) }
+    val hasPasskey by remember { mutableStateOf(profile?.hasPasskey ?: false) }
     val showDatePicker = remember { mutableStateOf(false) }
 
     val updatedProfile = UserProfileData(
@@ -439,7 +582,9 @@ fun ProfileEditSection(
         profileImageBitmap = profileImageBitmap,
         birthDate = birthDate,
         isVerified = isVerified,
-        isMember = isMember
+        isMember = isMember,
+        hasPassword = hasPassword,
+        hasPasskey = hasPasskey
     )
 
     Card(

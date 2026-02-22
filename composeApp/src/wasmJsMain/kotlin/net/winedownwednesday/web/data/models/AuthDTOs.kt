@@ -136,6 +136,23 @@ data class RegistrationOptionsRequest(
 @Serializable
 data class FirebaseAuthResponse(
     val token: String,
-    val verified: Boolean,
+    val verified: Boolean? = null,
 )
 
+@Serializable
+data class EmailPasswordRequest(
+    val email: String,
+    val password: String,
+)
+
+@Serializable
+data class ChangePasswordRequest(
+    val email: String,
+    val currentPassword: String? = null,
+    val newPassword: String,
+)
+
+@Serializable
+data class UserProfileRequest(
+    val email: String,
+)

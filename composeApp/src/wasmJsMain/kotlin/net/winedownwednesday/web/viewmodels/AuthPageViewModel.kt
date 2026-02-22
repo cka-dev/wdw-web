@@ -13,6 +13,8 @@ import net.winedownwednesday.web.FirebaseBridge
 import net.winedownwednesday.web.FirebaseUser
 import net.winedownwednesday.web.PublicKeyCredential
 import net.winedownwednesday.web.data.models.AuthenticationResponse
+import net.winedownwednesday.web.data.models.ChangePasswordRequest
+import net.winedownwednesday.web.data.models.EmailPasswordRequest
 import net.winedownwednesday.web.data.models.FcmInstanceRegistrationRequest
 import net.winedownwednesday.web.data.models.FirebaseAuthResponse
 import net.winedownwednesday.web.data.models.RSVPRequest
@@ -64,14 +66,13 @@ class AuthPageViewModel(
 
             try {
                 FirebaseBridge.getCurrentUser()?.let { user ->
-                    if (user != null) {
-                        val firebaseUser = user.toFirebaseUser()
-                        _uiState.value = LoginUIState.Authenticated
-                        setEmail(firebaseUser.email ?: "")
-                        fetchProfile(userEmail = firebaseUser.email ?: "")
+                    val firebaseUser = user.toFirebaseUser()
+                    val userEmail = firebaseUser.email
+                    if (!userEmail.isNullOrBlank()) {
+                        setEmail(userEmail)
+                        fetchProfile(userEmail = userEmail)
                         getAndRegisterFcmToken()
-                    } else {
-                        _uiState.value = LoginUIState.Idle
+                        _uiState.value = LoginUIState.Authenticated
                     }
                 }
             } catch (e: Exception) {
@@ -81,25 +82,30 @@ class AuthPageViewModel(
     }
 
     private fun observeAuthState() {
-        viewModelScope.launch {
-            try {
-                FirebaseBridge.observeAuthState { user ->
-                    if (user != null) {
-                        val firebaseUser = user.toFirebaseUser()
+        FirebaseBridge.observeAuthState { user ->
+            viewModelScope.launch {
+                if (user != null) {
+                    val firebaseUser = user.toFirebaseUser()
+                    val userEmail = firebaseUser.email
+                    if (!userEmail.isNullOrBlank()) {
+                        setEmail(userEmail)
+                        if (_profileData.value == null) {
+                            fetchProfile(userEmail = userEmail)
+                        }
                         _uiState.value = LoginUIState.Authenticated
-                        setEmail(firebaseUser.email ?: "")
-                        fetchProfile(userEmail = firebaseUser.email ?: "")
-                    } else {
+                    }
+                } else {
+                    if (_uiState.value is LoginUIState.Authenticated) {
                         _uiState.value = LoginUIState.Idle
+                        _profileData.value = null
                     }
                 }
-            } catch (e: Exception) {
-//                println("AuthStateChanged: Error observing auth state: ${e.message}")
             }
         }
     }
 
     fun fetchProfile(userEmail: String) {
+        if (userEmail.isBlank()) return
         viewModelScope.launch {
             _isFetchingProfile.value = true
             try {
@@ -131,104 +137,24 @@ class AuthPageViewModel(
         }
     }
 
-    fun registerPasskey(email: String) {
-        viewModelScope.launch {
-            _uiState.value = LoginUIState.Loading
-
-            when (val result = repository.generatePasskeyRegistrationOptions(email)) {
-                is ApiResult.Error -> {
-                    _uiState.value = LoginUIState.Error(result.message)
-                }
-                is ApiResult.Success -> {
-                    val options = result.data
-
-                    try {
-                        val credential = myWebAuthnBridge.startRegistration(
-                            challenge = options.challenge,
-                            rpId = options.rp.id,
-                            rpName = options.rp.name,
-                            userId = options.user.id,
-                            userName = options.user.name,
-                            userDisplayName = options.user.displayName,
-                            timeout = options.timeout ?: 60000,
-                            attestationType = options.attestation,
-                            authenticatorAttachment =
-                            options.authenticatorSelection.authenticatorAttachment,
-                            residentKey = options.authenticatorSelection.residentKey,
-                            requireResidentKey = options.authenticatorSelection.requireResidentKey,
-                            userVerification = options.authenticatorSelection.userVerification
-                        ).await<PublicKeyCredential>()
-
-                        val registrationResponse = try {
-                            credential.toRegistrationResponse()
-                        } catch (e: Exception) {
-                            throw e
-                        }
-
-                        val verified = repository.verifyPasskeyRegistration(
-                            registrationResponse, email)
-                        if (verified) {
-                            _uiState.value = LoginUIState.Authenticated
-                        } else {
-                            _uiState.value = LoginUIState.Error("Passkey registration failed")
-                        }
-                    } catch (e: Exception) {
-                        _uiState.value = LoginUIState.Error(
-                            "Error during registration: ${e.message}")
-                    }
-                }
-            }
-        }
-    }
-
-    fun authenticateWithPasskey(email: String) {
-        viewModelScope.launch {
-            _uiState.value = LoginUIState.Loading
-
-            when (val result = repository.generatePasskeyAuthenticationOptions(email)) {
-                is ApiResult.Error -> {
-                    _uiState.value = LoginUIState.Error(result.message)
-                }
-                is ApiResult.Success -> {
-                    val options = result.data
-
-                    val allowCredentialIds = options.allowCredentials?.joinToString(
-                        ",", "[", "]") {
-                        "\"" + it.id.toBase64Url() + "\""
-                    } ?: "[]"
-
-                    try {
-                        val credential = myWebAuthnBridge.startAuthentication(
-                            challenge = options.challenge,
-                            rpId = options.rpId,
-                            timeout = options.timeout ?: 60000,
-                            userVerification = options.userVerification,
-                            allowCredentialIds = allowCredentialIds
-                        ).await<PublicKeyCredential>()
-
-                        val authenticationResponse = try {
-                            credential.toAuthenticationResponse()
-                        } catch (e: Exception) {
-                            throw e
-                        }
-
-                        val verified = repository.verifyPasskeyAuthentication(
-                            authenticationResponse, email)
-                        if (verified) {
-                            _uiState.value = LoginUIState.Authenticated
-                        } else {
-                            _uiState.value = LoginUIState.Error("Passkey authentication failed")
-                        }
-                    } catch (e: Exception) {
-                        _uiState.value = LoginUIState.Error(
-                            "Error during authentication: ${e.message}")
-                    }
-                }
-            }
+    suspend fun signInWithCustomToken(token: String, email: String) {
+        if (email.isBlank()) return
+        try {
+            FirebaseBridge.signInWithCustomToken(token).await<JsAny?>()
+            val profile = repository.fetchProfileFromServer(email)
+            _profileData.value = profile
+            setEmail(email)
+            _uiState.value = LoginUIState.Authenticated
+        } catch (e: Exception) {
+            _uiState.value = LoginUIState.Error("Sign in failed: ${e.message}")
         }
     }
 
     fun registerPasskeyV2(email: String){
+        if (email.isBlank()) {
+            _uiState.value = LoginUIState.Error("Email is required")
+            return
+        }
         viewModelScope.launch {
             _uiState.value = LoginUIState.Loading
 
@@ -266,12 +192,10 @@ class AuthPageViewModel(
                             repository.verifyPasskeyRegistrationWithToken(
                                 registrationResponse, email)
                         if (verificationResponse is ApiResult.Success) {
-                            val firebaseAuthResponse = verificationResponse.data
-                            _uiState.value = LoginUIState.Authenticated
-                            fetchProfile(userEmail = email)
-                            FirebaseBridge.signInWithCustomToken(firebaseAuthResponse.token)
+                            signInWithCustomToken(verificationResponse.data.token, email)
                         } else {
-                            _uiState.value = LoginUIState.Error("Passkey registration failed")
+                            val msg = (verificationResponse as? ApiResult.Error)?.message ?: "Passkey registration failed"
+                            _uiState.value = LoginUIState.Error(msg)
                         }
                     } catch (e: Exception) {
                         _uiState.value = LoginUIState.Error(
@@ -283,6 +207,10 @@ class AuthPageViewModel(
     }
 
     fun authenticateWithPasskeyV2(email: String) {
+        if (email.isBlank()) {
+            _uiState.value = LoginUIState.Error("Email is required")
+            return
+        }
         viewModelScope.launch {
             _uiState.value = LoginUIState.Loading
 
@@ -317,20 +245,87 @@ class AuthPageViewModel(
                             repository.verifyPasskeyAuthenticationWithToken(
                                 authenticationResponse, email)
                         if (verificationResponse is ApiResult.Success) {
-                            val firebaseAuthResponse = verificationResponse.data
-                            _uiState.value = LoginUIState.Authenticated
-                            fetchProfile(userEmail = email)
-                            FirebaseBridge.signInWithCustomToken(firebaseAuthResponse.token)
+                            signInWithCustomToken(verificationResponse.data.token, email)
                         } else {
-                            _uiState.value = LoginUIState.Error(
-                                "$TAG Passkey authentication failed")
+                            val msg = (verificationResponse as? ApiResult.Error)?.message ?: "Passkey authentication failed"
+                            _uiState.value = LoginUIState.Error(msg)
                         }
                     } catch (e: Exception) {
                         _uiState.value = LoginUIState.Error(
-                            "$TAG Error during authentication: ${e.message}")
+                            "Error during authentication: ${e.message}")
                     }
                 }
             }
+        }
+    }
+
+    fun registerWithEmailPassword(email: String, password: String) {
+        if (email.isBlank() || password.isBlank()) return
+        viewModelScope.launch {
+            _uiState.value = LoginUIState.Loading
+            val result = repository.registerWithEmailPassword(EmailPasswordRequest(email, password))
+            when (result) {
+                is ApiResult.Success -> {
+                    signInWithCustomToken(result.data.token, email)
+                }
+                is ApiResult.Error -> {
+                    _uiState.value = LoginUIState.Error(result.message)
+                }
+            }
+        }
+    }
+
+    fun signInWithEmailPassword(email: String, password: String) {
+        if (email.isBlank() || password.isBlank()) return
+        viewModelScope.launch {
+            _uiState.value = LoginUIState.Loading
+            val result = repository.signInWithEmailPassword(EmailPasswordRequest(email, password))
+            when (result) {
+                is ApiResult.Success -> {
+                    signInWithCustomToken(result.data.token, email)
+                }
+                is ApiResult.Error -> {
+                    _uiState.value = LoginUIState.Error(result.message)
+                }
+            }
+        }
+    }
+
+    fun linkPasswordToAccount(password: String, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val email = _email.value
+            if (email.isBlank() || password.isBlank()) {
+                onResult(false)
+                return@launch
+            }
+            val success = repository.linkPasswordToAccount(EmailPasswordRequest(email, password))
+            if (success) {
+                fetchProfile(email)
+            }
+            onResult(success)
+        }
+    }
+
+    fun changePassword(currentPassword: String?, newPassword: String, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val email = _email.value
+            if (email.isBlank() || newPassword.isBlank()) {
+                onResult(false)
+                return@launch
+            }
+            val success = repository.changePassword(ChangePasswordRequest(email, currentPassword, newPassword))
+            onResult(success)
+        }
+    }
+
+    fun sendPasswordResetEmail(email: String, onResult: (Boolean) -> Unit) {
+        if (email.isBlank()) {
+            onResult(false)
+            return
+        }
+        viewModelScope.launch {
+            val success = repository.sendPasswordResetEmail(email)
+            onResult(success)
         }
     }
 
@@ -382,35 +377,8 @@ class AuthPageViewModel(
         return authenticationResponse
     }
 
-    fun simulateAuthentication(email: String) {
-        viewModelScope.launch {
-            delay(500)
-            _uiState.value = LoginUIState.Authenticated
-            fetchProfile(userEmail = email)
-        }
-    }
-
-    fun simulateAuthenticationError(email: String) {
-        viewModelScope.launch {
-            delay(500)
-            _uiState.value = LoginUIState.Error("Email is not registered. Please double check" +
-                    " for typos or register a new account.")
-        }
-    }
-
-    fun simulateRegistrationError(email: String) {
-        viewModelScope.launch {
-            delay(500)
-            _uiState.value = LoginUIState.Error("An account already exists with that email." +
-                    "Please log in instead.")
-        }
-    }
-
-    fun simulateRegistration() {
-        viewModelScope.launch {
-            delay(500)
-            _uiState.value = LoginUIState.Authenticated
-        }
+    fun resetToIdle() {
+        _uiState.value = LoginUIState.Idle
     }
 
     fun checkIsNewUser(isNewUser: Boolean) {
@@ -421,10 +389,14 @@ class AuthPageViewModel(
 
     suspend fun logout() {
             try {
-                unRegisterFcmInstanceId(
-                    fcmToken = fcmToken.value ?: "",
-                    email = email.value
-                )
+                val currentEmail = email.value
+                val currentToken = fcmToken.value
+                if (!currentEmail.isNullOrBlank() && !currentToken.isNullOrBlank()) {
+                    unRegisterFcmInstanceId(
+                        fcmToken = currentToken,
+                        email = currentEmail
+                    )
+                }
             } catch (e: Exception) {
 //                println("Error unregistering FCM instance ID: $e")
             }
@@ -437,6 +409,7 @@ class AuthPageViewModel(
             }
 
             _uiState.value = LoginUIState.Idle
+            _profileData.value = null
     }
 
     fun setEmail(email: String) {
@@ -501,10 +474,14 @@ class AuthPageViewModel(
         viewModelScope.launch {
             val tokenJsAny: JsAny? = FirebaseBridge.getFcmToken().await()
             val token = tokenJsAny?.unsafeCast<JsAny>()
-            _fcmToken.value = token.toString()
-            if (token != null) {
+            val tokenStr = token.toString()
+            if (token != null && tokenStr.isNotBlank()) {
+                _fcmToken.value = tokenStr
                 try {
-                    registerFcmInstanceId(token.toString())
+                    val currentEmail = email.value
+                    if (currentEmail.isNotBlank()) {
+                        registerFcmInstanceId(tokenStr, currentEmail)
+                    }
                 } catch (e: Exception) {
 //                    println("Error registering FCM instance ID: $e")
                 }
@@ -512,11 +489,11 @@ class AuthPageViewModel(
         }
     }
 
-    private fun registerFcmInstanceId(token: String) {
+    private fun registerFcmInstanceId(token: String, emailAddr: String) {
         viewModelScope.launch {
             val requestBody = FcmInstanceRegistrationRequest(
                 instanceId = token,
-                email = email.value
+                email = emailAddr
             )
             val request= repository.registerFcmInstanceId(requestBody)
             if (!request) {
@@ -526,6 +503,7 @@ class AuthPageViewModel(
     }
 
     private suspend fun unRegisterFcmInstanceId(fcmToken: String, email: String) {
+        if (fcmToken.isBlank() || email.isBlank()) return
         val requestBody = FcmInstanceRegistrationRequest(
             instanceId = fcmToken,
             email = email
@@ -559,6 +537,10 @@ class AuthPageViewModel(
     }
 
     fun sendVerificationEmail(email: String, onResult: (Boolean) -> Unit) {
+        if (email.isBlank()) {
+            onResult(false)
+            return
+        }
         viewModelScope.launch {
             try {
                 val success = repository.sendEmailVerification(email)

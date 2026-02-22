@@ -1,6 +1,6 @@
 
 function base64urlEncode(str) {
-    return btoa(str).replace(/\+/g, '-').replace(/\//g, '/').replace(/=+$/, '');
+    return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 function base64urlDecode(str) {
@@ -124,13 +124,5 @@ window.myWebAuthnBridge = {
     isSecureContext: function() {
         console.log("Secure context:", window.isSecureContext);
         return window.isSecureContext;
-    },
-
-//    isLocalhost = function() {
-//        return window.location.hostname === 'localhost' ||
-//        window.location.hostname === '[::1]' ||
-//        window.location.hostname.match(
-//            /^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/
-//        );
-//    }
+    }
 };

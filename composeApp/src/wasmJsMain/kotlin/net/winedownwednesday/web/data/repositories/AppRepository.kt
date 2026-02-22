@@ -13,6 +13,8 @@ import net.winedownwednesday.web.data.Event
 import net.winedownwednesday.web.data.Member
 import net.winedownwednesday.web.data.Wine
 import net.winedownwednesday.web.data.models.AuthenticationResponse
+import net.winedownwednesday.web.data.models.ChangePasswordRequest
+import net.winedownwednesday.web.data.models.EmailPasswordRequest
 import net.winedownwednesday.web.data.models.FcmInstanceRegistrationRequest
 import net.winedownwednesday.web.data.models.FirebaseAuthResponse
 import net.winedownwednesday.web.data.models.PublicKeyCredentialCreationOptions
@@ -117,8 +119,8 @@ class AppRepository (
         }
     }
 
-    suspend fun sendRSVP(rsvpRequest: RSVPRequest): Boolean {
-        return remoteDataSource.postRSVP(rsvpRequest)
+    suspend fun sendRSVP(rsvp: RSVPRequest): Boolean {
+        return remoteDataSource.postRSVP(rsvp)
     }
 
     suspend fun generatePasskeyRegistrationOptions(email: String):
@@ -178,6 +180,26 @@ class AppRepository (
         email: String
     ): ApiResult<FirebaseAuthResponse> {
         return remoteDataSource.verifyPasskeyAuthenticationWithToken(credential, email)
+    }
+
+    suspend fun registerWithEmailPassword(request: EmailPasswordRequest): ApiResult<FirebaseAuthResponse> {
+        return remoteDataSource.registerWithEmailPassword(request)
+    }
+
+    suspend fun signInWithEmailPassword(request: EmailPasswordRequest): ApiResult<FirebaseAuthResponse> {
+        return remoteDataSource.signInWithEmailPassword(request)
+    }
+
+    suspend fun linkPasswordToAccount(request: EmailPasswordRequest): Boolean {
+        return remoteDataSource.linkPasswordToAccount(request)
+    }
+
+    suspend fun changePassword(request: ChangePasswordRequest): Boolean {
+        return remoteDataSource.changePassword(request)
+    }
+
+    suspend fun sendPasswordResetEmail(email: String): Boolean {
+        return remoteDataSource.sendPasswordResetEmail(email)
     }
 
     companion object{

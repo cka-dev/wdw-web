@@ -17,5 +17,7 @@ data class UserProfileData(
     val birthDate: String? = null,
     val isVerified: Boolean? = false,
     val isMember: Boolean? = false,
+    val hasPassword: Boolean = false,
+    val hasPasskey: Boolean = false,
     val eventRsvps: Map<Int, RSVPRequest>? = emptyMap()
 )

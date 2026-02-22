@@ -1,3 +1,4 @@
+AGENTS.md
 composeApp/src/wasmJsMain/resources/firebase-messaging-sw.js
 composeApp/src/wasmJsMain/resources/firebase-bridge.js
 *.iml
