@@ -56,6 +56,9 @@ import net.winedownwednesday.web.data.Wine
 import net.winedownwednesday.web.viewmodels.HomePageViewModel
 import org.koin.compose.koinInject
 import kotlin.math.abs
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -68,6 +71,7 @@ fun HomePage(
     val upcomingEvents by viewModel.upcomingEvents.collectAsState()
     val featuredWines by viewModel.featuredWines.collectAsState()
     val highlightedMember by viewModel.highlightedMember.collectAsState()
+    val eventsLoaded by viewModel.eventsLoaded.collectAsState()
 
     var currentIndex by remember { mutableIntStateOf(0) }
     val maxListSize = maxOf(upcomingEvents.size, featuredWines.size)
@@ -127,7 +131,8 @@ fun HomePage(
                         events = upcomingEvents,
                         currentIndex = currentIndex,
                         isCompactScreen = isCompactScreen,
-                        onEventDetailsClick = { event -> selectedEvent = event }
+                        onEventDetailsClick = { event -> selectedEvent = event },
+                        isLoaded = eventsLoaded
                     )
                     AutoScrollingWineListHorizontal(
                         wines = featuredWines,
@@ -167,10 +172,11 @@ fun AutoScrollingEventDisplay(
     onEventDetailsClick: (Event) -> Unit = {},
     currentIndex: Int,
     isCompactScreen: Boolean,
+    isLoaded: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     if (events.size <= 1) {
-        SingleEventOrEmptyHorizontal(title, events, onEventDetailsClick)
+        SingleEventOrEmptyHorizontal(title, events, onEventDetailsClick, isCompactScreen, isLoaded, modifier)
         return
     }
     val transition = updateTransition(targetState = currentIndex, label = "eventSlide")
@@ -247,7 +253,7 @@ fun AutoScrollingWineListHorizontal(
     modifier: Modifier = Modifier
 ) {
     if (wines.size <= 1) {
-        SingleWineOrEmptyHorizontal(title, wines, onWineDetailsClick)
+        SingleWineOrEmptyHorizontal(title, wines, onWineDetailsClick, isCompactScreen, modifier)
         return
     }
     val transition = updateTransition(targetState = currentIndex, label = "wineSlide")
@@ -315,15 +321,21 @@ private fun SingleEventOrEmptyHorizontal(
     title: String,
     events: List<Event>,
     onEventDetailsClick: (Event) -> Unit,
+    isCompactScreen: Boolean,
+    isLoaded: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Card(
         shape = RoundedCornerShape(16.dp),
-        modifier = Modifier
-            .fillMaxWidth(0.3f)
-            .height(600.dp),
+        modifier = modifier
+            .then(
+                if (!isCompactScreen) Modifier.fillMaxWidth(0.3f) else Modifier.fillMaxWidth()
+            )
+            .then(
+                if (!isCompactScreen) Modifier.height(500.dp) else Modifier.heightIn(min = 350.dp)
+            ),
         elevation = cardElevation(defaultElevation = 16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -333,11 +345,37 @@ private fun SingleEventOrEmptyHorizontal(
             )
             Spacer(modifier = Modifier.height(8.dp))
             if (events.isEmpty()) {
-                Text(
-                    text = "Fetching upcoming events",
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-                LinearProgressBar()
+                if (isLoaded) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "No Upcoming Events",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Stay tuned for our next gathering!",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            )
+                        }
+                    }
+                } else {
+                    Text(
+                        text = "Fetching upcoming events",
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                    LinearProgressBar()
+                }
             } else {
                 HomePageEventCard(
                     event = events.first(),
@@ -354,16 +392,16 @@ private fun SingleWineOrEmptyHorizontal(
     title: String,
     wines: List<Wine>,
     onWineDetailsClick: (Wine) -> Unit,
+    isCompactScreen: Boolean,
     modifier: Modifier = Modifier
 ) {
     Card(
         shape = RoundedCornerShape(16.dp),
-        modifier = Modifier
-            .fillMaxWidth(0.3f)
-            .height(600.dp)
-            .padding(32.dp),
+        modifier = modifier
+            .then(if (!isCompactScreen) Modifier.fillMaxWidth(0.3f) else Modifier.fillMaxWidth())
+            .then(if (!isCompactScreen) Modifier.height(500.dp) else Modifier.heightIn(min = 350.dp)),
         elevation = cardElevation(defaultElevation = 16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -693,6 +731,8 @@ fun MemberSpotlightCard(
     isCompactScreen: Boolean,
     modifier: Modifier = Modifier
 ) {
+    var showDetails by remember { mutableStateOf(false) }
+
     Card(
         shape = RoundedCornerShape(16.dp),
         modifier = modifier
@@ -703,6 +743,10 @@ fun MemberSpotlightCard(
             .then(
                 if (!isCompactScreen) Modifier.height(500.dp)
                 else Modifier.heightIn(min = 350.dp)
+            )
+            .then(
+                if (member != null) Modifier.clickable { showDetails = true }
+                else Modifier
             ),
         elevation = cardElevation(defaultElevation = 16.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
@@ -729,6 +773,25 @@ fun MemberSpotlightCard(
                     }
                 } else {
                     Column {
+                        // Reason badge
+                        val isBirthdayMonth = if (featuredMember.spotlightReason != null) {
+                            featuredMember.spotlightReason == "birthday"
+                        } else {
+                            featuredMember.birthday.isNotBlank() && isBirthdayInCurrentMonth(featuredMember.birthday)
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isBirthdayMonth) Color(0xFF4A3000) else Color(0xFF1A3A1A),
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        ) {
+                            Text(
+                                text = if (isBirthdayMonth) "🎂 Birthday Spotlight" else "⭐ Featured Member",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (isBirthdayMonth) Color(0xFFFFD54F) else Color(0xFF81C784),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+
                         Card(
                             modifier = Modifier.padding(bottom = 16.dp),
                             elevation = cardElevation(defaultElevation = 8.dp)
@@ -752,23 +815,172 @@ fun MemberSpotlightCard(
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.Unspecified
                         )
+                        if (isBirthdayMonth) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "🎉 Birthday: ${featuredMember.birthday}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFFFFD54F)
+                            )
+                        }
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-//                            text = "\"${featuredMember.quote}\"",
-                            text = "\"Wine Down Wednesday is a great way to meet new people and" +
-                                    "try new wines. I always look forward to our events!. I " +
-                                    "also love the community engagement and the opportunity to " +
-                                    "learn more about wine.\"",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontStyle = FontStyle.Italic
-                            ),
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-                            maxLines = 3,
-                            overflow = TextOverflow.Ellipsis
+                            text = "Tap for more details",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                         )
                     }
                 }
             }
         }
     }
+
+    if (showDetails && member != null) {
+        MemberDetailsDialog(
+            member = member,
+            isCompactScreen = isCompactScreen,
+            onDismiss = { showDetails = false }
+        )
+    }
+}
+
+@Composable
+private fun MemberDetailsDialog(
+    member: Member,
+    isCompactScreen: Boolean,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .padding(16.dp)
+                .then(
+                    if (!isCompactScreen) Modifier.fillMaxWidth(0.9f)
+                    else Modifier.fillMaxWidth()
+                ),
+            shape = RoundedCornerShape(16.dp),
+            elevation = cardElevation(defaultElevation = 16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                AsyncImage(
+                    model = member.profilePictureUrl,
+                    contentDescription = "${member.name}'s profile picture",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 300.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = member.name,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "\"Wine is about bringing people together, sharing moments, and building community. That's what WDW is all about.\"",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                if (member.role.isNotBlank()) {
+                    Text(
+                        text = member.role,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                if (member.profession.isNotBlank()) {
+                    Text(
+                        text = "💼 ${member.profession}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                if (!member.company.isNullOrBlank()) {
+                    Text(
+                        text = "🏢 ${member.company}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                if (member.birthday.isNotBlank()) {
+                    Text(
+                        text = "🎂 ${member.birthday}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                if (member.interests.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Interests",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                    Text(
+                        text = member.interests.joinToString(", "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                if (member.favoriteWines.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Favorite Wines",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                    Text(
+                        text = member.favoriteWines.joinToString(", "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.align(Alignment.End),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Close")
+                }
+            }
+        }
+    }
+}
+
+private fun isBirthdayInCurrentMonth(birthday: String): Boolean {
+    val monthNames = mapOf(
+        "january" to 1, "february" to 2, "march" to 3,
+        "april" to 4, "may" to 5, "june" to 6,
+        "july" to 7, "august" to 8, "september" to 9,
+        "october" to 10, "november" to 11, "december" to 12
+    )
+    val currentMonth = Clock.System.now()
+        .toLocalDateTime(TimeZone.currentSystemDefault())
+        .monthNumber
+
+    val trimmed = birthday.trim()
+    // Try "MM/DD" format
+    if (trimmed.contains("/")) {
+        val parts = trimmed.split("/")
+        if (parts.size >= 2) {
+            return parts[0].toIntOrNull() == currentMonth
+        }
+    }
+    // Try "Month Day" format
+    val parts = trimmed.split("\\s+".toRegex())
+    if (parts.isNotEmpty()) {
+        val monthNum = monthNames[parts[0].lowercase()]
+        if (monthNum != null) {
+            return monthNum == currentMonth
+        }
+    }
+    return false
 }

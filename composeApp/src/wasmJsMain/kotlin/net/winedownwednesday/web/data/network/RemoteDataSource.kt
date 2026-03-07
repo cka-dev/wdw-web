@@ -136,6 +136,23 @@ class RemoteDataSource (
         }
     }
 
+    override suspend fun fetchMemberSpotlight(): Member? {
+        _isLoading.value = true
+        return try {
+            client.get("$SERVER_URL/getMemberSpotlight"){
+                headers {
+                    append(HttpHeaders.AccessControlAllowOrigin, "*")
+                    append(HttpHeaders.Accept, ContentType.Application.Json.toString())
+                }
+            }.body()
+        } catch (e: Exception) {
+            _error.value = e.message ?: "Unknown error occurred"
+            null
+        } finally {
+            _isLoading.value = false
+        }
+    }
+
     override suspend fun postRSVP(rsvp: RSVPRequest): Boolean {
         _isLoading.value = true
         return try {

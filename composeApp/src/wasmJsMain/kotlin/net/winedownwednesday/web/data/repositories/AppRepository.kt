@@ -119,6 +119,10 @@ class AppRepository (
         }
     }
 
+    suspend fun fetchMemberSpotlight(): Member? {
+        return remoteDataSource.fetchMemberSpotlight()
+    }
+
     suspend fun sendRSVP(rsvp: RSVPRequest): Boolean {
         return remoteDataSource.postRSVP(rsvp)
     }

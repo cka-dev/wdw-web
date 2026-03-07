@@ -28,6 +28,8 @@ interface ApiService {
 
     suspend fun fetchEvents(): List<Event>?
 
+    suspend fun fetchMemberSpotlight(): Member?
+
     suspend fun postRSVP(rsvp: RSVPRequest): Boolean
 
     suspend fun generatePasskeyRegistrationOptions(email: String):
