@@ -15,6 +15,7 @@ import net.winedownwednesday.web.data.models.PublicKeyCredentialRequestOptions
 import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.data.models.RegistrationResponse
 import net.winedownwednesday.web.data.models.UserProfileData
+import net.winedownwednesday.web.data.models.FeaturedWinesResponse
 
 interface ApiService {
 
@@ -23,6 +24,8 @@ interface ApiService {
     suspend fun fetchAboutItems(): List<AboutItem>
 
     suspend fun fetchWines(): List<Wine>?
+
+    suspend fun fetchFeaturedWines(): FeaturedWinesResponse?
 
     suspend fun fetchMembers(): List<Member>?
 

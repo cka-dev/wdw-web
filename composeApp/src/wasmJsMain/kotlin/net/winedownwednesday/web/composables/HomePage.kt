@@ -20,7 +20,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -72,6 +75,8 @@ fun HomePage(
     val featuredWines by viewModel.featuredWines.collectAsState()
     val highlightedMember by viewModel.highlightedMember.collectAsState()
     val eventsLoaded by viewModel.eventsLoaded.collectAsState()
+    val campaignName by viewModel.campaignName.collectAsState()
+    val campaignDescription by viewModel.campaignDescription.collectAsState()
 
     var currentIndex by remember { mutableIntStateOf(0) }
     val maxListSize = maxOf(upcomingEvents.size, featuredWines.size)
@@ -135,6 +140,8 @@ fun HomePage(
                         isLoaded = eventsLoaded
                     )
                     AutoScrollingWineListHorizontal(
+                        title = campaignName,
+                        description = campaignDescription,
                         wines = featuredWines,
                         currentIndex = currentIndex,
                         isCompactScreen = isCompactScreen,
@@ -246,6 +253,7 @@ fun AutoScrollingEventDisplay(
 @Composable
 fun AutoScrollingWineListHorizontal(
     title: String = "Featured Wines",
+    description: String = "",
     wines: List<Wine>,
     onWineDetailsClick: (Wine) -> Unit = {},
     currentIndex: Int,
@@ -253,7 +261,7 @@ fun AutoScrollingWineListHorizontal(
     modifier: Modifier = Modifier
 ) {
     if (wines.size <= 1) {
-        SingleWineOrEmptyHorizontal(title, wines, onWineDetailsClick, isCompactScreen, modifier)
+        SingleWineOrEmptyHorizontal(title, description, wines, onWineDetailsClick, isCompactScreen, modifier)
         return
     }
     val transition = updateTransition(targetState = currentIndex, label = "wineSlide")
@@ -276,6 +284,13 @@ fun AutoScrollingWineListHorizontal(
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
+            if (description.isNotBlank()) {
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+            }
             Spacer(modifier = Modifier.height(8.dp))
             Box(modifier = Modifier.fillMaxSize()) {
                 wines.forEachIndexed { index, wine ->
@@ -390,6 +405,7 @@ private fun SingleEventOrEmptyHorizontal(
 @Composable
 private fun SingleWineOrEmptyHorizontal(
     title: String,
+    description: String,
     wines: List<Wine>,
     onWineDetailsClick: (Wine) -> Unit,
     isCompactScreen: Boolean,
@@ -409,6 +425,13 @@ private fun SingleWineOrEmptyHorizontal(
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
+            if (description.isNotBlank()) {
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+            }
             Spacer(modifier = Modifier.height(8.dp))
             if (wines.isEmpty()) {
                 Text(
@@ -664,17 +687,23 @@ fun WineDetailsDialog(wine: Wine, isCompactScreen: Boolean, onDismiss: () -> Uni
             elevation = cardElevation(defaultElevation = 16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                AsyncImage(
-                    model = wine.imageUrl,
-                    contentDescription = "${wine.name} image",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                if (!wine.imageUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = wine.imageUrl,
+                        contentDescription = "${wine.name} image",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .wrapContentHeight()
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Fit
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
                 Text(
                     text = wine.name,
                     style = MaterialTheme.typography.headlineSmall,
@@ -724,6 +753,7 @@ fun WineDetailsDialog(wine: Wine, isCompactScreen: Boolean, onDismiss: () -> Uni
         }
     }
 }
+
 
 @Composable
 fun MemberSpotlightCard(

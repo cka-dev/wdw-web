@@ -34,6 +34,7 @@ import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.data.models.RegistrationOptionsRequest
 import net.winedownwednesday.web.data.models.RegistrationResponse
 import net.winedownwednesday.web.data.models.UserProfileData
+import net.winedownwednesday.web.data.models.FeaturedWinesResponse
 import net.winedownwednesday.web.data.models.UserProfileRequest
 import net.winedownwednesday.web.data.models.VerifyAuthenticationRequest
 import net.winedownwednesday.web.data.models.VerifyRegistrationRequest
@@ -89,6 +90,23 @@ class RemoteDataSource (
         _isLoading.value = true
         return try {
             client.get("$SERVER_URL/getWines"){
+                headers {
+                    append(HttpHeaders.AccessControlAllowOrigin, "*")
+                    append(HttpHeaders.Accept, ContentType.Application.Json.toString())
+                }
+            }.body()
+        } catch (e: Exception) {
+            _error.value = e.message ?: "Unknown error occurred"
+            null
+        } finally {
+            _isLoading.value = false
+        }
+    }
+
+    override suspend fun fetchFeaturedWines(): FeaturedWinesResponse? {
+        _isLoading.value = true
+        return try {
+            client.get("$SERVER_URL/getFeaturedWines"){
                 headers {
                     append(HttpHeaders.AccessControlAllowOrigin, "*")
                     append(HttpHeaders.Accept, ContentType.Application.Json.toString())

@@ -30,6 +30,12 @@ class HomePageViewModel(
     private val _highlightedMember = MutableStateFlow<Member?>(null)
     val highlightedMember = _highlightedMember.asStateFlow()
 
+    private val _campaignName = MutableStateFlow("Featured Wines")
+    val campaignName = _campaignName.asStateFlow()
+
+    private val _campaignDescription = MutableStateFlow("")
+    val campaignDescription = _campaignDescription.asStateFlow()
+
     init {
         viewModelScope.launch {
             repository.events.collect { events ->
@@ -45,10 +51,17 @@ class HomePageViewModel(
         }
 
         viewModelScope.launch {
-            repository.wineList.collect { wines ->
-                if (wines != null) {
-                    _featuredWines.value = wines
+            try {
+                val featured = repository.fetchFeaturedWines()
+                if (featured != null) {
+                    _featuredWines.value = featured.wines
+                    _campaignName.value = featured.campaignName
+                    _campaignDescription.value = featured.description
                 }
+            } catch (e: Exception) {
+                println("$TAG: Error fetching featured wines: ${e.message}")
+                _featuredWines.value = emptyList()
+                _campaignName.value = "Featured Wines"
             }
         }
 

@@ -15,6 +15,7 @@ import net.winedownwednesday.web.data.Wine
 import net.winedownwednesday.web.data.models.AuthenticationResponse
 import net.winedownwednesday.web.data.models.ChangePasswordRequest
 import net.winedownwednesday.web.data.models.EmailPasswordRequest
+import net.winedownwednesday.web.data.models.FeaturedWinesResponse
 import net.winedownwednesday.web.data.models.FcmInstanceRegistrationRequest
 import net.winedownwednesday.web.data.models.FirebaseAuthResponse
 import net.winedownwednesday.web.data.models.PublicKeyCredentialCreationOptions
@@ -121,6 +122,10 @@ class AppRepository (
 
     suspend fun fetchMemberSpotlight(): Member? {
         return remoteDataSource.fetchMemberSpotlight()
+    }
+
+    suspend fun fetchFeaturedWines(): FeaturedWinesResponse? {
+        return remoteDataSource.fetchFeaturedWines()
     }
 
     suspend fun sendRSVP(rsvp: RSVPRequest): Boolean {
