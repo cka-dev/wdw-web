@@ -55,8 +55,8 @@ To prevent leaking project identifiers, some JavaScript files are excluded from 
 - **Cleanup**: Tokens are automatically unregistered from the backend upon logout or when the ViewModel is cleared to ensure notification integrity.
 
 ### Content Modules
-- **Event Management**: List view with RSVP capability for authenticated users.
-- **Member Directory**: Directory of community members and leadership.
+- **Event Management**: List view with RSVP capability for authenticated users, featuring strict admin-side validation and chronological descending default sorts.
+- **Member Directory & Spotlight**: Directory of community members, highlighting a deterministic rotating "Member Spotlight" driven by a robust round-robin queue, automated birthday prioritization, and secure manual override architecture.
 - **Podcasts & Wines**: Metadata-rich catalogs for media and wine inventory.
 
 ## 4. Technical Implementation Details
