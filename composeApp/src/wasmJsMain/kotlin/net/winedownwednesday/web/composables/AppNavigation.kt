@@ -17,7 +17,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.launch
@@ -89,30 +88,36 @@ fun AppNavigation(
 
                 Box(
                     modifier = Modifier.weight(1f)
-                ){
+                ) {
                     when (appBarState.value) {
                         AppBarState.HOME -> HomePage(
                             isCompactScreen = isCompactScreen
                         )
+
                         AppBarState.ABOUT -> AboutPage(
                             isCompactScreen = isCompactScreen
                         )
+
                         AppBarState.MEMBERS -> MembersPage(
                             isCompactScreen = isCompactScreen,
                             uiState = uiState,
                             userProfileData = userProfileData
                         )
+
                         AppBarState.PODCASTS -> PodcastsPage(
                             isCompactScreen = isCompactScreen
                         )
+
                         AppBarState.EVENTS -> EventsPage(
                             isCompactScreen = isCompactScreen,
                             uiState = uiState,
                             authPageViewModel = authViewModel
                         )
+
                         AppBarState.WINES -> WinePage(
                             isCompactScreen = isCompactScreen
                         )
+
                         AppBarState.LOGIN -> {
                             if (!isLoggedIn) {
                                 LoginScreen(
@@ -126,6 +131,7 @@ fun AppNavigation(
                                 appBarState.value = AppBarState.HOME
                             }
                         }
+
                         AppBarState.PROFILE -> {
                             ProfilePage(
                                 isCompactScreen = isCompactScreen,

@@ -199,7 +199,7 @@ fun EventsPage(
     }
 
     if (selectedEvent != null) {
-        if (isCompactScreen){
+        if (isCompactScreen) {
             CompactScreenEventDetailPopup(
                 event = selectedEvent!!,
                 onDismissRequest = {
@@ -277,6 +277,7 @@ fun EventCard(
                     text = event.name,
                     style = MaterialTheme.typography.titleLarge,
                     color = Color.White,
+                    minLines = 1,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -303,6 +304,7 @@ fun EventCard(
                 text = event.description,
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White,
+                minLines = 3,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
@@ -312,12 +314,18 @@ fun EventCard(
             Text(
                 text = "Location: ${event.location}",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.LightGray
+                color = Color.LightGray,
+                minLines = 1,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = "Date: ${formatDate(stringToDate(event.date))}",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.LightGray
+                color = Color.LightGray,
+                minLines = 1,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -355,7 +363,8 @@ fun EventCard(
             onDismissRequest = { onDismissRequest() },
             event = event,
             existingRsvp = if (userHasRsvped) authPageViewModel.getRsvpForEvent(
-                event.id) else null,
+                event.id
+            ) else null,
             isCompactScreen = isCompactScreen,
             uiState = uiState,
             userProfileData = userProfileData,
@@ -392,13 +401,13 @@ fun EventCard(
                 }
             }
         )
-        if (showSuccessToast.value){
+        if (showSuccessToast.value) {
             Toast(
                 message = "RSVP submitted successfully!"
             )
         }
 
-        if (showErrorToast.value){
+        if (showErrorToast.value) {
             Toast(
                 message = "Failed to submit RSVP. Please try again."
             )
@@ -524,8 +533,10 @@ fun EventDetailContent(
         if (!event.time.isNullOrBlank()) {
             EventDetailRow(label = "Time", value = event.time)
         }
-        EventDetailRow(label = "Event Type", value = event
-            .eventType.toString().replace('_', ' '))
+        EventDetailRow(
+            label = "Event Type", value = event
+                .eventType.toString().replace('_', ' ')
+        )
         EventDetailRow(label = "Location", value = event.location)
         EventDetailRow(label = "Description", value = event.description)
 
@@ -817,25 +828,33 @@ fun RSVPComponent(
     val numericRegex = Regex("[^0-9]")
 
     var firstName by rememberSaveable {
-        mutableStateOf(existingRsvp?.firstName ?: profileDataFirstName) }
+        mutableStateOf(existingRsvp?.firstName ?: profileDataFirstName)
+    }
     var lastName by rememberSaveable {
-        mutableStateOf(existingRsvp?.lastName ?: profileDataLastName) }
+        mutableStateOf(existingRsvp?.lastName ?: profileDataLastName)
+    }
     var email by rememberSaveable {
-        mutableStateOf(existingRsvp?.email ?: userProfileData?.email) }
+        mutableStateOf(existingRsvp?.email ?: userProfileData?.email)
+    }
     var phoneNumber by rememberSaveable {
         mutableStateOf(
             existingRsvp?.phoneNumber?.replace(
-                numericRegex, "")?.take(10)
+                numericRegex, ""
+            )?.take(10)
                 ?: userProfileData?.phone?.replace(
-                    numericRegex, "")?.take(10) ?: ""
+                    numericRegex, ""
+                )?.take(10) ?: ""
         )
     }
     var guestsCount by rememberSaveable {
-        mutableStateOf(existingRsvp?.guestsCount ?: 1) }
+        mutableStateOf(existingRsvp?.guestsCount ?: 1)
+    }
     var allowUpdates by rememberSaveable {
-        mutableStateOf(true) }
+        mutableStateOf(true)
+    }
     var guestsCountText by rememberSaveable {
-        mutableStateOf(existingRsvp?.guestsCount ?: "1") }
+        mutableStateOf(existingRsvp?.guestsCount ?: "1")
+    }
 
     var firstNameError by rememberSaveable { mutableStateOf("") }
     var lastNameError by rememberSaveable { mutableStateOf("") }
@@ -1159,10 +1178,10 @@ fun CompactScreenReservationFields(
             ) {
                 Text("Number of guests: ", style = MaterialTheme.typography.bodyLarge)
                 Spacer(modifier = Modifier.width(8.dp))
-                Row (
+                Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Card (
+                    Card(
                         colors = CardDefaults.cardColors(
                             containerColor = Color.LightGray,
                         ),
@@ -1195,7 +1214,7 @@ fun CompactScreenReservationFields(
                         modifier = Modifier.width(80.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Card (
+                    Card(
                         colors = CardDefaults.cardColors(
                             containerColor = Color.LightGray,
                         ),
@@ -1325,7 +1344,10 @@ fun NonCompactReservationFields(
         }
 
         item {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 OutlinedTextField(
                     value = firstName ?: "",
                     onValueChange = { onFirstNameChange(it) },
@@ -1354,7 +1376,10 @@ fun NonCompactReservationFields(
         }
 
         item {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 OutlinedTextField(
                     value = email ?: "",
                     onValueChange = { onEmailChange(it) },
@@ -1388,7 +1413,7 @@ fun NonCompactReservationFields(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Number of guests: ", style = MaterialTheme.typography.bodyLarge)
                 Spacer(modifier = Modifier.width(8.dp))
-                Card (
+                Card(
                     colors = CardDefaults.cardColors(
                         containerColor = Color.LightGray,
                     ),
@@ -1420,7 +1445,7 @@ fun NonCompactReservationFields(
                     modifier = Modifier.width(80.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Card (
+                Card(
                     colors = CardDefaults.cardColors(
                         containerColor = Color.LightGray,
                     ),
@@ -1456,7 +1481,7 @@ fun NonCompactReservationFields(
             ) {
                 Text(
                     text =
-                    if (uiState is LoginUIState.Authenticated) "Submit" else "Log in to RSVP"
+                        if (uiState is LoginUIState.Authenticated) "Submit" else "Log in to RSVP"
                 )
             }
         }
