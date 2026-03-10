@@ -16,10 +16,14 @@ import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.data.models.RegistrationResponse
 import net.winedownwednesday.web.data.models.UserProfileData
 import net.winedownwednesday.web.data.models.FeaturedWinesResponse
+import net.winedownwednesday.web.data.models.BlogPostsResponse
+import net.winedownwednesday.web.data.models.BlogPost
 
 interface ApiService {
 
     suspend fun fetchEpisodes(): List<Episode>?
+
+    suspend fun fetchBlogPosts(): BlogPostsResponse?
 
     suspend fun fetchAboutItems(): List<AboutItem>
 

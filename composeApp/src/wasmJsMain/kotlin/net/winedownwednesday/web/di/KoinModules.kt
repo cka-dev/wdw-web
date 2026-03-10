@@ -5,6 +5,7 @@ import net.winedownwednesday.web.data.network.RemoteDataSource
 import net.winedownwednesday.web.data.repositories.AppRepository
 import net.winedownwednesday.web.viewmodels.AboutPageViewModel
 import net.winedownwednesday.web.viewmodels.AuthPageViewModel
+import net.winedownwednesday.web.viewmodels.BlogPageViewModel
 import net.winedownwednesday.web.viewmodels.EventsPageViewModel
 import net.winedownwednesday.web.viewmodels.HomePageViewModel
 import net.winedownwednesday.web.viewmodels.MembersPageViewModel
@@ -57,6 +58,10 @@ val provideHomePageViewModel = module {
     viewModel { HomePageViewModel(get()) }
 }
 
+val provideBlogPageViewModel = module {
+    viewModel { BlogPageViewModel(get(), get()) }
+}
+
 val appModule  =
     listOf(
         provideHttpClient,
@@ -69,4 +74,5 @@ val appModule  =
         provideWinePageViewModel,
         provideAuthPageViewModel,
         provideHomePageViewModel,
+        provideBlogPageViewModel,
     )

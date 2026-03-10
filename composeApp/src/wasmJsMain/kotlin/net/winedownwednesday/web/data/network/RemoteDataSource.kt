@@ -35,6 +35,8 @@ import net.winedownwednesday.web.data.models.RegistrationOptionsRequest
 import net.winedownwednesday.web.data.models.RegistrationResponse
 import net.winedownwednesday.web.data.models.UserProfileData
 import net.winedownwednesday.web.data.models.FeaturedWinesResponse
+import net.winedownwednesday.web.data.models.BlogPostsResponse
+import net.winedownwednesday.web.data.models.BlogPost
 import net.winedownwednesday.web.data.models.UserProfileRequest
 import net.winedownwednesday.web.data.models.VerifyAuthenticationRequest
 import net.winedownwednesday.web.data.models.VerifyRegistrationRequest
@@ -56,6 +58,23 @@ class RemoteDataSource (
         _isLoading.value = true
         return try {
             client.get("$SERVER_URL/getEpisodes"){
+                headers {
+                    append(HttpHeaders.AccessControlAllowOrigin, "*")
+                    append(HttpHeaders.Accept, ContentType.Application.Json.toString())
+                }
+            }.body()
+        } catch (e: Exception) {
+            _error.value = e.message ?: "Unknown error occurred"
+            null
+        } finally {
+            _isLoading.value = false
+        }
+    }
+
+    override suspend fun fetchBlogPosts(): BlogPostsResponse? {
+        _isLoading.value = true
+        return try {
+            client.get("$SERVER_URL/getBlogPosts"){
                 headers {
                     append(HttpHeaders.AccessControlAllowOrigin, "*")
                     append(HttpHeaders.Accept, ContentType.Application.Json.toString())

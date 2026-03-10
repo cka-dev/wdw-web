@@ -1,4 +1,3 @@
-
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 
@@ -58,6 +57,10 @@ kotlin {
             // Koin Annotations
             api("io.insert-koin:koin-annotations:1.4.0")
             implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.8.2")
+
+            // Markdown rendering
+            implementation("com.mikepenz:multiplatform-markdown-renderer:0.32.0")
+            implementation("com.mikepenz:multiplatform-markdown-renderer-m3:0.32.0")
 
             //Coil
             implementation(libs.coil.compose)

@@ -139,6 +139,7 @@ fun TopNavBar(
                 val navItems = listOf(
                     "Home" to AppBarState.HOME,
                     "About" to AppBarState.ABOUT,
+                    "Blog" to AppBarState.BLOG,
                     "Members" to AppBarState.MEMBERS,
                     "Uncorked Conversations" to AppBarState.PODCASTS,
                     "Events" to AppBarState.EVENTS,
