@@ -33,6 +33,7 @@ enum class AppBarState {
     WINES,
     LOGIN,
     PROFILE,
+    BLOG
 }
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
@@ -144,6 +145,10 @@ fun AppNavigation(
                                 viewModel = authViewModel,
                                 userEmail = userEmail
                             )
+                        }
+
+                        AppBarState.BLOG -> {
+                            BlogPage(isCompactScreen = isCompactScreen)
                         }
                     }
 

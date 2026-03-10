@@ -57,6 +57,7 @@ To prevent leaking project identifiers, some JavaScript files are excluded from 
 ### Content Modules
 - **Event Management**: List view with RSVP capability for authenticated users, featuring strict admin-side validation and chronological descending default sorts.
 - **Member Directory & Spotlight**: Directory of community members, highlighting a deterministic rotating "Member Spotlight" driven by a robust round-robin queue, automated birthday prioritization, and secure manual override architecture.
+- **Blog Engine**: A rich-text publishing system where content is served from Firebase as structured JSON `ContentBlock` arrays, rather than HTML or MD files, permitting flawless native UI rendering (without WebViews) optimized for Compose reading modes across devices.
 - **Podcasts & Wines**: Metadata-rich catalogs for media and wine inventory.
 
 ## 4. Technical Implementation Details

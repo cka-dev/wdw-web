@@ -16,7 +16,7 @@ import net.winedownwednesday.web.data.models.AuthenticationResponse
 import net.winedownwednesday.web.data.models.ChangePasswordRequest
 import net.winedownwednesday.web.data.models.EmailPasswordRequest
 import net.winedownwednesday.web.data.models.FeaturedWinesResponse
-import net.winedownwednesday.web.data.models.FcmInstanceRegistrationRequest
+import net.winedownwednesday.web.data.models.BlogPost
 import net.winedownwednesday.web.data.models.FirebaseAuthResponse
 import net.winedownwednesday.web.data.models.PublicKeyCredentialCreationOptions
 import net.winedownwednesday.web.data.models.PublicKeyCredentialRequestOptions
@@ -24,6 +24,7 @@ import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.data.models.RegistrationResponse
 import net.winedownwednesday.web.data.models.UserProfileData
 import net.winedownwednesday.web.data.network.ApiResult
+import net.winedownwednesday.web.data.models.FcmInstanceRegistrationRequest
 import net.winedownwednesday.web.data.network.RemoteDataSource
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.Single
@@ -39,6 +40,9 @@ class AppRepository (
 
     private val _events = MutableStateFlow<List<Event>?>(listOf())
     val events = _events.asStateFlow()
+
+    private val _blogPosts = MutableStateFlow<List<BlogPost>?>(listOf())
+    val blogPosts = _blogPosts.asStateFlow()
 
     private val _episodes = MutableStateFlow<List<Episode>?>(listOf())
     val episodes = _episodes.asStateFlow()
@@ -59,6 +63,7 @@ class AppRepository (
             fetchMembers()
             fetchEvents()
             fetchEpisodes()
+            fetchBlogPosts()
             fetchAboutItems()
             fetchWines()
         }
@@ -84,6 +89,17 @@ class AppRepository (
             }
         } catch (e: Exception) {
             println("$TAG: Error fetching events.")
+        }
+    }
+
+    private suspend fun fetchBlogPosts() {
+        try {
+            val remoteBlogPostsResponse = remoteDataSource.fetchBlogPosts()
+            if (remoteBlogPostsResponse != null && remoteBlogPostsResponse.posts.isNotEmpty()) {
+                _blogPosts.value = remoteBlogPostsResponse.posts
+            }
+        } catch (e: Exception) {
+            println("$TAG: Error fetching blog posts: ${e.message}")
         }
     }
 
