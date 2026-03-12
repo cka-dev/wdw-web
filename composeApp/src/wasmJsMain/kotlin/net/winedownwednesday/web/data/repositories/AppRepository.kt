@@ -13,10 +13,11 @@ import net.winedownwednesday.web.data.Event
 import net.winedownwednesday.web.data.Member
 import net.winedownwednesday.web.data.Wine
 import net.winedownwednesday.web.data.models.AuthenticationResponse
+import net.winedownwednesday.web.data.models.BlogPost
 import net.winedownwednesday.web.data.models.ChangePasswordRequest
 import net.winedownwednesday.web.data.models.EmailPasswordRequest
+import net.winedownwednesday.web.data.models.FcmInstanceRegistrationRequest
 import net.winedownwednesday.web.data.models.FeaturedWinesResponse
-import net.winedownwednesday.web.data.models.BlogPost
 import net.winedownwednesday.web.data.models.FirebaseAuthResponse
 import net.winedownwednesday.web.data.models.PublicKeyCredentialCreationOptions
 import net.winedownwednesday.web.data.models.PublicKeyCredentialRequestOptions
@@ -24,7 +25,6 @@ import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.data.models.RegistrationResponse
 import net.winedownwednesday.web.data.models.UserProfileData
 import net.winedownwednesday.web.data.network.ApiResult
-import net.winedownwednesday.web.data.models.FcmInstanceRegistrationRequest
 import net.winedownwednesday.web.data.network.RemoteDataSource
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.Single
@@ -38,7 +38,7 @@ class AppRepository (
     private val _members = MutableStateFlow<List<Member?>>(listOf())
     val members = _members.asStateFlow()
 
-    private val _events = MutableStateFlow<List<Event>?>(listOf())
+    private val _events = MutableStateFlow<List<Event>?>(null)
     val events = _events.asStateFlow()
 
     private val _blogPosts = MutableStateFlow<List<BlogPost>?>(listOf())
@@ -52,6 +52,12 @@ class AppRepository (
 
     private val _wineList = MutableStateFlow<List<Wine>?>(listOf())
     val wineList = _wineList.asStateFlow()
+    
+    private val _featuredWinesResponse = MutableStateFlow<FeaturedWinesResponse?>(null)
+    val featuredWinesResponse = _featuredWinesResponse.asStateFlow()
+
+    private val _memberSpotlight = MutableStateFlow<Member?>(null)
+    val memberSpotlight = _memberSpotlight.asStateFlow()
 
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -66,6 +72,8 @@ class AppRepository (
             fetchBlogPosts()
             fetchAboutItems()
             fetchWines()
+            fetchFeaturedWinesResponse()
+            fetchMemberSpotlight()
         }
     }
 
@@ -84,11 +92,14 @@ class AppRepository (
     private suspend fun fetchEvents() {
         try {
             val remoteEventList = remoteDataSource.fetchEvents()
-            if (!remoteEventList.isNullOrEmpty()) {
+            if (remoteEventList != null) {
                 _events.value = remoteEventList
+            } else {
+                _events.value = emptyList()
             }
         } catch (e: Exception) {
             println("$TAG: Error fetching events.")
+            _events.value = emptyList()
         }
     }
 
@@ -136,12 +147,22 @@ class AppRepository (
         }
     }
 
-    suspend fun fetchMemberSpotlight(): Member? {
-        return remoteDataSource.fetchMemberSpotlight()
+    private suspend fun fetchMemberSpotlight() {
+        try {
+            val member = remoteDataSource.fetchMemberSpotlight()
+            _memberSpotlight.value = member
+        } catch (e: Exception) {
+            println("$TAG: Error fetching member spotlight.")
+        }
     }
 
-    suspend fun fetchFeaturedWines(): FeaturedWinesResponse? {
-        return remoteDataSource.fetchFeaturedWines()
+    private suspend fun fetchFeaturedWinesResponse() {
+        try {
+            val featuredWines = remoteDataSource.fetchFeaturedWines()
+            _featuredWinesResponse.value = featuredWines
+        } catch (e: Exception) {
+            println("$TAG: Error fetching featured wines.")
+        }
     }
 
     suspend fun sendRSVP(rsvp: RSVPRequest): Boolean {

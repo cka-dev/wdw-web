@@ -45,33 +45,24 @@ class HomePageViewModel(
                     _upcomingEvents.value = events.filter {
                         stringToDate(it.date) >= today
                     }.sortedBy { it.date }
+                    _eventsLoaded.value = true
                 }
-                _eventsLoaded.value = true
             }
         }
 
         viewModelScope.launch {
-            try {
-                val featured = repository.fetchFeaturedWines()
+            repository.featuredWinesResponse.collect { featured ->
                 if (featured != null) {
                     _featuredWines.value = featured.wines
                     _campaignName.value = featured.campaignName
                     _campaignDescription.value = featured.description
                 }
-            } catch (e: Exception) {
-                println("$TAG: Error fetching featured wines: ${e.message}")
-                _featuredWines.value = emptyList()
-                _campaignName.value = "Featured Wines"
             }
         }
 
         viewModelScope.launch {
-            try {
-                val member = repository.fetchMemberSpotlight()
+            repository.memberSpotlight.collect { member ->
                 _highlightedMember.value = member
-            } catch (e: Exception) {
-                println("$TAG: Error fetching member spotlight: ${e.message}")
-                _highlightedMember.value = null
             }
         }
     }
