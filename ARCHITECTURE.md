@@ -41,12 +41,12 @@ To prevent leaking project identifiers, some JavaScript files are excluded from 
 
 ## 3. Key Features
 
-### Authentication & Identity (Hybrid Model)
-- **Unified Strategy**: All authentication (except Passkey verification) happens server-side via Cloud Functions.
+### Authentication & Identity (Unified Strategy)
+- **Shared Backend Logic**: All authentication and credential management (except Passkey verification) happens server-side via Cloud Functions. Both the main web client and the Admin Dashboard share the same endpoints for `changePassword` and `linkPasswordToAccount`.
 - **Custom Token Pattern**: Upon successful validation (Password or Passkey), the backend returns a Firebase Custom Token. The client uses `signInWithCustomToken` to establish the Firebase session.
-- **Passkeys (WebAuthn)**: Biometric/Hardware key login scoped to the production domain.
-- **Password Support**: Standard email/password login, registration, and management (Change/Reset/Link) via Ktor calls.
-- **Dynamic Profile UI**: The UI adapts based on user capabilities (e.g., "Add Passkey" only shows if missing).
+- **Passkeys (WebAuthn)**: Biometric/Hardware key login scoped to the production domain. **Whitelisting Requirement**: For passkeys to function on the Admin Dashboard, the origin `https://admin.winedownwednesday.net` must be explicitly whitelisted in the backend's `expectedOrigins`.
+- **Universal Credential Management**: Both Web and Admin clients offer a dynamic "Settings/Profile" UI that adapts based on user capabilities (e.g., "Add Passkey" only shows if missing; password change only shows if a password exists).
+- **Password Support**: Standard email/password login, registration, and management via Ktor/React API calls.
 
 ### Firebase Cloud Messaging (Web Push)
 - **Service Worker**: `firebase-messaging-sw.js` handles background notifications and notification display while the app is in the background.
@@ -57,7 +57,8 @@ To prevent leaking project identifiers, some JavaScript files are excluded from 
 ### Content Modules
 - **Event Management**: List view with RSVP capability for authenticated users, featuring strict admin-side validation and chronological descending default sorts.
 - **Member Directory & Spotlight**: Directory of community members, highlighting a deterministic rotating "Member Spotlight" driven by a robust round-robin queue, automated birthday prioritization, and secure manual override architecture.
-- **Blog Engine**: A rich-text publishing system where content is served from Firebase as structured JSON `ContentBlock` arrays, rather than HTML or MD files, permitting flawless native UI rendering (without WebViews) optimized for Compose reading modes across devices.
+- **Blog Engine**: A rich-text publishing system where content is served from Firebase as structured JSON `ContentBlock` arrays, rather than HTML or MD files. This permitting flawless native UI rendering (without WebViews) optimized for Compose reading modes across devices.
+    - **Multi-Client Support Requirement**: While fully implemented on Web/Admin, the **Android client must be updated** to consume these structured payloads natively to maintain parity. See [android_blog_implementation_guide.md] for details.
 - **Podcasts & Wines**: Metadata-rich catalogs for media and wine inventory.
 
 ## 4. Technical Implementation Details
