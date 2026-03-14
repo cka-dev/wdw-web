@@ -248,6 +248,10 @@ class AppRepository (
         return remoteDataSource.sendPasswordResetEmail(email)
     }
 
+    suspend fun fetchStreamToken(): net.winedownwednesday.web.data.models.StreamTokenResponse? {
+        return remoteDataSource.fetchStreamToken()
+    }
+
     companion object{
         private const val TAG = "AppRepository"
     }

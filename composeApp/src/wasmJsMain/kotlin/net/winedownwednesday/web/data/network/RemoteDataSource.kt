@@ -16,6 +16,7 @@ import io.ktor.http.headers
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.await
 import kotlinx.serialization.json.Json
 import net.winedownwednesday.web.FirebaseBridge
 import net.winedownwednesday.web.data.AboutItem
@@ -212,7 +213,7 @@ class RemoteDataSource (
             ApiResult<PublicKeyCredentialCreationOptions> {
         return try {
             val response: HttpResponse = client.post(
-                "$SERVER_URL/generatePasskeyRegistrationOptions") {
+                "https://generatepasskeyregistrationoptions-iktff5ztia-uc.a.run.app") {
                 contentType(ContentType.Application.Json)
                 setBody(RegistrationOptionsRequest(email))
             }
@@ -237,7 +238,7 @@ class RemoteDataSource (
         _isLoading.value = true
         return try {
             val response: HttpResponse = client.post(
-                "$SERVER_URL/verifyPasskeyRegistration") {
+                "https://verifypasskeyregistration-iktff5ztia-uc.a.run.app") {
                 contentType(ContentType.Application.Json)
                 setBody(VerifyRegistrationRequest(credential, email))
             }
@@ -255,7 +256,7 @@ class RemoteDataSource (
     ): ApiResult<PublicKeyCredentialRequestOptions> {
         return try {
             val response: HttpResponse = client.post(
-                "$SERVER_URL/generatePasskeyAuthenticationOptions") {
+                "https://generatepasskeyauthenticationoptions-iktff5ztia-uc.a.run.app") {
                 contentType(ContentType.Application.Json)
                 setBody(mapOf("email" to email))
             }
@@ -282,7 +283,7 @@ class RemoteDataSource (
         _isLoading.value = true
         return try {
             val response: HttpResponse = client.post(
-                "$SERVER_URL/verifyPasskeyAuthentication") {
+                "https://verifypasskeyauthentication-iktff5ztia-uc.a.run.app") {
                 contentType(ContentType.Application.Json)
                 setBody(VerifyAuthenticationRequest(credential, email))
             }
@@ -303,13 +304,24 @@ class RemoteDataSource (
                 url { parameters.append("email", userEmail) }
                 setBody(UserProfileRequest(userEmail))
             }
+            println("$TAG: fetchUserProfile response status: ${response.status}")
             if (response.status.isSuccess()) {
                 val jsonString = response.bodyAsText()
-                Json.decodeFromString<UserProfileData>(jsonString)
+                println("$TAG: fetchUserProfile raw response: $jsonString")
+                try {
+                    val profile = JsonInstanceProvider.json.decodeFromString<UserProfileData>(jsonString)
+                    println("$TAG: fetchUserProfile parsed profile: name=${profile.name}, email=${profile.email}, imageUrl=${profile.profileImageUrl}")
+                    profile
+                } catch (parseError: Exception) {
+                    println("$TAG: fetchUserProfile PARSE ERROR: ${parseError.message}")
+                    null
+                }
             } else {
+                println("$TAG: fetchUserProfile FAILED with status: ${response.status}")
                 null
             }
         } catch (e: Exception) {
+            println("$TAG: fetchUserProfile EXCEPTION: ${e.message}")
             null
         }
     }
@@ -385,7 +397,7 @@ class RemoteDataSource (
         _isLoading.value = true
         return try {
             val response: HttpResponse = client.post(
-                "$SERVER_URL/verifyPasskeyRegistrationWithFirebaseAuth") {
+                "https://verifypasskeyregistrationwithfirebaseauth-iktff5ztia-uc.a.run.app") {
                 contentType(ContentType.Application.Json)
                 setBody(VerifyRegistrationRequest(credential, email))
             }
@@ -409,7 +421,7 @@ class RemoteDataSource (
         _isLoading.value = true
         return try {
             val response: HttpResponse = client.post(
-                "$SERVER_URL/verifyPasskeyAuthenticationWithFirebaseAuth") {
+                "https://verifypasskeyauthenticationwithfirebaseauth-iktff5ztia-uc.a.run.app") {
                 contentType(ContentType.Application.Json)
                 setBody(VerifyAuthenticationRequest(credential, email))
             }
@@ -495,6 +507,27 @@ class RemoteDataSource (
             response.status.isSuccess()
         } catch (e: Exception) {
             false
+        }
+    }
+
+    override suspend fun fetchStreamToken(): net.winedownwednesday.web.data.models.StreamTokenResponse? {
+        _isLoading.value = true
+        return try {
+            val idToken = FirebaseBridge.getIdToken().await<JsAny?>().toString()
+            val response: HttpResponse = client.post("https://generatestreamtoken-iktff5ztia-uc.a.run.app") {
+                header(HttpHeaders.Authorization, "Bearer $idToken")
+                contentType(ContentType.Application.Json)
+            }
+            if (response.status.isSuccess()) {
+                response.body()
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            _error.value = e.message
+            null
+        } finally {
+            _isLoading.value = false
         }
     }
 

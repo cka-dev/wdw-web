@@ -53,7 +53,7 @@ class AuthPageViewModel(
     init {
         viewModelScope.launch {
             try {
-                FirebaseBridge.waitUntilInitialized().await()
+                FirebaseBridge.waitUntilInitialized().await<JsAny?>()
             } catch (e: Exception) {
 //                println("Error initializing Firebase: ${e.message}")
             }
@@ -109,9 +109,12 @@ class AuthPageViewModel(
         viewModelScope.launch {
             _isFetchingProfile.value = true
             try {
+                println("$TAG: fetchProfile called with email=$userEmail")
                 val profile = repository.fetchProfileFromServer(userEmail)
+                println("$TAG: fetchProfile result: name=${profile?.name}, email=${profile?.email}, imageUrl=${profile?.profileImageUrl}")
                 _profileData.value = profile
             } catch (e: Exception) {
+                println("$TAG: fetchProfile EXCEPTION: ${e.message}")
                 _isFetchingProfile.value = false
             } finally {
                 _isFetchingProfile.value = false
@@ -456,7 +459,7 @@ class AuthPageViewModel(
         viewModelScope.launch {
             try {
                 val permissionResultJsAny: JsAny? =
-                    FirebaseBridge.requestNotificationPermission().await()
+                    FirebaseBridge.requestNotificationPermission().await<JsString?>()
                 val permissionResult = permissionResultJsAny?.unsafeCast<JsAny>()
 
                 if (permissionResult.toString() == "granted") {
@@ -472,7 +475,7 @@ class AuthPageViewModel(
 
     private fun getAndRegisterFcmToken() {
         viewModelScope.launch {
-            val tokenJsAny: JsAny? = FirebaseBridge.getFcmToken().await()
+            val tokenJsAny: JsAny? = FirebaseBridge.getFcmToken().await<JsAny?>()
             val token = tokenJsAny?.unsafeCast<JsAny>()
             val tokenStr = token.toString()
             if (token != null && tokenStr.isNotBlank()) {

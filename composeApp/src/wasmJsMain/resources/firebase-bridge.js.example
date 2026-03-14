@@ -3,7 +3,7 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
 import { getAuth, signInWithCustomToken, signOut, onAuthStateChanged, browserLocalPersistence, setPersistence } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
-import { getMessaging, getToken, requestPermission } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-messaging.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-messaging.js";
 
 // REPLACE THE VALUES BELOW WITH YOUR PROJECT'S CONFIGURATION
 const firebaseConfig = {
@@ -58,6 +58,11 @@ window.wdwFirebaseBridge = {
         return auth?.currentUser;
     },
 
+    getIdToken: async function() {
+        if (!auth?.currentUser) return null;
+        return await auth.currentUser.getIdToken();
+    },
+
     observeAuthState: function(callback) {
         if (!auth) return;
         onAuthStateChanged(auth, (user) => {
@@ -85,5 +90,38 @@ window.wdwFirebaseBridge = {
             console.error("Error getting FCM token:", error);
             throw error;
         }
+    },
+
+    /**
+     * Sets up foreground notification handling.
+     * When the app tab is open, Firebase delivers messages to onMessage
+     * instead of the service worker's onBackgroundMessage.
+     * We must manually show a browser notification here.
+     */
+    setupForegroundNotifications: function() {
+        if (!messaging) return;
+        onMessage(messaging, (payload) => {
+            console.log("FirebaseBridge: Foreground message received:", payload);
+
+            let title = "New Message";
+            let body = "You have a new message.";
+
+            if (payload.notification) {
+                title = payload.notification.title || title;
+                body = payload.notification.body || body;
+            } else if (payload.data) {
+                title = payload.data.title || `New message from ${payload.data.sender || 'someone'}`;
+                body = payload.data.body || payload.data.message || "Tap to view.";
+            }
+
+            // Show browser notification manually
+            if (Notification.permission === 'granted') {
+                new Notification(title, {
+                    body: body,
+                    icon: '/favicon.ico'
+                });
+            }
+        });
+        console.log("FirebaseBridge: Foreground notification handler set up");
     }
 };

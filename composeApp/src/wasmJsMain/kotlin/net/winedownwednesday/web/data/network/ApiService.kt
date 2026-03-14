@@ -84,5 +84,6 @@ interface ApiService {
     suspend fun changePassword(request: ChangePasswordRequest): Boolean
 
     suspend fun sendPasswordResetEmail(email: String): Boolean
+    suspend fun fetchStreamToken(): net.winedownwednesday.web.data.models.StreamTokenResponse?
 
 }

@@ -1,0 +1,404 @@
+/**
+ * Bridge for Stream Chat SDK for Kotlin/Wasm
+ */
+window.wdwStreamBridge = {
+    initialized: false,
+    client: null,
+    currentChannel: null,
+    messageCallbacks: [],
+
+    /**
+     * Connects a user to Stream Chat
+     */
+    connectUser: async function(apiKey, userToken, userId) {
+        console.log("StreamBridge: connectUser called for:", userId);
+        try {
+            if (!window.StreamChat) {
+                console.log("StreamBridge: Downloading Stream SDK...");
+                const module = await import("https://cdn.jsdelivr.net/npm/stream-chat/+esm");
+                window.StreamChat = module.StreamChat;
+            }
+
+            if (this.initialized && this.client) {
+                console.log("StreamBridge: Disconnecting existing client...");
+                await this.client.disconnectUser();
+            }
+
+            this.client = window.StreamChat.getInstance(apiKey);
+            
+            console.log("StreamBridge: Connecting user...");
+            await this.client.connectUser(
+                { id: userId },
+                userToken
+            );
+
+            // Set up listener for new messages and reactions
+            this.client.on((event) => {
+                const mappedEvent = {
+                    type: event.type,
+                    userId: event.user?.id || '',
+                    userName: event.user?.name || event.user?.id || '',
+                    channelId: event.cid ? event.cid.replace('messaging:', '') : ''
+                };
+
+                if (event.type === 'message.new' || event.type === 'message.deleted' || event.type === 'message.updated') {
+                    console.log("StreamBridge: Message event:", event.type);
+                    this.messageCallbacks.forEach(cb => cb(mappedEvent));
+                } else if (event.type === 'message.read') {
+                    console.log("StreamBridge: Read event:", event.type);
+                    this.messageCallbacks.forEach(cb => cb(mappedEvent));
+                } else if (event.type === 'reaction.new' || event.type === 'reaction.deleted' || event.type === 'reaction.updated') {
+                    console.log("StreamBridge: Reaction event:", event.type);
+                    this.messageCallbacks.forEach(cb => cb(mappedEvent));
+                } else if (event.type === 'typing.start' || event.type === 'typing.stop') {
+                    this.messageCallbacks.forEach(cb => cb(mappedEvent));
+                }
+            });
+
+            this.initialized = true;
+            console.log("StreamBridge: User connected successfully");
+        } catch (error) {
+            console.error("StreamBridge: Error in connectUser:", error);
+            throw error;
+        }
+    },
+
+    /**
+     * Maps a Stream message object to a simplified format
+     */
+    _mapMessage: function(m, channel) {
+        // Build reactions summary: { "like": { count: 2, own: true }, "love": { count: 1, own: false } }
+        const reactions = {};
+        if (m.reaction_counts) {
+            for (const [type, count] of Object.entries(m.reaction_counts)) {
+                const ownReaction = m.own_reactions?.some(r => r.type === type) || false;
+                reactions[type] = { count, own: ownReaction };
+            }
+        }
+
+        const isMessageDeleted = m.type === 'deleted';
+        let readStatus = "sent";
+        
+        if (channel && channel.state && channel.state.read) {
+            const msgTime = new Date(m.created_at).getTime();
+            let isReadByOther = false;
+            for (const [userId, readState] of Object.entries(channel.state.read)) {
+                if (userId !== m.user?.id) {
+                    const readTime = new Date(readState.last_read).getTime();
+                    if (readTime >= msgTime) {
+                        isReadByOther = true;
+                        break;
+                    }
+                }
+            }
+            readStatus = isReadByOther ? "read" : "delivered";
+        }
+        
+        return {
+            id: m.id,
+            text: isMessageDeleted ? 'This message was deleted.' : (m.text || ''),
+            userId: m.user?.id || '',
+            userName: m.user?.name || m.user?.id || '',
+            userImage: m.user?.image || '',
+            createdAt: new Date(m.created_at).toISOString(),
+            parentId: m.parent_id || '',
+            replyCount: m.reply_count || 0,
+            quotedText: m.quoted_message?.text || '',
+            quotedUserName: m.quoted_message?.user?.name || m.quoted_message?.user?.id || '',
+            reactions: JSON.stringify(reactions),
+            attachments: JSON.stringify(m.attachments || []),
+            isDeleted: isMessageDeleted,
+            readStatus: readStatus
+        };
+    },
+
+    /**
+     * Returns a list of channels for the current user
+     */
+    queryChannels: async function() {
+        if (!this.client) return [];
+        try {
+            const filter = { type: 'messaging', members: { $in: [this.client.userID] } };
+            const sort = [{ last_message_at: -1 }];
+            const channels = await this.client.queryChannels(filter, sort, {
+                watch: true,
+                presence: true,
+                limit: 10
+            });
+            
+            return channels.map(c => ({
+                id: c.id,
+                cid: c.cid,
+                name: c.data.name || 'Chat',
+                lastMessage: c.state.messages[c.state.messages.length - 1]?.text || '',
+                unreadCount: c.countUnread()
+            }));
+        } catch (error) {
+            console.error("StreamBridge: Error querying channels:", error);
+            return [];
+        }
+    },
+
+    /**
+     * Gets message history for a specific channel
+     */
+    getMessages: async function(channelId) {
+        if (!this.client) return [];
+        try {
+            const channel = this.client.channel('messaging', channelId);
+            await channel.watch();
+            return channel.state.messages.map(m => this._mapMessage(m, channel));
+        } catch (error) {
+            console.error("StreamBridge: Error getting messages:", error);
+            return [];
+        }
+    },
+
+    /**
+     * Sends a message to a channel
+     */
+    sendMessage: async function(channelId, text) {
+        if (!this.client) return null;
+        try {
+            const channel = this.client.channel('messaging', channelId);
+            const response = await channel.sendMessage({ text });
+            return this._mapMessage(response.message, channel);
+        } catch (error) {
+            console.error("StreamBridge: Error sending message:", error);
+            return null;
+        }
+    },
+
+    /**
+     * Uploads an image and sends a message with it attached
+     */
+    sendImageMessage: async function(channelId, text, file) {
+        if (!this.client || !file) return null;
+        try {
+            const channel = this.client.channel('messaging', channelId);
+            const response = await channel.sendImage(file);
+            const imageUrl = response.file;
+            
+            const msgResponse = await channel.sendMessage({
+                text: text || '',
+                attachments: [{
+                    type: 'image',
+                    image_url: imageUrl,
+                    fallback: file.name
+                }]
+            });
+            return this._mapMessage(msgResponse.message, channel);
+        } catch(error) {
+            console.error("StreamBridge: Error sending image message:", error);
+            return null;
+        }
+    },
+
+    /**
+     * Sends a reply to a specific message (threaded reply with quote)
+     */
+    sendReply: async function(channelId, parentMessageId, text) {
+        if (!this.client) return null;
+        try {
+            const channel = this.client.channel('messaging', channelId);
+            const response = await channel.sendMessage({
+                text,
+                parent_id: parentMessageId, 
+                show_in_channel: true,
+                quoted_message_id: parentMessageId
+            });
+            return this._mapMessage(response.message, channel);
+        } catch (error) {
+            console.error("StreamBridge: Error sending reply:", error);
+            return null;
+        }
+    },
+
+    /**
+     * Deletes a message
+     */
+    deleteMessage: async function(messageId) {
+        if (!this.client) return false;
+        try {
+            await this.client.deleteMessage(messageId);
+            return true;
+        } catch (error) {
+            console.error("StreamBridge: Error deleting message:", error);
+            return false;
+        }
+    },
+
+    /**
+     * Checks if the current user is an admin
+     */
+    isAdmin: function() {
+        if (!this.client || !this.client.user) return false;
+        return this.client.user.role === 'admin';
+    },
+
+    /**
+     * Adds a reaction to a message
+     */
+    addReaction: async function(messageId, reactionType) {
+        if (!this.currentChannel) return false;
+        try {
+            await this.currentChannel.sendReaction(messageId, { type: reactionType });
+            return true;
+        } catch (error) {
+            console.error("StreamBridge: Error adding reaction:", error);
+            return false;
+        }
+    },
+
+    /**
+     * Removes a reaction from a message
+     */
+    removeReaction: async function(messageId, reactionType) {
+        if (!this.currentChannel) return false;
+        try {
+            await this.currentChannel.deleteReaction(messageId, reactionType);
+            return true;
+        } catch (error) {
+            console.error("StreamBridge: Error removing reaction:", error);
+            return false;
+        }
+    },
+
+    /**
+     * Notify that the user has started typing
+     */
+    startTyping: async function(channelId) {
+        if (!this.client) return false;
+        try {
+            const channel = this.client.channel('messaging', channelId);
+            await channel.keystroke();
+            return true;
+        } catch (error) {
+            console.error("StreamBridge: Error sending typing start:", error);
+            return false;
+        }
+    },
+
+    /**
+     * Notify that the user has stopped typing
+     */
+    stopTyping: async function(channelId) {
+        if (!this.client) return false;
+        try {
+            const channel = this.client.channel('messaging', channelId);
+            await channel.stopTyping();
+            return true;
+        } catch (error) {
+            console.error("StreamBridge: Error sending typing stop:", error);
+            return false;
+        }
+    },
+
+    /**
+     * Mark a channel as read
+     */
+    markRead: async function(channelId) {
+        if (!this.client) return false;
+        try {
+            const channel = this.client.channel('messaging', channelId);
+            await channel.markRead();
+            return true;
+        } catch (error) {
+            console.error("StreamBridge: Error marking read:", error);
+            return false;
+        }
+    },
+
+    /**
+     * Register a callback for real-time events
+     */
+    onMessageNew: function(callback) {
+        this.messageCallbacks.push(callback);
+    },
+
+    /**
+     * Ensures the current user is a member of the global community channel
+     */
+    joinCommunityChannel: async function() {
+        if (!this.client) return null;
+        try {
+            // Membership is ensured server-side during token generation.
+            // Client only needs to watch the existing channel.
+            const channel = this.client.channel('messaging', 'wdw-community');
+            await channel.watch();
+            return {
+                id: channel.id,
+                cid: channel.cid,
+                name: channel.data.name
+            };
+        } catch (error) {
+            console.error("StreamBridge: Error joining community channel:", error);
+            return null;
+        }
+    },
+
+    /**
+     * Search for users matching a query string
+     */
+    searchUsers: async function(query) {
+        if (!this.client) return [];
+        try {
+            const filter = {
+                id: { $ne: this.client.userID },
+                name: { $autocomplete: query }
+            };
+            const response = await this.client.queryUsers(filter, { name: 1 }, { limit: 10 });
+            return response.users.map(u => ({
+                id: u.id,
+                name: u.name || u.id,
+                image: u.image || ''
+            }));
+        } catch (error) {
+            console.error("StreamBridge: Error searching users:", error);
+            return [];
+        }
+    },
+
+    /**
+     * Creates or retrieves a 1-on-1 direct messaging channel
+     */
+    createDirectChannel: async function(otherUserId) {
+        if (!this.client) return null;
+        try {
+            const channel = this.client.channel('messaging', {
+                members: [this.client.userID, otherUserId]
+            });
+            await channel.watch();
+            return {
+                id: channel.id,
+                cid: channel.cid,
+                name: channel.data.name || 'Direct Message',
+                lastMessage: channel.state.messages[channel.state.messages.length - 1]?.text || '',
+                unreadCount: channel.countUnread()
+            };
+        } catch (error) {
+            console.error("StreamBridge: Error creating direct channel:", error);
+            return null;
+        }
+    },
+
+    /**
+     * Disconnects the current user
+     */
+    disconnectUser: async function() {
+        console.log("StreamBridge: disconnectUser called");
+        try {
+            if (this.client) {
+                await this.client.disconnectUser();
+                this.client = null;
+                this.initialized = false;
+                this.messageCallbacks = [];
+                console.log("StreamBridge: User disconnected");
+            }
+        } catch (error) {
+            console.error("StreamBridge: Error in disconnectUser:", error);
+        }
+    }
+};
+
+console.log("StreamBridge: wdwStreamBridge defined on window");

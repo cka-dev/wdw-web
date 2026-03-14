@@ -88,6 +88,9 @@ kotlin {
 
             implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
 
+            // Emoji support (Noto images for Wasm)
+            implementation("org.kodein.emoji:emoji-compose-m3:2.0.1")
+
             // Icons Extension
             implementation("org.jetbrains.compose.material:material-icons-extended:1.6.11")
         }

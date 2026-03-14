@@ -13,9 +13,11 @@ external object FirebaseBridge {
     fun signInWithCustomToken(token: String): Promise<JsAny>
     fun signOut(): Promise<JsAny>
     fun getCurrentUser(): JsAny?
+    fun getIdToken(): Promise<JsString?>
     fun persistSession()
     fun observeAuthState(callback: (JsAny?) -> Unit)
     fun waitUntilInitialized(): Promise<JsAny>
+    fun setupForegroundNotifications()
 
 }
 

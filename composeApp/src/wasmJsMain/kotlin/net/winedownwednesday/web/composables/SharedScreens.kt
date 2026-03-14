@@ -18,12 +18,22 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.automirrored.filled.Article
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Podcasts
+import androidx.compose.material.icons.filled.WineBar
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
@@ -47,8 +57,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import kotlinx.browser.window
 import kotlinx.coroutines.delay
 import net.winedownwednesday.web.viewmodels.LoginUIState
@@ -106,10 +119,24 @@ fun TopNavItem(
 fun TopNavBar(
     appBarState: MutableState<AppBarState>,
     uiState: LoginUIState,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    userProfileImageUrl: String? = null,
+    isCompactScreen: Boolean = false,
+    onHamburgerClick: () -> Unit = {}
 ) {
     Surface {
         TopAppBar(
+            navigationIcon = {
+                if (isCompactScreen) {
+                    IconButton(onClick = onHamburgerClick) {
+                        Icon(
+                            imageVector = Icons.Default.Menu,
+                            contentDescription = "Menu",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            },
             title = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -136,48 +163,101 @@ fun TopNavBar(
                 }
             },
             actions = {
-                val navItems = listOf(
-                    "Home" to AppBarState.HOME,
-                    "About" to AppBarState.ABOUT,
-                    "Blog" to AppBarState.BLOG,
-                    "Members" to AppBarState.MEMBERS,
-                    "Uncorked Conversations" to AppBarState.PODCASTS,
-                    "Events" to AppBarState.EVENTS,
-                    "Our Wine" to AppBarState.WINES
-                )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.horizontalScroll(rememberScrollState())
-                ) {
-                    navItems.forEach { (label, state) ->
-                        TopNavItem(
-                            label = label,
-                            target = state,
-                            currentState = appBarState.value,
-                            onClick = { appBarState.value = state }
-                        )
-                    }
+                if (isCompactScreen) {
+                    // Compact: just profile avatar or login
                     if (uiState is LoginUIState.Authenticated) {
-                        Spacer(modifier = Modifier.width(16.dp))
                         IconButton(
-                            onClick = {
-                                appBarState.value = AppBarState.PROFILE
+                            onClick = { appBarState.value = AppBarState.PROFILE }
+                        ) {
+                            if (!userProfileImageUrl.isNullOrEmpty()) {
+                                AsyncImage(
+                                    model = userProfileImageUrl,
+                                    contentDescription = "Profile",
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.AccountCircle,
+                                    contentDescription = "Account Circle",
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
                             }
+                        }
+                    } else if (uiState is LoginUIState.Idle) {
+                        IconButton(
+                            onClick = { appBarState.value = AppBarState.LOGIN }
                         ) {
                             Icon(
                                 imageVector = Icons.Default.AccountCircle,
-                                contentDescription = "Account Circle",
+                                contentDescription = "Login",
                                 tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
-                    } else if (uiState is LoginUIState.Idle) {
-                        Spacer(modifier = Modifier.width(16.dp))
-                        TopNavItem(
-                            label = "Member Login",
-                            target = AppBarState.LOGIN,
-                            currentState = appBarState.value,
-                            onClick = { appBarState.value = AppBarState.LOGIN }
-                        )
+                    }
+                } else {
+                    // Desktop: full horizontal nav
+                    val navItems = mutableListOf(
+                        "Home" to AppBarState.HOME,
+                        "About" to AppBarState.ABOUT,
+                        "Blog" to AppBarState.BLOG,
+                        "Members" to AppBarState.MEMBERS,
+                        "Uncorked Conversations" to AppBarState.PODCASTS,
+                        "Events" to AppBarState.EVENTS,
+                        "Our Wine" to AppBarState.WINES
+                    )
+
+                    if (uiState is LoginUIState.Authenticated) {
+                        navItems.add("Messages" to AppBarState.MESSAGING)
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.horizontalScroll(rememberScrollState())
+                    ) {
+                        navItems.forEach { (label, state) ->
+                            TopNavItem(
+                                label = label,
+                                target = state,
+                                currentState = appBarState.value,
+                                onClick = { appBarState.value = state }
+                            )
+                        }
+                        if (uiState is LoginUIState.Authenticated) {
+                            Spacer(modifier = Modifier.width(16.dp))
+                            IconButton(
+                                onClick = {
+                                    appBarState.value = AppBarState.PROFILE
+                                }
+                            ) {
+                                if (!userProfileImageUrl.isNullOrEmpty()) {
+                                    AsyncImage(
+                                        model = userProfileImageUrl,
+                                        contentDescription = "Profile",
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clip(CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.AccountCircle,
+                                        contentDescription = "Account Circle",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        } else if (uiState is LoginUIState.Idle) {
+                            Spacer(modifier = Modifier.width(16.dp))
+                            TopNavItem(
+                                label = "Member Login",
+                                target = AppBarState.LOGIN,
+                                currentState = appBarState.value,
+                                onClick = { appBarState.value = AppBarState.LOGIN }
+                            )
+                        }
                     }
                 }
             },
@@ -185,6 +265,124 @@ fun TopNavBar(
                 containerColor = MaterialTheme.colorScheme.primary
             )
         )
+    }
+}
+
+@Composable
+fun MobileBottomNavBar(
+    appBarState: MutableState<AppBarState>,
+    uiState: LoginUIState
+) {
+    val bottomTabs = listOf(
+        Triple("About", Icons.Default.Home, AppBarState.HOME),
+        Triple("Podcasts", Icons.Default.Podcasts, AppBarState.PODCASTS),
+        Triple("Events", Icons.Default.Event, AppBarState.EVENTS),
+        Triple("Our Wine", Icons.Default.WineBar, AppBarState.WINES),
+        Triple("Chat", Icons.AutoMirrored.Filled.Chat, AppBarState.MESSAGING)
+    )
+
+    Surface(
+        color = Color(0xFF1E1E1E),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            bottomTabs.forEach { (label, icon, state) ->
+                val isSelected = appBarState.value == state
+                val color by animateColorAsState(
+                    targetValue = if (isSelected) Color(0xFFFF7F33) else Color.Gray,
+                    animationSpec = tween(200)
+                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .clickable {
+                            if (state == AppBarState.MESSAGING && uiState !is LoginUIState.Authenticated) {
+                                appBarState.value = AppBarState.LOGIN
+                            } else {
+                                appBarState.value = state
+                            }
+                        }
+                        .padding(horizontal = 4.dp, vertical = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = label,
+                        tint = color,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = label,
+                        color = color,
+                        fontSize = 10.sp,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun NavDrawerContent(
+    appBarState: MutableState<AppBarState>,
+    onItemSelected: () -> Unit
+) {
+    val drawerItems = listOf(
+        Triple("Members", Icons.Default.People, AppBarState.MEMBERS),
+        Triple("Blog", Icons.AutoMirrored.Filled.Article, AppBarState.BLOG)
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF1E1E1E))
+            .padding(top = 48.dp, start = 16.dp, end = 16.dp)
+    ) {
+        Text(
+            text = "More",
+            color = Color.White,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
+
+        drawerItems.forEach { (label, icon, state) ->
+            val isSelected = appBarState.value == state
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        appBarState.value = state
+                        onItemSelected()
+                    }
+                    .background(
+                        if (isSelected) Color(0xFF333333) else Color.Transparent,
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                    .padding(vertical = 12.dp, horizontal = 12.dp)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = if (isSelected) Color(0xFFFF7F33) else Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = label,
+                    color = if (isSelected) Color(0xFFFF7F33) else Color.White,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+        }
     }
 }
 

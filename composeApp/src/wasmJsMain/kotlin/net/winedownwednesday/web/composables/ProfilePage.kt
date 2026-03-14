@@ -154,7 +154,7 @@ fun ProfilePage(
                             .padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        item {
+                        item(key = "profile_content_${userProfile?.hashCode()}") {
                             if (editMode) {
                                 ProfileEditSection(
                                     profile = userProfile,
@@ -344,9 +344,10 @@ fun ProfileReadSection(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "Verified: ",
+                    text = "Verified:",
                     color = Color.White,
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.width(80.dp)
                 )
 
                 if (profile.isVerified == true) {
@@ -369,9 +370,10 @@ fun ProfileReadSection(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "Member: ",
+                    text = "Member:",
                     color = Color.White,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.width(80.dp)
                 )
                 if (profile.isMember == true) {
                     Icon(
@@ -561,17 +563,17 @@ fun ProfileEditSection(
     userEmail: String
 ) {
     val numericRegex = Regex("[^0-9]")
-    var name by remember { mutableStateOf(profile?.name ?: "") }
-    var email by remember { mutableStateOf(userEmail) }
-    var phone by remember { mutableStateOf(profile?.phone?.replace(
+    var name by remember(profile) { mutableStateOf(profile?.name ?: "") }
+    var email by remember(profile) { mutableStateOf(profile?.email ?: userEmail) }
+    var phone by remember(profile) { mutableStateOf(profile?.phone?.replace(
         numericRegex, "")?.take(10) ?: "") }
-    var aboutMe by remember { mutableStateOf(profile?.aboutMe ?: "") }
-    var profileImageBitmap by remember { mutableStateOf(profile?.profileImageBitmap) }
-    var birthDate by remember { mutableStateOf(profile?.birthDate) }
-    val isVerified by remember { mutableStateOf(profile?.isVerified ?: false) }
-    val isMember by remember { mutableStateOf(profile?.isMember ?: false) }
-    val hasPassword by remember { mutableStateOf(profile?.hasPassword ?: false) }
-    val hasPasskey by remember { mutableStateOf(profile?.hasPasskey ?: false) }
+    var aboutMe by remember(profile) { mutableStateOf(profile?.aboutMe ?: "") }
+    var profileImageBitmap by remember(profile) { mutableStateOf(profile?.profileImageBitmap) }
+    var birthDate by remember(profile) { mutableStateOf(profile?.birthDate) }
+    val isVerified by remember(profile) { mutableStateOf(profile?.isVerified ?: false) }
+    val isMember by remember(profile) { mutableStateOf(profile?.isMember ?: false) }
+    val hasPassword by remember(profile) { mutableStateOf(profile?.hasPassword ?: false) }
+    val hasPasskey by remember(profile) { mutableStateOf(profile?.hasPasskey ?: false) }
     val showDatePicker = remember { mutableStateOf(false) }
 
     val updatedProfile = UserProfileData(
@@ -670,9 +672,10 @@ fun ProfileEditSection(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "Verified: ",
+                    text = "Verified:",
                     color = Color.White,
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.width(80.dp)
                 )
 
                 if (isVerified) {
@@ -702,11 +705,15 @@ fun ProfileEditSection(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            Row {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Text(
-                    text = "Member:      ",
+                    text = "Member:",
                     color = Color.White,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.width(80.dp)
                 )
                 if (isMember) {
                     Icon(
