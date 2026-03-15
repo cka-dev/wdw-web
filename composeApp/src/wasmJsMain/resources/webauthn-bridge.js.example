@@ -1,3 +1,7 @@
+// Template for webauthn-bridge.js
+// Instructions: Copy this file to webauthn-bridge.js.
+// This file contains no secrets — it's pure WebAuthn/FIDO2 crypto utility functions.
+// It is gitignored as a precaution in case future changes introduce sensitive config.
 
 function base64urlEncode(str) {
     return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');

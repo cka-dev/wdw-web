@@ -578,6 +578,19 @@ class AuthPageViewModel(
         }
     }
 
+    fun deleteAccount(
+        confirmPhrase: String,
+        onComplete: (Boolean) -> Unit
+    ) {
+        viewModelScope.launch {
+            val success = repository.deleteAccount(confirmPhrase)
+            if (success) {
+                firebaseSignOut()
+            }
+            onComplete(success)
+        }
+    }
+
     companion object {
         private const val TAG = "AuthPageViewModel"
     }

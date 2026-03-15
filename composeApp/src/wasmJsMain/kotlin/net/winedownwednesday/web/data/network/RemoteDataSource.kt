@@ -14,10 +14,9 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.headers
 import io.ktor.http.isSuccess
+import kotlinx.coroutines.await
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.await
-import kotlinx.serialization.json.Json
 import net.winedownwednesday.web.FirebaseBridge
 import net.winedownwednesday.web.data.AboutItem
 import net.winedownwednesday.web.data.Episode
@@ -25,19 +24,19 @@ import net.winedownwednesday.web.data.Event
 import net.winedownwednesday.web.data.Member
 import net.winedownwednesday.web.data.Wine
 import net.winedownwednesday.web.data.models.AuthenticationResponse
+import net.winedownwednesday.web.data.models.BlogPostsResponse
 import net.winedownwednesday.web.data.models.ChangePasswordRequest
 import net.winedownwednesday.web.data.models.EmailPasswordRequest
 import net.winedownwednesday.web.data.models.FcmInstanceRegistrationRequest
+import net.winedownwednesday.web.data.models.FeaturedWinesResponse
 import net.winedownwednesday.web.data.models.FirebaseAuthResponse
 import net.winedownwednesday.web.data.models.PublicKeyCredentialCreationOptions
 import net.winedownwednesday.web.data.models.PublicKeyCredentialRequestOptions
 import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.data.models.RegistrationOptionsRequest
 import net.winedownwednesday.web.data.models.RegistrationResponse
+import net.winedownwednesday.web.data.models.StreamTokenResponse
 import net.winedownwednesday.web.data.models.UserProfileData
-import net.winedownwednesday.web.data.models.FeaturedWinesResponse
-import net.winedownwednesday.web.data.models.BlogPostsResponse
-import net.winedownwednesday.web.data.models.BlogPost
 import net.winedownwednesday.web.data.models.UserProfileRequest
 import net.winedownwednesday.web.data.models.VerifyAuthenticationRequest
 import net.winedownwednesday.web.data.models.VerifyRegistrationRequest
@@ -304,13 +303,11 @@ class RemoteDataSource (
                 url { parameters.append("email", userEmail) }
                 setBody(UserProfileRequest(userEmail))
             }
-            println("$TAG: fetchUserProfile response status: ${response.status}")
             if (response.status.isSuccess()) {
                 val jsonString = response.bodyAsText()
                 println("$TAG: fetchUserProfile raw response: $jsonString")
                 try {
                     val profile = JsonInstanceProvider.json.decodeFromString<UserProfileData>(jsonString)
-                    println("$TAG: fetchUserProfile parsed profile: name=${profile.name}, email=${profile.email}, imageUrl=${profile.profileImageUrl}")
                     profile
                 } catch (parseError: Exception) {
                     println("$TAG: fetchUserProfile PARSE ERROR: ${parseError.message}")
@@ -350,7 +347,8 @@ class RemoteDataSource (
         }
     }
 
-    override suspend fun registerFcmInstanceId(request: FcmInstanceRegistrationRequest): Boolean {
+    override suspend fun registerFcmInstanceId(request: FcmInstanceRegistrationRequest): Boolean
+    {
         try {
             val response = client.post("$SERVER_URL/registerFcmInstanceId") {
                 contentType(ContentType.Application.Json)
@@ -364,7 +362,8 @@ class RemoteDataSource (
         return false
     }
 
-    override suspend fun unRegisterFcmInstanceId(request: FcmInstanceRegistrationRequest): Boolean {
+    override suspend fun unRegisterFcmInstanceId(request: FcmInstanceRegistrationRequest): Boolean
+    {
         try {
             val response = client.post("$SERVER_URL/unRegisterFcmInstanceId") {
                 contentType(ContentType.Application.Json)
@@ -397,7 +396,8 @@ class RemoteDataSource (
         _isLoading.value = true
         return try {
             val response: HttpResponse = client.post(
-                "https://verifypasskeyregistrationwithfirebaseauth-iktff5ztia-uc.a.run.app") {
+                "https://verifypasskeyregistrationwithfirebaseauth-iktff5ztia-uc.a.run.app"
+            ) {
                 contentType(ContentType.Application.Json)
                 setBody(VerifyRegistrationRequest(credential, email))
             }
@@ -421,7 +421,8 @@ class RemoteDataSource (
         _isLoading.value = true
         return try {
             val response: HttpResponse = client.post(
-                "https://verifypasskeyauthenticationwithfirebaseauth-iktff5ztia-uc.a.run.app") {
+                "https://verifypasskeyauthenticationwithfirebaseauth-iktff5ztia-uc.a.run.app"
+            ) {
                 contentType(ContentType.Application.Json)
                 setBody(VerifyAuthenticationRequest(credential, email))
             }
@@ -442,11 +443,15 @@ class RemoteDataSource (
         }
     }
 
-    override suspend fun registerWithEmailPassword(request: EmailPasswordRequest): ApiResult<FirebaseAuthResponse> {
+    override suspend fun registerWithEmailPassword(
+        request: EmailPasswordRequest
+    ): ApiResult<FirebaseAuthResponse> {
         return try {
-            val response: HttpResponse = client.post("$SERVER_URL/registerWithEmailPassword") {
-                contentType(ContentType.Application.Json)
-                setBody(request)
+            val response: HttpResponse =
+                client.post("$SERVER_URL/registerWithEmailPassword")
+                {
+                    contentType(ContentType.Application.Json)
+                    setBody(request)
             }
             if (response.status.isSuccess()) {
                 ApiResult.Success(response.body())
@@ -458,11 +463,14 @@ class RemoteDataSource (
         }
     }
 
-    override suspend fun signInWithEmailPassword(request: EmailPasswordRequest): ApiResult<FirebaseAuthResponse> {
+    override suspend fun signInWithEmailPassword(
+        request: EmailPasswordRequest): ApiResult<FirebaseAuthResponse>
+    {
         return try {
-            val response: HttpResponse = client.post("$SERVER_URL/signInWithEmailPassword") {
-                contentType(ContentType.Application.Json)
-                setBody(request)
+            val response: HttpResponse = client
+                .post("$SERVER_URL/signInWithEmailPassword") {
+                    contentType(ContentType.Application.Json)
+                    setBody(request)
             }
             if (response.status.isSuccess()) {
                 ApiResult.Success(response.body())
@@ -476,9 +484,10 @@ class RemoteDataSource (
 
     override suspend fun linkPasswordToAccount(request: EmailPasswordRequest): Boolean {
         return try {
-            val response: HttpResponse = client.post("$SERVER_URL/linkPasswordToAccount") {
-                contentType(ContentType.Application.Json)
-                setBody(request)
+            val response: HttpResponse = client
+                .post("$SERVER_URL/linkPasswordToAccount") {
+                    contentType(ContentType.Application.Json)
+                    setBody(request)
             }
             response.status.isSuccess()
         } catch (e: Exception) {
@@ -500,9 +509,10 @@ class RemoteDataSource (
 
     override suspend fun sendPasswordResetEmail(email: String): Boolean {
         return try {
-            val response: HttpResponse = client.post("$SERVER_URL/sendPasswordResetEmail") {
-                contentType(ContentType.Application.Json)
-                setBody(mapOf("email" to email))
+            val response: HttpResponse = client
+                .post("$SERVER_URL/sendPasswordResetEmail") {
+                    contentType(ContentType.Application.Json)
+                    setBody(mapOf("email" to email))
             }
             response.status.isSuccess()
         } catch (e: Exception) {
@@ -510,13 +520,14 @@ class RemoteDataSource (
         }
     }
 
-    override suspend fun fetchStreamToken(): net.winedownwednesday.web.data.models.StreamTokenResponse? {
+    override suspend fun fetchStreamToken(): StreamTokenResponse? {
         _isLoading.value = true
         return try {
             val idToken = FirebaseBridge.getIdToken().await<JsAny?>().toString()
-            val response: HttpResponse = client.post("https://generatestreamtoken-iktff5ztia-uc.a.run.app") {
-                header(HttpHeaders.Authorization, "Bearer $idToken")
-                contentType(ContentType.Application.Json)
+            val response: HttpResponse = client
+                .post("https://generatestreamtoken-iktff5ztia-uc.a.run.app") {
+                    header(HttpHeaders.Authorization, "Bearer $idToken")
+                    contentType(ContentType.Application.Json)
             }
             if (response.status.isSuccess()) {
                 response.body()
@@ -528,6 +539,145 @@ class RemoteDataSource (
             null
         } finally {
             _isLoading.value = false
+        }
+    }
+
+    // ─── Moderation ─────────────────────────────────────────────────────────
+
+    override suspend fun blockUser(targetEmail: String): Boolean {
+        return try {
+            val idToken = FirebaseBridge.getIdToken().await<JsAny?>().toString()
+            val response: HttpResponse = client.post(
+                "https://blockuser-iktff5ztia-uc.a.run.app"
+            ) {
+                header(HttpHeaders.Authorization, "Bearer $idToken")
+                contentType(ContentType.Application.Json)
+                setBody(mapOf("targetUserId" to targetEmail))
+            }
+            response.status.isSuccess()
+        } catch (e: Exception) {
+            _error.value = e.message
+            false
+        }
+    }
+
+    override suspend fun unblockUser(targetEmail: String): Boolean {
+        return try {
+            val idToken = FirebaseBridge.getIdToken().await<JsAny?>().toString()
+            val response: HttpResponse = client.post(
+                "https://unblockuser-iktff5ztia-uc.a.run.app"
+            ) {
+                header(HttpHeaders.Authorization, "Bearer $idToken")
+                contentType(ContentType.Application.Json)
+                setBody(mapOf("targetUserId" to targetEmail))
+            }
+            response.status.isSuccess()
+        } catch (e: Exception) {
+            _error.value = e.message
+            false
+        }
+    }
+
+    override suspend fun flagUser(
+        targetEmail: String,
+        reason: String?,
+        category: String
+    ): Boolean {
+        return try {
+            val idToken = FirebaseBridge.getIdToken().await<JsAny?>().toString()
+            val response: HttpResponse = client.post(
+                "https://flaguser-iktff5ztia-uc.a.run.app"
+            ) {
+                header(HttpHeaders.Authorization, "Bearer $idToken")
+                contentType(ContentType.Application.Json)
+                setBody(mapOf(
+                    "targetUserId" to targetEmail,
+                    "reason" to (reason ?: ""),
+                    "category" to category
+                ))
+            }
+            response.status.isSuccess()
+        } catch (e: Exception) {
+            _error.value = e.message
+            false
+        }
+    }
+
+    override suspend fun flagMessage(
+        messageId: String,
+        reason: String?,
+        category: String
+    ): Boolean {
+        return try {
+            val idToken = FirebaseBridge.getIdToken().await<JsAny?>().toString()
+            val response: HttpResponse = client.post(
+                "https://flagmessage-iktff5ztia-uc.a.run.app"
+            ) {
+                header(HttpHeaders.Authorization, "Bearer $idToken")
+                contentType(ContentType.Application.Json)
+                setBody(mapOf(
+                    "messageId" to messageId,
+                    "reason" to (reason ?: ""),
+                    "category" to category
+                ))
+            }
+            response.status.isSuccess()
+        } catch (e: Exception) {
+            _error.value = e.message
+            false
+        }
+    }
+
+    override suspend fun getBlockedUsers(): List<String> {
+        return try {
+            val idToken = FirebaseBridge.getIdToken().await<JsAny?>().toString()
+            val response: HttpResponse = client.get(
+                "https://getblockedusers-iktff5ztia-uc.a.run.app"
+            ) {
+                header(HttpHeaders.Authorization, "Bearer $idToken")
+            }
+            if (response.status.isSuccess()) {
+                val body = response.body<kotlinx.serialization.json.JsonObject>()
+                // Prefer blockedUserIds (Stream IDs) for client-side matching
+                val arr = body["blockedUserIds"] as? kotlinx.serialization.json.JsonArray
+                    ?: body["blockedEmails"] as? kotlinx.serialization.json.JsonArray
+                arr?.mapNotNull {
+                    (it as? kotlinx.serialization.json.JsonPrimitive)?.content
+                } ?: emptyList()
+            } else {
+                emptyList()
+            }
+        } catch (e: Exception) {
+            _error.value = e.message
+            emptyList()
+        }
+    }
+
+    override suspend fun deleteAccount(
+        confirmPhrase: String
+    ): Boolean {
+        return try {
+            val idToken = FirebaseBridge.getIdToken()
+                .await<JsAny?>().toString()
+            val response: HttpResponse = client.post(
+                "https://deleteaccount-iktff5ztia-uc.a.run.app"
+            ) {
+                header(
+                    HttpHeaders.Authorization,
+                    "Bearer $idToken")
+                contentType(ContentType.Application.Json)
+                setBody(
+                    kotlinx.serialization.json.buildJsonObject {
+                        put("confirmPhrase",
+                            kotlinx.serialization.json.JsonPrimitive(
+                                confirmPhrase))
+                    }.toString()
+                )
+            }
+            response.status.isSuccess()
+        } catch (e: Exception) {
+            _error.value = e.message
+            false
         }
     }
 

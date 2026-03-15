@@ -19,5 +19,6 @@ data class UserProfileData(
     val isMember: Boolean? = false,
     val hasPassword: Boolean = false,
     val hasPasskey: Boolean = false,
-    val eventRsvps: Map<Int, RSVPRequest>? = emptyMap()
+    val eventRsvps: Map<Int, RSVPRequest>? = emptyMap(),
+    val blockedEmails: List<String>? = emptyList()
 )

@@ -1,8 +1,13 @@
 package net.winedownwednesday.web.composables
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,21 +37,30 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.TextSelectionColors
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -54,8 +68,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
@@ -85,6 +101,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle.Companion.Italic
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
@@ -124,6 +141,18 @@ data class ChatAttachment(
 
 val LocalMembers = androidx.compose.runtime.compositionLocalOf<List<Member?>> { emptyList() }
 
+data class ModerationCallbacks(
+    val currentUserId: String? = null,
+    val blockedUserIds: List<String> = emptyList(),
+    val blockedUserProfiles: List<JsStreamUser> = emptyList(),
+    val onBlock: (targetUserId: String) -> Unit = {},
+    val onUnblock: (targetUserId: String) -> Unit = {},
+    val onReport: (targetUserId: String, reason: String?, category: String) -> Unit = { _, _, _ -> },
+    val fetchBlockedUserProfiles: () -> Unit = {}
+)
+
+val LocalModeration = androidx.compose.runtime.compositionLocalOf { ModerationCallbacks() }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessagingScreen(
@@ -147,13 +176,64 @@ fun MessagingScreen(
     val threadParentMessage by viewModel.threadParentMessage.collectAsState()
     val threadReplies by viewModel.threadReplies.collectAsState()
     val membersList by viewModel.members.collectAsState()
+    val blockedEmails by viewModel.blockedEmails.collectAsState()
+    val blockedUserProfiles by viewModel.blockedUserProfiles.collectAsState()
     var showNewChatDialog by remember { mutableStateOf(false) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
+
+    // Chat Settings Dialog (hoisted here so it survives layout changes)
+    if (showSettingsDialog) {
+        LaunchedEffect(Unit) {
+            viewModel.fetchBlockedUserProfiles()
+        }
+        ChatSettingsDialog(
+            blockedUsers = blockedUserProfiles,
+            onUnblock = { userId ->
+                viewModel.unblockUser(userId)
+                viewModel.fetchBlockedUserProfiles()
+            },
+            onDismiss = { showSettingsDialog = false }
+        )
+    }
+
+    // Report dialog (driven by ViewModel state — survives layout/resize changes)
+    val reportTarget by viewModel.reportDialogTarget.collectAsState()
+    reportTarget?.let { target ->
+        ReportUserDialog(
+            userName = target.userName,
+            onDismiss = { viewModel.dismissReportDialog() },
+            onSubmit = { reason, category ->
+                viewModel.dismissReportDialog()
+                viewModel.flagUser(target.userId, reason, category)
+            }
+        )
+    }
 
     // Initialize the emoji image service (loads Noto glyphs for Wasm)
     remember { EmojiService.initialize() }
 
     LaunchedEffect(Unit) {
         viewModel.connectToChat()
+        viewModel.fetchBlockedUsers()
+    }
+
+    val moderationCallbacks = remember(
+        streamToken?.userId,
+        blockedEmails,
+        blockedUserProfiles
+    )
+    {
+        ModerationCallbacks(
+            currentUserId = streamToken?.userId,
+            blockedUserIds = blockedEmails,
+            blockedUserProfiles = blockedUserProfiles,
+            onBlock = { userId -> viewModel.blockUser(userId) },
+            onUnblock = { userId -> viewModel.unblockUser(userId) },
+            onReport = { userId, reason, category ->
+                viewModel.flagUser(userId, reason, category)
+            },
+            fetchBlockedUserProfiles = { viewModel.fetchBlockedUserProfiles() }
+        )
     }
 
     Box(
@@ -161,97 +241,144 @@ fun MessagingScreen(
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        CompositionLocalProvider(LocalMembers provides membersList) {
-        when {
-            isConnecting -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Color(0xFFFF7F33))
+        CompositionLocalProvider(
+            LocalMembers provides membersList,
+            LocalModeration provides moderationCallbacks
+        ) {
+            when {
+                isConnecting -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Color(0xFFFF7F33))
+                    }
                 }
-            }
-            error != null -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(text = "Error: $error", color = Color.Red)
+
+                error != null -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(text = "Error: $error", color = Color.Red)
+                    }
                 }
-            }
-            streamToken != null -> {
-                Row(modifier = Modifier.fillMaxSize()) {
-                    ChatLayout(
-                        isCompactScreen = isCompactScreen,
-                        channels = channels,
-                        messages = messages,
-                        selectedChannelId = selectedChannelId,
-                        currentUserId = streamToken?.userId,
-                        isAdmin = isAdmin,
-                        replyingTo = replyingTo,
-                        editingMessage = editingMessage,
-                        typingUsers = typingUsers,
-                        onChannelSelect = { viewModel.selectChannel(it) },
-                        onSendMessage = { text, file -> viewModel.sendMessage(text, file) },
-                        onReply = { viewModel.setReplyingTo(it) },
-                        onDelete = { viewModel.deleteMessage(it) },
-                        onCancelReply = { viewModel.setReplyingTo(null) },
-                        onReaction = { messageId, type -> viewModel.addReaction(messageId, type) },
-                        onFlag = { messageId -> viewModel.flagMessage(messageId) },
-                        onEdit = { viewModel.setEditingMessage(it) },
-                        onEditMessage = { id, text -> viewModel.editMessage(id, text) },
-                        onCancelEditing = { viewModel.cancelEditing() },
-                        onTyping = { viewModel.notifyTyping() },
-                        onNewChatClick = { showNewChatDialog = true },
-                        notificationsEnabled = notificationsEnabled,
-                        onEnableNotifications = { viewModel.toggleNotifications() },
-                        channelSearchQuery = channelSearchQuery,
-                        onChannelSearchQueryChange = { viewModel.setChannelSearchQuery(it) },
-                        messageSearchQuery = messageSearchQuery,
-                        onMessageSearchQueryChange = { viewModel.setMessageSearchQuery(it) },
-                        onOpenThread = { viewModel.openThread(it) },
-                        onPin = { viewModel.pinMessage(it) },
-                        onUnpin = { viewModel.unpinMessage(it) },
-                        onSendGif = { url, title -> viewModel.sendGiphyMessage(url, title) },
-                        onForward = { text, channelId -> viewModel.forwardMessage(text, channelId) },
-                        modifier = Modifier
-                            .weight(if (threadParentMessage != null) 0.65f else 1f)
-                            .fillMaxHeight()
-                    )
-                    // Thread panel slides in from the right
-                    if (threadParentMessage != null) {
-                        Box(
-                            modifier = Modifier
-                                .width(2.dp)
-                                .fillMaxHeight()
-                                .background(Color(0xFF333333))
-                        )
-                        ThreadPanel(
-                            parentMessage = threadParentMessage!!,
-                            replies = threadReplies,
+
+                streamToken != null -> {
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        ChatLayout(
+                            isCompactScreen = isCompactScreen,
+                            channels = channels,
+                            messages = messages,
+                            selectedChannelId = selectedChannelId,
                             currentUserId = streamToken?.userId,
-                            onClose = { viewModel.closeThread() },
-                            onSendReply = { viewModel.sendThreadReply(it) },
+                            isAdmin = isAdmin,
+                            replyingTo = replyingTo,
+                            editingMessage = editingMessage,
+                            typingUsers = typingUsers,
+                            onChannelSelect = { viewModel.selectChannel(it) },
+                            onSendMessage = { text, file -> viewModel.sendMessage(text, file) },
+                            onReply = { viewModel.setReplyingTo(it) },
+                            onDelete = { viewModel.deleteMessage(it) },
+                            onCancelReply = { viewModel.setReplyingTo(null) },
+                            onReaction = { messageId, type ->
+                                viewModel.addReaction(messageId, type)
+                            },
+                            onFlag = { messageId -> viewModel.flagMessage(messageId) },
+                            onEdit = { viewModel.setEditingMessage(it) },
+                            onEditMessage = { id, text ->
+                                viewModel.editMessage(id, text)
+                            },
+                            onCancelEditing = { viewModel.cancelEditing() },
+                            onTyping = { viewModel.notifyTyping() },
+                            onNewChatClick = { showNewChatDialog = true },
+                            notificationsEnabled = notificationsEnabled,
+                            onEnableNotifications = { viewModel.toggleNotifications() },
+                            channelSearchQuery = channelSearchQuery,
+                            onChannelSearchQueryChange = { viewModel.setChannelSearchQuery(it) },
+                            messageSearchQuery = messageSearchQuery,
+                            onMessageSearchQueryChange = { viewModel.setMessageSearchQuery(it) },
+                            onOpenThread = { viewModel.openThread(it) },
+                            onPin = { viewModel.pinMessage(it) },
+                            onUnpin = { viewModel.unpinMessage(it) },
+                            onSendGif = { url, title ->
+                                viewModel.sendGiphyMessage(url, title)
+                            },
+                            onForward = { text, channelId ->
+                                viewModel.forwardMessage(
+                                    text,
+                                    channelId
+                                )
+                            },
+                            onOpenSettings = { showSettingsDialog = true },
                             modifier = Modifier
-                                .weight(0.35f)
+                                .weight(if (threadParentMessage != null) 0.65f else 1f)
                                 .fillMaxHeight()
                         )
+                        // Thread panel slides in from the right
+                        if (threadParentMessage != null) {
+                            Box(
+                                modifier = Modifier
+                                    .width(2.dp)
+                                    .fillMaxHeight()
+                                    .background(Color(0xFF333333))
+                            )
+                            ThreadPanel(
+                                parentMessage = threadParentMessage!!,
+                                replies = threadReplies,
+                                currentUserId = streamToken?.userId,
+                                onClose = { viewModel.closeThread() },
+                                onSendReply = { viewModel.sendThreadReply(it) },
+                                modifier = Modifier
+                                    .weight(0.35f)
+                                    .fillMaxHeight()
+                            )
+                        }
+                    }
+                }
+
+                else -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(text = "Initializing chat...", color = Color.White)
                     }
                 }
             }
-            else -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(text = "Initializing chat...", color = Color.White)
+        } // CompositionLocalProvider
+
+        // Moderation feedback toast
+        val moderationMsg by viewModel.moderationMessage.collectAsState()
+        moderationMsg?.let { msg ->
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 32.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .background(
+                            color = if (msg.contains("Failed") || msg.contains("Error"))
+                                Color(0xCC_C0392B.toInt())
+                            else Color(0xCC_2E7D32.toInt()),
+                            shape = RoundedCornerShape(24.dp)
+                        )
+                        .padding(horizontal = 24.dp, vertical = 12.dp)
+                        .clickable { viewModel.clearModerationMessage() }
+                ) {
+                    Text(
+                        text = msg,
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
         }
-        } // CompositionLocalProvider
     }
 
     if (showNewChatDialog) {
         NewChatDialog(
             searchResults = searchResults,
             onSearch = { viewModel.searchUsers(it) },
-            onSelectUser = { 
+            onSelectUser = {
                 viewModel.startDirectMessage(it)
                 showNewChatDialog = false
                 viewModel.clearSearch()
             },
-            onDismiss = { 
+            onDismiss = {
                 showNewChatDialog = false
                 viewModel.clearSearch()
             }
@@ -293,6 +420,7 @@ fun ChatLayout(
     onUnpin: (String) -> Unit,
     onSendGif: (String, String) -> Unit,
     onForward: (String, String) -> Unit,
+    onOpenSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var splitRatio by remember { mutableStateOf(0.3f) }
@@ -346,14 +474,16 @@ fun ChatLayout(
 
             // Chat Area
             if (!isCompactScreen || (isCompactScreen && selectedChannelId != null)) {
-                val selectedChannelName = channels.firstOrNull { it.id == selectedChannelId }?.name ?: "Chat"
+                val selectedChannelName =
+                    channels.firstOrNull { it.id == selectedChannelId }?.name ?: "Chat"
                 Card(
                     modifier = Modifier
                         .weight(if (isCompactScreen) 1f else (1f - splitRatio))
                         .fillMaxHeight()
                         .padding(if (isCompactScreen) 4.dp else 16.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF141414)),
-                    elevation = CardDefaults.cardElevation(if (isCompactScreen) 0.dp else 4.dp)
+                    elevation = CardDefaults
+                        .cardElevation(if (isCompactScreen) 0.dp else 4.dp)
                 ) {
                     ChatArea(
                         modifier = Modifier.fillMaxSize(),
@@ -375,7 +505,9 @@ fun ChatLayout(
                         onEditMessage = onEditMessage,
                         onCancelEditing = onCancelEditing,
                         onTyping = onTyping,
-                        onBack = if (isCompactScreen) { { onChannelSelect("") } } else null,
+                        onBack = if (isCompactScreen) {
+                            { onChannelSelect("") }
+                        } else null,
                         searchQuery = messageSearchQuery,
                         onSearchQueryChange = onMessageSearchQueryChange,
                         onOpenThread = onOpenThread,
@@ -383,7 +515,8 @@ fun ChatLayout(
                         onUnpin = onUnpin,
                         onSendGif = onSendGif,
                         onForward = onForward,
-                        channels = channels
+                        channels = channels,
+                        onOpenSettings = onOpenSettings
                     )
                 }
             }
@@ -407,107 +540,241 @@ fun ChannelSidebar(
     Card(
         modifier = modifier.padding(if (isCompactScreen) 4.dp else 16.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF141414)),
-        elevation = CardDefaults.cardElevation(if (isCompactScreen) 0.dp else 4.dp)
+        elevation = CardDefaults
+            .cardElevation(if (isCompactScreen) 0.dp else 4.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "Conversations",
-                style = MaterialTheme.typography.titleLarge,
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Conversations",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+
+                // Bell icon for notifications toggle
+                IconButton(onClick = onEnableNotifications) {
+                    Icon(
+                        if (notificationsEnabled) Icons.Default.Notifications
+                        else Icons.Default.Notifications,
+                        contentDescription = if (notificationsEnabled) "Mute Notifications" else "Enable Notifications",
+                        tint = if (notificationsEnabled) Color.Gray else Color(0xFFFF7F33)
+                    )
+                }
+
+                IconButton(onClick = onNewChatClick) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "New Chat",
+                        tint = Color.White
+                    )
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(Color(0xFF2A2A2A))
             )
 
-            // Bell icon for notifications toggle
-            IconButton(onClick = onEnableNotifications) {
-                Icon(
-                    if (notificationsEnabled) Icons.Default.Notifications
-                    else Icons.Default.Notifications,
-                    contentDescription = if (notificationsEnabled) "Mute Notifications" else "Enable Notifications",
-                    tint = if (notificationsEnabled) Color.Gray else Color(0xFFFF7F33)
-                )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            SearchBar(
+                label = "Search conversations",
+                query = searchQuery,
+                onQueryChange = onSearchQueryChange
+            )
+
+            val filteredChannels = remember(channels, searchQuery) {
+                if (searchQuery.isBlank()) channels
+                else channels.filter { it.name.contains(searchQuery, ignoreCase = true) }
             }
 
-            IconButton(onClick = onNewChatClick) {
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = "New Chat",
-                    tint = Color.White
-                )
-            }
-        }
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(Color(0xFF2A2A2A))
-        )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        SearchBar(
-            label = "Search conversations",
-            query = searchQuery,
-            onQueryChange = onSearchQueryChange
-        )
+            if (filteredChannels.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        if (channels.isEmpty()) "No conversations yet" else "No matching conversations",
+                        color = Color.Gray
+                    )
+                }
+            } else {
+                val groupChats = filteredChannels.filter { !it.isDirectMessage }
+                val dms = filteredChannels.filter { it.isDirectMessage }
+                val blockedIds = LocalModeration.current.blockedUserIds
+                val unblockedDMs = dms.filter { it.otherUserId !in blockedIds }
+                val blockedDMs = dms.filter { it.otherUserId in blockedIds }
+                var blockedExpanded by remember { mutableStateOf(false) }
+                var unblockTarget by remember { mutableStateOf<JsChatChannel?>(null) }
+                val moderation = LocalModeration.current
 
-        val filteredChannels = remember(channels, searchQuery) {
-            if (searchQuery.isBlank()) channels
-            else channels.filter { it.name.contains(searchQuery, ignoreCase = true) }
-        }
-        
-        if (filteredChannels.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(if (channels.isEmpty()) "No conversations yet" else "No matching conversations", color = Color.Gray)
-            }
-        } else {
-            val groupChats = filteredChannels.filter { !it.isDirectMessage }
-            val dms = filteredChannels.filter { it.isDirectMessage }
-
-            LazyColumn(modifier = Modifier.padding(horizontal = 8.dp)) {
-                if (groupChats.isNotEmpty()) {
-                    item {
-                        Text(
-                            "COMMUNITIES",
-                            color = Color.Gray,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 12.dp, top = 16.dp, bottom = 8.dp)
-                        )
-                    }
-                    items(groupChats) { channel ->
-                        ChannelItem(
-                            channel = channel,
-                            isSelected = channel.id == selectedChannelId,
-                            onClick = { onChannelSelect(channel.id) }
-                        )
-                    }
+                // Unblock confirmation dialog
+                unblockTarget?.let { ch ->
+                    AlertDialog(
+                        onDismissRequest = { unblockTarget = null },
+                        containerColor = Color(0xFF1E1E1E),
+                        title = {
+                            Text(
+                                "Unblock ${ch.name}?",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                        },
+                        text = {
+                            Text(
+                                "You will be able to see their messages again.",
+                                color = Color.Gray
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                moderation.onUnblock(ch.otherUserId)
+                                unblockTarget = null
+                            }) {
+                                Text("Unblock", color = Color(0xFFFF7F33))
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { unblockTarget = null }) {
+                                Text("Cancel", color = Color.Gray)
+                            }
+                        }
+                    )
                 }
 
-                if (dms.isNotEmpty()) {
-                    item {
-                        Text(
-                            "DIRECT MESSAGES",
-                            color = Color.Gray,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 12.dp, top = 16.dp, bottom = 8.dp)
-                        )
+                LazyColumn(modifier = Modifier.padding(horizontal = 8.dp)) {
+                    if (groupChats.isNotEmpty()) {
+                        item {
+                            Text(
+                                "COMMUNITIES",
+                                color = Color.Gray,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(
+                                    start = 12.dp,
+                                    top = 16.dp,
+                                    bottom = 8.dp
+                                )
+                            )
+                        }
+                        items(groupChats) { channel ->
+                            ChannelItem(
+                                channel = channel,
+                                isSelected = channel.id == selectedChannelId,
+                                onClick = { onChannelSelect(channel.id) }
+                            )
+                        }
                     }
-                    items(dms) { channel ->
-                        ChannelItem(
-                            channel = channel,
-                            isSelected = channel.id == selectedChannelId,
-                            onClick = { onChannelSelect(channel.id) }
-                        )
+
+                    if (unblockedDMs.isNotEmpty()) {
+                        item {
+                            Text(
+                                "DIRECT MESSAGES",
+                                color = Color.Gray,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(
+                                    start = 12.dp,
+                                    top = 16.dp,
+                                    bottom = 8.dp
+                                )
+                            )
+                        }
+                        items(unblockedDMs) { channel ->
+                            ChannelItem(
+                                channel = channel,
+                                isSelected = channel.id == selectedChannelId,
+                                onClick = { onChannelSelect(channel.id) }
+                            )
+                        }
+                    }
+
+                    if (blockedDMs.isNotEmpty()) {
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { blockedExpanded = !blockedExpanded }
+                                    .padding(start = 12.dp, top = 16.dp, bottom = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "BLOCKED (${blockedDMs.size})",
+                                    color = Color.Gray.copy(alpha = 0.6f),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Icon(
+                                    if (blockedExpanded)
+                                        Icons.Default.KeyboardArrowDown
+                                    else Icons.Default.KeyboardArrowRight,
+                                    contentDescription = "Toggle",
+                                    tint = Color.Gray,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                        if (blockedExpanded) {
+                            items(blockedDMs) { channel ->
+                                // Gray out blocked channels
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 2.dp)
+                                        .clickable { unblockTarget = channel },
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = Color(0xFF1A1A1A)
+                                    ),
+                                    elevation = CardDefaults.cardElevation(0.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(0xFF333333)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                channel.name.take(1).uppercase(),
+                                                color = Color.Gray,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                        Spacer(Modifier.width(12.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                channel.name,
+                                                color = Color.Gray,
+                                                maxLines = 1
+                                            )
+                                            Text(
+                                                "Blocked",
+                                                color = Color.Gray.copy(alpha = 0.5f),
+                                                fontSize = 11.sp
+                                            )
+                                        }
+                                        Icon(
+                                            Icons.Default.Block,
+                                            contentDescription = "Blocked",
+                                            tint = Color.Gray.copy(alpha = 0.5f),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
-        }
         }
     }
 }
@@ -524,7 +791,7 @@ fun ChannelItem(
         "wdw-leaders" -> "Leaders Only"
         else -> null
     }
-    
+
     val bgColor = if (isSelected) Color(0xFFFF7F33) else Color(0xFF2A2A2A)
 
     Card(
@@ -550,7 +817,7 @@ fun ChannelItem(
             } else {
                 Spacer(modifier = Modifier.width(11.dp))
             }
-        
+
             Box(
                 modifier = Modifier.size(40.dp)
             ) {
@@ -566,7 +833,7 @@ fun ChannelItem(
                             model = channel.image,
                             contentDescription = "${channel.name} avatar",
                             modifier = Modifier.fillMaxSize().clip(CircleShape),
-                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                            contentScale = ContentScale.Crop
                         )
                     } else {
                         Text(
@@ -598,7 +865,10 @@ fun ChannelItem(
                         fontSize = 10.sp
                     )
                 }
-                if (channel.lastMessage.isNotEmpty()) {
+                val blockedIds = LocalModeration.current.blockedUserIds
+                val isLastMsgBlocked = channel.lastMessageUserId.isNotEmpty() &&
+                        channel.lastMessageUserId in blockedIds
+                if (channel.lastMessage.isNotEmpty() && !isLastMsgBlocked) {
                     Text(
                         channel.lastMessage,
                         color = Color.Gray,
@@ -646,7 +916,8 @@ fun ChatArea(
     onUnpin: (String) -> Unit,
     onSendGif: (String, String) -> Unit,
     onForward: (String, String) -> Unit,
-    channels: List<JsChatChannel>
+    channels: List<JsChatChannel>,
+    onOpenSettings: () -> Unit = {}
 ) {
     var activeReactionMessageId by remember { mutableStateOf<String?>(null) }
     var isInputEmojiPickerOpen by remember { mutableStateOf(false) }
@@ -682,334 +953,358 @@ fun ChatArea(
     }
 
     Box(modifier = modifier) {
-    Column(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        var isSearchVisible by remember { mutableStateOf(false) }
-        var isChannelInfoOpen by remember { mutableStateOf(false) }
-        var channelMembers by remember { mutableStateOf<List<JsChannelMember>>(emptyList()) }
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            var isSearchVisible by remember { mutableStateOf(false) }
+            var isChannelInfoOpen by remember { mutableStateOf(false) }
+            var channelMembers by
+            remember { mutableStateOf<List<JsChannelMember>>(emptyList()) }
+            // Settings dialog state is hoisted to MessagingScreen
 
-        // Chat Header
-        TopAppBar(
-            title = { Text(channelName, color = Color.White) },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black),
-            navigationIcon = {
-                if (onBack != null) {
-                    Text(
-                        "< Back",
-                        color = Color(0xFFFF7F33),
-                        modifier = Modifier.clickable { onBack() }.padding(8.dp)
-                    )
+            // Chat Header
+            TopAppBar(
+                title = { Text(channelName, color = Color.White) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black),
+                navigationIcon = {
+                    if (onBack != null) {
+                        Text(
+                            "< Back",
+                            color = Color(0xFFFF7F33),
+                            modifier = Modifier.clickable { onBack() }.padding(8.dp)
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        isSearchVisible = !isSearchVisible
+                        if (!isSearchVisible) onSearchQueryChange("")
+                    }) {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = "Search messages",
+                            tint = if (isSearchVisible) Color(0xFFFF7F33) else Color.White
+                        )
+                    }
+                    IconButton(onClick = {
+                        isChannelInfoOpen = !isChannelInfoOpen
+                        if (isChannelInfoOpen && selectedChannelId != null) {
+                            StreamBridge.getChannelMembers(selectedChannelId).then { members ->
+                                channelMembers = (0 until members.length)
+                                    .mapNotNull { members[it] }
+                                null
+                            }
+                        }
+                    }) {
+                        TextWithNotoImageEmoji(
+                            "\u2139\uFE0F",
+                            fontSize = 18.sp,
+                            color = if (isChannelInfoOpen) Color(0xFFFF7F33) else Color.White
+                        )
+                    }
+                    // Settings
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings",
+                            tint = Color.White
+                        )
+                    }
                 }
-            },
-            actions = {
-                IconButton(onClick = {
-                    isSearchVisible = !isSearchVisible
-                    if (!isSearchVisible) onSearchQueryChange("")
-                }) {
-                    Icon(
-                        Icons.Default.Search,
-                        contentDescription = "Search messages",
-                        tint = if (isSearchVisible) Color(0xFFFF7F33) else Color.White
-                    )
+            )
+
+            AnimatedVisibility(visible = isSearchVisible) {
+                SearchBar(
+                    label = "Search messages",
+                    query = searchQuery,
+                    onQueryChange = onSearchQueryChange
+                )
+            }
+
+            // Channel Info Panel
+            AnimatedVisibility(visible = isChannelInfoOpen) {
+                ChannelInfoPanel(
+                    channelName = channelName,
+                    members = channelMembers,
+                    onDismiss = { isChannelInfoOpen = false }
+                )
+            }
+
+            val filteredMessages = remember(messages, searchQuery) {
+                if (searchQuery.isBlank()) messages
+                else messages.filter { it.text.contains(searchQuery, ignoreCase = true) }
+            }
+
+            // Messages List
+            val listState = rememberLazyListState()
+
+            // Only auto-scroll to bottom when user is already at (or near) the bottom
+            val isAtBottom by remember {
+                derivedStateOf {
+                    val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                    lastVisible >= listState.layoutInfo.totalItemsCount - 2
                 }
-                IconButton(onClick = {
-                    isChannelInfoOpen = !isChannelInfoOpen
-                    if (isChannelInfoOpen && selectedChannelId != null) {
-                        StreamBridge.getChannelMembers(selectedChannelId).then { members ->
-                            channelMembers = (0 until members.length).mapNotNull { members[it] }
-                            null
+            }
+
+            var unreadCount by remember { mutableStateOf(0) }
+
+            // Track new messages arriving while scrolled up
+            LaunchedEffect(filteredMessages.size) {
+                if (filteredMessages.isNotEmpty()) {
+                    if (isAtBottom) {
+                        listState.animateScrollToItem(filteredMessages.size - 1)
+                        unreadCount = 0
+                    } else {
+                        unreadCount++
+                    }
+                }
+            }
+
+            // Reset unread counter when user scrolls to bottom manually
+            LaunchedEffect(isAtBottom) {
+                if (isAtBottom) unreadCount = 0
+            }
+
+            val coroutineScope = rememberCoroutineScope()
+
+            Box(modifier = Modifier.weight(1f)) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
+                    itemsIndexed(filteredMessages) { index, message ->
+                        // Date separator: show when date changes from previous message
+                        val currentDate = extractDatePart(message.createdAt)
+                        val previousDate =
+                            if (index > 0) extractDatePart(filteredMessages[index - 1].createdAt) else null
+                        if (currentDate != previousDate) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = formatDateLabel(currentDate),
+                                    color = Color.Gray,
+                                    fontSize = 11.sp,
+                                    modifier = Modifier
+                                        .background(
+                                            Color(0xFF1E1E1E),
+                                            RoundedCornerShape(12.dp)
+                                        )
+                                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+
+                        MessageBubble(
+                            message = message,
+                            isMe = message.userId == currentUserId,
+                            isAdmin = isAdmin,
+                            onReply = { onReply(message) },
+                            onDelete = { onDelete(message.id) },
+                            onReaction = { type -> onReaction(message.id, type) },
+                            onFlag = { onFlag(message.id) },
+                            onEdit = { onEdit(message) },
+                            isEmojiPickerOpen = activeReactionMessageId == message.id,
+                            onToggleEmojiPicker = {
+                                if (activeReactionMessageId == message.id) {
+                                    activeReactionMessageId = null
+                                } else {
+                                    closePickers()
+                                    activeReactionMessageId = message.id
+                                }
+                            },
+                            onClosePickers = closePickers,
+                            onEmojiPickerOpen = {
+                                coroutineScope.launch {
+                                    // Scroll so the message + its picker are visible
+                                    listState.animateScrollToItem(index)
+                                }
+                            },
+                            onOpenThread = { onOpenThread(message) },
+                            onPin = { onPin(message.id) },
+                            onUnpin = { onUnpin(message.id) },
+                            onForward = { forwardingMessage = message },
+                            onImageClick = { lightboxImageUrl = it },
+                            currentUserId = currentUserId,
+                        )
+                    }
+                }
+
+                // Scroll-to-bottom FAB with unread badge
+                if (!isAtBottom) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 16.dp, bottom = 16.dp)
+                    ) {
+                        Surface(
+                            onClick = {
+                                coroutineScope.launch {
+                                    if (filteredMessages.isNotEmpty()) {
+                                        listState.animateScrollToItem(filteredMessages.size - 1)
+                                    }
+                                    unreadCount = 0
+                                }
+                            },
+                            color = Color(0xFF2C2C2C),
+                            shape = CircleShape,
+                            modifier = Modifier.size(40.dp),
+                            shadowElevation = 4.dp
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center, modifier = Modifier
+                                    .fillMaxSize()
+                            ) {
+                                Icon(
+                                    Icons.Default.KeyboardArrowDown,
+                                    contentDescription = "Scroll to bottom",
+                                    tint = Color(0xFFFF7F33),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
+                        // Unread badge
+                        if (unreadCount > 0) {
+                            Badge(
+                                containerColor = Color(0xFFFF7F33),
+                                modifier = Modifier.align(Alignment.TopEnd)
+                            ) {
+                                Text(
+                                    unreadCount.toString(),
+                                    color = Color.White,
+                                    fontSize = 10.sp
+                                )
+                            }
                         }
                     }
-                }) {
-                    TextWithNotoImageEmoji(
-                        "\u2139\uFE0F",
-                        fontSize = 18.sp,
-                        color = if (isChannelInfoOpen) Color(0xFFFF7F33) else Color.White
+                }
+            }
+
+            // Typing Indicator
+            AnimatedVisibility(
+                visible = typingUsers.isNotEmpty(),
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                val typingText = when (typingUsers.size) {
+                    1 -> "${typingUsers.first()} is typing..."
+                    2 -> "${typingUsers[0]} and ${typingUsers[1]} are typing..."
+                    else -> "Several people are typing..."
+                }
+                Text(
+                    text = typingText,
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
+                )
+            }
+
+            // Reply Banner
+            AnimatedVisibility(
+                visible = replyingTo != null,
+                enter = slideInVertically(initialOffsetY = { it }),
+                exit = slideOutVertically(targetOffsetY = { it })
+            ) {
+                if (replyingTo != null) {
+                    ReplyBanner(
+                        replyingTo = replyingTo,
+                        onCancel = onCancelReply
                     )
                 }
             }
-        )
 
-        AnimatedVisibility(visible = isSearchVisible) {
-            SearchBar(
-                label = "Search messages",
-                query = searchQuery,
-                onQueryChange = onSearchQueryChange
-            )
-        }
-
-        // Channel Info Panel
-        AnimatedVisibility(visible = isChannelInfoOpen) {
-            ChannelInfoPanel(
-                channelName = channelName,
-                members = channelMembers,
-                onDismiss = { isChannelInfoOpen = false }
-            )
-        }
-
-        val filteredMessages = remember(messages, searchQuery) {
-            if (searchQuery.isBlank()) messages
-            else messages.filter { it.text.contains(searchQuery, ignoreCase = true) }
-        }
-
-        // Messages List
-        val listState = rememberLazyListState()
-
-        // Only auto-scroll to bottom when user is already at (or near) the bottom
-        val isAtBottom by remember {
-            derivedStateOf {
-                val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-                lastVisible >= listState.layoutInfo.totalItemsCount - 2
+            // GIF Search Panel
+            AnimatedVisibility(visible = isGifPanelOpen) {
+                GifSearchPanel(
+                    onGifSelected = { url, title ->
+                        onSendGif(url, title)
+                        isGifPanelOpen = false
+                    },
+                    onDismiss = { isGifPanelOpen = false }
+                )
             }
-        }
 
-        var unreadCount by remember { mutableStateOf(0) }
-
-        // Track new messages arriving while scrolled up
-        LaunchedEffect(filteredMessages.size) {
-            if (filteredMessages.isNotEmpty()) {
-                if (isAtBottom) {
-                    listState.animateScrollToItem(filteredMessages.size - 1)
-                    unreadCount = 0
-                } else {
-                    unreadCount++
+            // Input Area
+            MessageInput(
+                replyingToUser = replyingTo?.userName,
+                editingMessage = editingMessage,
+                onSendMessage = onSendMessage,
+                onEditMessage = onEditMessage,
+                onCancelEditing = onCancelEditing,
+                onTyping = onTyping,
+                isEmojiPickerOpen = isInputEmojiPickerOpen,
+                onToggleEmojiPicker = {
+                    if (isInputEmojiPickerOpen) {
+                        isInputEmojiPickerOpen = false
+                    } else {
+                        closePickers()
+                        isInputEmojiPickerOpen = true
+                    }
+                },
+                onClosePickers = closePickers,
+                isGifPanelOpen = isGifPanelOpen,
+                onToggleGifPanel = {
+                    isGifPanelOpen = !isGifPanelOpen
                 }
-            }
+            )
         }
 
-        // Reset unread counter when user scrolls to bottom manually
-        LaunchedEffect(isAtBottom) {
-            if (isAtBottom) unreadCount = 0
+        // Forward dialog
+        if (forwardingMessage != null) {
+            ForwardMessageDialog(
+                message = forwardingMessage!!,
+                channels = channels,
+                onForward = { text, channelId ->
+                    onForward(text, channelId)
+                    forwardingMessage = null
+                },
+                onDismiss = { forwardingMessage = null }
+            )
         }
 
-        val coroutineScope = rememberCoroutineScope()
+        // Image lightbox
+        if (lightboxImageUrl != null) {
+            ImageLightboxDialog(
+                imageUrl = lightboxImageUrl!!,
+                onDismiss = { lightboxImageUrl = null }
+            )
+        }
 
-        Box(modifier = Modifier.weight(1f)) {
-            LazyColumn(
-                state = listState,
+        // Drag overlay
+        if (isDragging) {
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(bottom = 16.dp)
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .border(
+                        width = 3.dp,
+                        color = Color(0xFFFF7F33),
+                        shape = RoundedCornerShape(12.dp)
+                    ),
+                contentAlignment = Alignment.Center
             ) {
-                itemsIndexed(filteredMessages) { index, message ->
-                    // Date separator: show when date changes from previous message
-                    val currentDate = extractDatePart(message.createdAt)
-                    val previousDate = if (index > 0) extractDatePart(filteredMessages[index - 1].createdAt) else null
-                    if (currentDate != previousDate) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = formatDateLabel(currentDate),
-                                color = Color.Gray,
-                                fontSize = 11.sp,
-                                modifier = Modifier
-                                    .background(Color(0xFF1E1E1E), RoundedCornerShape(12.dp))
-                                    .padding(horizontal = 12.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
-
-                    MessageBubble(
-                        message = message,
-                        isMe = message.userId == currentUserId,
-                        isAdmin = isAdmin,
-                        onReply = { onReply(message) },
-                        onDelete = { onDelete(message.id) },
-                        onReaction = { type -> onReaction(message.id, type) },
-                        onFlag = { onFlag(message.id) },
-                        onEdit = { onEdit(message) },
-                        isEmojiPickerOpen = activeReactionMessageId == message.id,
-                        onToggleEmojiPicker = {
-                            if (activeReactionMessageId == message.id) {
-                                activeReactionMessageId = null
-                            } else {
-                                closePickers()
-                                activeReactionMessageId = message.id
-                            }
-                        },
-                        onClosePickers = closePickers,
-                        onEmojiPickerOpen = {
-                            coroutineScope.launch {
-                                // Scroll so the message + its picker are visible
-                                listState.animateScrollToItem(index)
-                            }
-                        },
-                        onOpenThread = { onOpenThread(message) },
-                        onPin = { onPin(message.id) },
-                        onUnpin = { onUnpin(message.id) },
-                        onForward = { forwardingMessage = message },
-                        onImageClick = { lightboxImageUrl = it }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    TextWithNotoImageEmoji(
+                        "\uD83D\uDCCE",
+                        fontSize = 40.sp
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "Drop file here",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
-
-            // Scroll-to-bottom FAB with unread badge
-            if (!isAtBottom) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(end = 16.dp, bottom = 16.dp)
-                ) {
-                    Surface(
-                        onClick = {
-                            coroutineScope.launch {
-                                if (filteredMessages.isNotEmpty()) {
-                                    listState.animateScrollToItem(filteredMessages.size - 1)
-                                }
-                                unreadCount = 0
-                            }
-                        },
-                        color = Color(0xFF2C2C2C),
-                        shape = CircleShape,
-                        modifier = Modifier.size(40.dp),
-                        shadowElevation = 4.dp
-                    ) {
-                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                            TextWithNotoImageEmoji("⬇️", fontSize = 18.sp)
-                        }
-                    }
-                    // Unread badge
-                    if (unreadCount > 0) {
-                        Badge(
-                            containerColor = Color(0xFFFF7F33),
-                            modifier = Modifier.align(Alignment.TopEnd)
-                        ) {
-                            Text(
-                                unreadCount.toString(),
-                                color = Color.White,
-                                fontSize = 10.sp
-                            )
-                        }
-                    }
-                }
-            }
         }
-
-        // Typing Indicator
-        AnimatedVisibility(
-            visible = typingUsers.isNotEmpty(),
-            enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(),
-            exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically()
-        ) {
-            val typingText = when (typingUsers.size) {
-                1 -> "${typingUsers.first()} is typing..."
-                2 -> "${typingUsers[0]} and ${typingUsers[1]} are typing..."
-                else -> "Several people are typing..."
-            }
-            Text(
-                text = typingText,
-                color = Color.Gray,
-                fontSize = 12.sp,
-                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
-            )
-        }
-
-        // Reply Banner
-        AnimatedVisibility(
-            visible = replyingTo != null,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it })
-        ) {
-            if (replyingTo != null) {
-                ReplyBanner(
-                    replyingTo = replyingTo,
-                    onCancel = onCancelReply
-                )
-            }
-        }
-
-        // GIF Search Panel
-        AnimatedVisibility(visible = isGifPanelOpen) {
-            GifSearchPanel(
-                onGifSelected = { url, title ->
-                    onSendGif(url, title)
-                    isGifPanelOpen = false
-                },
-                onDismiss = { isGifPanelOpen = false }
-            )
-        }
-
-        // Input Area
-        MessageInput(
-            replyingToUser = replyingTo?.userName,
-            editingMessage = editingMessage,
-            onSendMessage = onSendMessage,
-            onEditMessage = onEditMessage,
-            onCancelEditing = onCancelEditing,
-            onTyping = onTyping,
-            isEmojiPickerOpen = isInputEmojiPickerOpen,
-            onToggleEmojiPicker = {
-                if (isInputEmojiPickerOpen) {
-                    isInputEmojiPickerOpen = false
-                } else {
-                    closePickers()
-                    isInputEmojiPickerOpen = true
-                }
-            },
-            onClosePickers = closePickers,
-            isGifPanelOpen = isGifPanelOpen,
-            onToggleGifPanel = {
-                isGifPanelOpen = !isGifPanelOpen
-            }
-        )
-    }
-
-    // Forward dialog
-    if (forwardingMessage != null) {
-        ForwardMessageDialog(
-            message = forwardingMessage!!,
-            channels = channels,
-            onForward = { text, channelId ->
-                onForward(text, channelId)
-                forwardingMessage = null
-            },
-            onDismiss = { forwardingMessage = null }
-        )
-    }
-
-    // Image lightbox
-    if (lightboxImageUrl != null) {
-        ImageLightboxDialog(
-            imageUrl = lightboxImageUrl!!,
-            onDismiss = { lightboxImageUrl = null }
-        )
-    }
-
-    // Drag overlay
-    if (isDragging) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.6f))
-                .border(
-                    width = 3.dp,
-                    color = Color(0xFFFF7F33),
-                    shape = RoundedCornerShape(12.dp)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                TextWithNotoImageEmoji(
-                    "\uD83D\uDCCE",
-                    fontSize = 40.sp
-                )
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    "Drop file here",
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-    }
     } // end Box
 }
 
@@ -1031,7 +1326,9 @@ fun MessageBubble(
     onPin: () -> Unit = {},
     onUnpin: () -> Unit = {},
     onForward: () -> Unit = {},
-    onImageClick: (String) -> Unit = {}
+    onImageClick: (String) -> Unit = {},
+    currentUserId: String?,
+    modifier: Modifier = Modifier
 ) {
     var dragOffsetX by remember { mutableFloatStateOf(0f) }
     val swipeThreshold = 60f
@@ -1077,7 +1374,8 @@ fun MessageBubble(
                         it.pointerInput(Unit) {
                             detectHorizontalDragGestures(
                                 onHorizontalDrag = { change, dragAmount ->
-                                    dragOffsetX = (dragOffsetX + dragAmount).coerceAtLeast(0f)
+                                    dragOffsetX =
+                                        (dragOffsetX + dragAmount).coerceAtLeast(0f)
                                 },
                                 onDragEnd = {
                                     if (dragOffsetX >= swipeThreshold) {
@@ -1142,12 +1440,25 @@ fun MessageBubble(
 
                 // Profile popover
                 if (showProfilePopover) {
+                    val moderation = LocalModeration.current
+                    val messagingViewModel: MessagingViewModel = koinInject()
                     UserProfilePopover(
                         userName = message.userName,
                         userImage = message.userImage,
                         isOnline = message.userOnline,
                         userId = message.userId,
-                        onDismiss = { showProfilePopover = false }
+                        isSelf = message.userId == currentUserId,
+                        isBlocked = message.userId in moderation.blockedUserIds,
+                        onDismiss = { showProfilePopover = false },
+                        onBlock = { moderation.onBlock(message.userId) },
+                        onUnblock = { moderation.onUnblock(message.userId) },
+                        onReportClick = {
+                            showProfilePopover = false
+                            messagingViewModel.openReportDialog(
+                                message.userName,
+                                message.userId
+                            )
+                        }
                     )
                 }
             }
@@ -1192,42 +1503,51 @@ fun MessageBubble(
                         )
                     }
                 }
-                
+
                 Box {
                     val mentionBorder = if (message.isMentioned) {
-                        Modifier.border(2.dp, Color(0xFFFF7F33), RoundedCornerShape(
-                            topStart = 16.dp,
-                            topEnd = 16.dp,
-                            bottomStart = if (isMe) 16.dp else 4.dp,
-                            bottomEnd = if (isMe) 4.dp else 16.dp
-                        ))
+                        Modifier.border(
+                            2.dp, Color(0xFFFF7F33), RoundedCornerShape(
+                                topStart = 16.dp,
+                                topEnd = 16.dp,
+                                bottomStart = if (isMe) 16.dp else 4.dp,
+                                bottomEnd = if (isMe) 4.dp else 16.dp
+                            )
+                        )
                     } else Modifier
 
                     // Detect media/file-only messages (no text, has image/giphy/file attachment)
-                    val parsedAttachments = remember(message.attachments) { parseAttachments(message.attachments) }
-                    val isMediaOnlyMessage = remember(message.text, message.attachments) {
+                    val parsedAttachments = remember(message.attachments) {
+                        parseAttachments(message.attachments)
+                    }
+                    val isMediaOnlyMessage = remember(
+                        message.text,
+                        message.attachments
+                    )
+                    {
                         val textTrimmed = message.text.trim()
                         val hasNoText = textTrimmed.isEmpty()
                         val hasMediaAttachment = parsedAttachments.any { att ->
                             att.type == "image" ||
-                            att.type == "giphy" ||
-                            att.type == "file" ||
-                            att.imageUrl.isNotEmpty() ||
-                            att.titleLink.isNotEmpty()
+                                    att.type == "giphy" ||
+                                    att.type == "file" ||
+                                    att.imageUrl.isNotEmpty() ||
+                                    att.titleLink.isNotEmpty()
                         }
                         // Check if text is just a URL that generated a link preview:
                         // Link-only messages have no spaces, are short, and have a link preview
                         val hasLinkPreview = parsedAttachments.any { it.titleLink.isNotEmpty() }
                         val textIsJustUrl = hasLinkPreview &&
-                            textTrimmed.length <= 200 &&
-                            !textTrimmed.contains(' ') &&
-                            (textTrimmed.contains('.') || textTrimmed.startsWith("http"))
+                                textTrimmed.length <= 200 &&
+                                !textTrimmed.contains(' ') &&
+                                (textTrimmed.contains('.') ||
+                                        textTrimmed.startsWith("http"))
                         (hasNoText || textIsJustUrl) && hasMediaAttachment
                     }
 
                     Surface(
                         color = if (isMediaOnlyMessage) Color.Transparent
-                                else if (isMe) Color(0xFFFF7F33) else Color(0xFF2C2C2C),
+                        else if (isMe) Color(0xFFFF7F33) else Color(0xFF2C2C2C),
                         shape = RoundedCornerShape(
                             topStart = 16.dp,
                             topEnd = 16.dp,
@@ -1241,31 +1561,33 @@ fun MessageBubble(
                                 else Modifier
                             )
                             .let {
-                            if (!message.isDeleted) {
-                                it.pointerInput(isEmojiPickerOpen) {
-                                    detectTapGestures(
-                                        onTap = {
-                                            if (isEmojiPickerOpen) {
-                                                onToggleEmojiPicker()
-                                            } else {
-                                                onClosePickers()
+                                if (!message.isDeleted) {
+                                    it.pointerInput(isEmojiPickerOpen) {
+                                        detectTapGestures(
+                                            onTap = {
+                                                if (isEmojiPickerOpen) {
+                                                    onToggleEmojiPicker()
+                                                } else {
+                                                    onClosePickers()
+                                                }
+                                            },
+                                            onLongPress = {
+                                                if (!isEmojiPickerOpen) {
+                                                    onToggleEmojiPicker()
+                                                }
+                                                onEmojiPickerOpen()
                                             }
-                                        },
-                                        onLongPress = {
-                                            if (!isEmojiPickerOpen) {
-                                                onToggleEmojiPicker()
-                                            }
-                                            onEmojiPickerOpen()
-                                        }
-                                    )
-                                }
-                            } else it
-                        }
+                                        )
+                                    }
+                                } else it
+                            }
                     ) {
-                        Column(modifier = Modifier.padding(
-                            horizontal = if (isMediaOnlyMessage) 4.dp else 12.dp,
-                            vertical = if (isMediaOnlyMessage) 4.dp else 8.dp
-                        )) {
+                        Column(
+                            modifier = Modifier.padding(
+                                horizontal = if (isMediaOnlyMessage) 4.dp else 12.dp,
+                                vertical = if (isMediaOnlyMessage) 4.dp else 8.dp
+                            )
+                        ) {
                             // Quoted message preview (for replies)
                             if (message.quotedText.isNotEmpty()) {
                                 Surface(
@@ -1289,13 +1611,13 @@ fun MessageBubble(
                                             Text(
                                                 message.quotedUserName,
                                                 color = if (isMe) Color.White.copy(alpha = 0.8f)
-                                                       else Color(0xFFFF7F33),
+                                                else Color(0xFFFF7F33),
                                                 fontSize = 10.sp,
                                                 fontWeight = FontWeight.Bold
                                             )
                                             Text(
                                                 message.quotedText.take(50) +
-                                                    if (message.quotedText.length > 50) "\u2026" else "",
+                                                        if (message.quotedText.length > 50) "\u2026" else "",
                                                 color = Color.White.copy(alpha = 0.6f),
                                                 fontSize = 10.sp,
                                                 maxLines = 1
@@ -1306,13 +1628,26 @@ fun MessageBubble(
                             }
                             Column {
                                 if (parsedAttachments.isNotEmpty() && !message.isDeleted) {
-                                    Column(modifier = Modifier.padding(bottom = if (isMediaOnlyMessage) 0.dp else 4.dp)) {
+                                    Column(
+                                        modifier = Modifier.padding(
+                                            bottom =
+                                                if (isMediaOnlyMessage) 0.dp else 4.dp
+                                        )
+                                    ) {
                                         parsedAttachments.forEach { attachment ->
-                                            if (attachment.type == "image" || attachment.type == "giphy" || (attachment.imageUrl.isNotEmpty() && attachment.title.isEmpty())) {
-                                                val imageSource = attachment.imageUrl.ifEmpty { attachment.thumbUrl }
-                                                val isGif = imageSource.contains("tenor", ignoreCase = true) ||
-                                                    imageSource.endsWith(".gif", ignoreCase = true) ||
-                                                    attachment.type == "giphy"
+                                            if (attachment.type == "image" || attachment.type ==
+                                                "giphy" || (attachment.imageUrl.isNotEmpty() &&
+                                                        attachment.title.isEmpty())
+                                            ) {
+                                                val imageSource = attachment.imageUrl.ifEmpty {
+                                                    attachment.thumbUrl
+                                                }
+                                                val isGif = imageSource
+                                                    .contains("tenor", ignoreCase = true) ||
+                                                        imageSource.endsWith(
+                                                            ".gif",
+                                                            ignoreCase = true
+                                                        ) || attachment.type == "giphy"
                                                 if (isGif) {
                                                     // Static GIF preview with "GIF" badge — click to view in lightbox
                                                     Box {
@@ -1321,11 +1656,18 @@ fun MessageBubble(
                                                             contentDescription = "GIF",
                                                             modifier = Modifier
                                                                 .then(
-                                                                    if (isMediaOnlyMessage) Modifier.widthIn(max = 200.dp).heightIn(max = 160.dp)
-                                                                    else Modifier.widthIn(max = 160.dp).heightIn(max = 130.dp)
+                                                                    if (isMediaOnlyMessage) Modifier.widthIn(
+                                                                        max = 200.dp
+                                                                    ).heightIn(max = 160.dp)
+                                                                    else Modifier.widthIn(max = 160.dp)
+                                                                        .heightIn(max = 130.dp)
                                                                 )
                                                                 .clip(RoundedCornerShape(8.dp))
-                                                                .clickable { onImageClick(imageSource) },
+                                                                .clickable {
+                                                                    onImageClick(
+                                                                        imageSource
+                                                                    )
+                                                                },
                                                             contentScale = ContentScale.Fit
                                                         )
                                                         // "GIF" badge in bottom-right corner
@@ -1335,14 +1677,21 @@ fun MessageBubble(
                                                             modifier = Modifier
                                                                 .align(Alignment.BottomEnd)
                                                                 .padding(6.dp)
-                                                                .clickable { onImageClick(imageSource) }
+                                                                .clickable {
+                                                                    onImageClick(
+                                                                        imageSource
+                                                                    )
+                                                                }
                                                         ) {
                                                             Text(
                                                                 "GIF ▶",
                                                                 color = Color.White,
                                                                 fontSize = 10.sp,
                                                                 fontWeight = FontWeight.Bold,
-                                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                                modifier = Modifier.padding(
+                                                                    horizontal = 6.dp,
+                                                                    vertical = 2.dp
+                                                                )
                                                             )
                                                         }
                                                     }
@@ -1352,11 +1701,20 @@ fun MessageBubble(
                                                         contentDescription = "Attached Image",
                                                         modifier = Modifier
                                                             .then(
-                                                                if (isMediaOnlyMessage) Modifier.widthIn(max = 200.dp).heightIn(max = 160.dp)
-                                                                else Modifier.fillMaxWidth().heightIn(max = 240.dp)
+                                                                if (isMediaOnlyMessage)
+                                                                    Modifier.widthIn(
+                                                                        max = 200.dp
+                                                                    ).heightIn(max = 160.dp) else
+                                                                        Modifier.fillMaxWidth()
+                                                                            .heightIn(max = 240.dp)
                                                             )
-                                                            .clip(RoundedCornerShape(8.dp))
-                                                            .clickable { onImageClick(imageSource) },
+                                                            .clip(
+                                                                RoundedCornerShape(
+                                                                    8.dp)
+                                                            )
+                                                            .clickable {
+                                                                onImageClick(imageSource)
+                                                            },
                                                         contentScale = ContentScale.Fit
                                                     )
                                                 }
@@ -1373,7 +1731,7 @@ fun MessageBubble(
                                         Text(
                                             text = message.text,
                                             color = Color.White.copy(alpha = 0.6f),
-                                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                            fontStyle = Italic,
                                             modifier = Modifier.weight(1f, fill = false),
                                             fontSize = 14.sp
                                         )
@@ -1388,8 +1746,13 @@ fun MessageBubble(
                                     }
 
                                     // Reaction chips inside the bubble at the end of text
-                                    val reactions = remember(message.id + message.reactions) { parseReactions(message.reactions) }
-                                    androidx.compose.animation.AnimatedVisibility(visible = reactions.isNotEmpty() && !message.isDeleted) {
+                                    val reactions = remember(
+                                        message.id + message.reactions
+                                    ) { parseReactions(message.reactions) }
+                                    AnimatedVisibility(
+                                        visible = reactions.isNotEmpty() &&
+                                                !message.isDeleted
+                                    ) {
                                         Row(
                                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                                             modifier = Modifier.offset(y = 4.dp)
@@ -1405,16 +1768,22 @@ fun MessageBubble(
                                                             .split("_")
                                                             .map { it.toInt(16).toChar() }
                                                             .joinToString("")
-                                                    } catch (_: Exception) { type }
+                                                    } catch (_: Exception) {
+                                                        type
+                                                    }
                                                 } else {
                                                     type
                                                 }
                                                 Row(
                                                     modifier = Modifier
                                                         .clickable { onReaction(type) }
-                                                        .padding(horizontal = 2.dp, vertical = 2.dp),
+                                                        .padding(
+                                                            horizontal = 2.dp,
+                                                            vertical = 2.dp
+                                                        ),
                                                     verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                                    horizontalArrangement = Arrangement
+                                                        .spacedBy(2.dp)
                                                 ) {
                                                     TextWithNotoImageEmoji(
                                                         emoji,
@@ -1434,9 +1803,13 @@ fun MessageBubble(
                                 if (parsedAttachments.isNotEmpty() && !message.isDeleted) {
                                     Column(modifier = Modifier.padding(top = 4.dp)) {
                                         parsedAttachments.forEach { attachment ->
-                                            if (attachment.type == "file" && attachment.fileUrl.isNotEmpty()) {
+                                            if (attachment.type == "file" && attachment.fileUrl
+                                                    .isNotEmpty()
+                                            ) {
                                                 FileAttachmentCard(attachment = attachment)
-                                            } else if (attachment.type == "og_scrape" || attachment.title.isNotEmpty()) {
+                                            } else if (attachment.type == "og_scrape" ||
+                                                attachment.title.isNotEmpty()
+                                            ) {
                                                 LinkPreviewCard(attachment = attachment)
                                             }
                                         }
@@ -1459,12 +1832,16 @@ fun MessageBubble(
                     )
                     if (isMe) {
                         Spacer(Modifier.width(4.dp))
-                        val receiptIcon = if (message.readStatus == "read" || message.readStatus == "delivered") {
+                        val receiptIcon = if (message.readStatus == "read" ||
+                            message.readStatus == "delivered"
+                        ) {
                             Icons.Default.DoneAll
                         } else {
                             Icons.Default.Done
                         }
-                        val receiptColor = if (message.readStatus == "read") Color(0xFF4ea4e8) else Color.Gray
+                        val receiptColor = if (message
+                                .readStatus == "read"
+                        ) Color(0xFF4ea4e8) else Color.Gray
 
                         Icon(
                             receiptIcon,
@@ -1563,7 +1940,11 @@ fun MessageBubble(
                 // Clickable reply count to open thread
                 if (message.replyCount > 0 && !message.isDeleted) {
                     Text(
-                        text = "${message.replyCount} ${if (message.replyCount == 1) "reply" else "replies"}",
+                        text = "${message.replyCount} ${
+                            if (message
+                                    .replyCount == 1
+                            ) "reply" else "replies"
+                        }",
                         color = Color(0xFF4ea4e8),
                         fontSize = 11.sp,
                         modifier = Modifier
@@ -1579,7 +1960,8 @@ fun MessageBubble(
                             // Map emoji to reaction type if it matches a known reaction,
                             // otherwise convert to a Stream-safe type (alphanumeric only)
                             val type = reactionDefs.find { it.emoji == emoji }?.type
-                                ?: ("emoji_" + emoji.map { it.code.toString(16) }.joinToString("_"))
+                                ?: ("emoji_" + emoji.map { it.code.toString(16) }
+                                    .joinToString("_"))
                             onReaction(type)
                             onToggleEmojiPicker()
                         }
@@ -1596,7 +1978,8 @@ fun MessageBubble(
 private fun formatMessageTime(isoString: String): String {
     return try {
         // ISO format: "2026-03-12T14:30:00.000Z"
-        val timePart = isoString.substringAfter("T").substringBefore("Z").substringBefore("+").substringBefore("-")
+        val timePart = isoString.substringAfter("T").substringBefore("Z")
+            .substringBefore("+").substringBefore("-")
         val parts = timePart.split(":")
         if (parts.size >= 2) {
             val hour = parts[0].toIntOrNull() ?: return ""
@@ -1640,7 +2023,10 @@ private fun formatDateLabel(dateStr: String): String {
             val m = todayParts[1].toInt()
             val d = todayParts[2].toInt()
             val yesterday = if (d > 1) {
-                "${todayParts[0]}-${todayParts[1]}-${(d - 1).toString().padStart(2, '0')}"
+                "${todayParts[0]}-${todayParts[1]}-${
+                    (d - 1)
+                        .toString().padStart(2, '0')
+                }"
             } else {
                 // Simplified: just compare the string from JS
                 ""
@@ -1653,8 +2039,10 @@ private fun formatDateLabel(dateStr: String): String {
         if (parts.size == 3) {
             val month = parts[1].toIntOrNull() ?: return dateStr
             val day = parts[2].toIntOrNull() ?: return dateStr
-            val monthNames = listOf("", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+            val monthNames = listOf(
+                "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+            )
             "${monthNames.getOrElse(month) { "" }} $day, ${parts[0]}"
         } else dateStr
     } catch (e: Exception) {
@@ -1771,7 +2159,7 @@ fun ReplyBanner(
                     }
                     Text(
                         replyingTo.text.take(60) +
-                            if (replyingTo.text.length > 60) "\u2026" else "",
+                                if (replyingTo.text.length > 60) "\u2026" else "",
                         color = Color.Gray,
                         fontSize = 12.sp,
                         maxLines = 1
@@ -1865,7 +2253,7 @@ fun MessageInput(
                         }
                         Text(
                             editingMessage.text.take(60) +
-                                if (editingMessage.text.length > 60) "\u2026" else "",
+                                    if (editingMessage.text.length > 60) "\u2026" else "",
                             color = Color.Gray,
                             fontSize = 12.sp,
                             maxLines = 1
@@ -1942,7 +2330,7 @@ fun MessageInput(
                     }
                 )
             }
-            
+
             Row(
                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -1976,7 +2364,7 @@ fun MessageInput(
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
                     )
                 }
-                
+
                 TextField(
                     value = textFieldValue,
                     onValueChange = { newValue ->
@@ -2200,12 +2588,12 @@ private fun EmojiPickerPanel(onEmojiSelect: (String) -> Unit) {
                     Box(
                         modifier = Modifier
                             .size(20.dp)
-                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .clip(CircleShape)
                             .background(color)
                             .then(
                                 if (selectedSkinTone == modifier)
                                     Modifier.padding(1.dp)
-                                        .clip(androidx.compose.foundation.shape.CircleShape)
+                                        .clip(CircleShape)
                                         .background(color)
                                 else Modifier
                             )
@@ -2220,7 +2608,7 @@ private fun EmojiPickerPanel(onEmojiSelect: (String) -> Unit) {
                             Box(
                                 modifier = Modifier.fillMaxSize()
                                     .padding(1.dp)
-                                    .clip(androidx.compose.foundation.shape.CircleShape)
+                                    .clip(CircleShape)
                                     .background(Color.White.copy(alpha = 0.4f))
                             )
                         }
@@ -2243,7 +2631,12 @@ private fun EmojiPickerPanel(onEmojiSelect: (String) -> Unit) {
                 ),
                 shape = RoundedCornerShape(8.dp),
                 leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = null,
+                        tint = Color.Gray,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             )
             Spacer(Modifier.height(4.dp))
@@ -2265,9 +2658,10 @@ private fun EmojiPickerPanel(onEmojiSelect: (String) -> Unit) {
                             verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
                             emojis.forEach { emoji ->
-                                val displayEmoji = if (selectedSkinTone.isNotEmpty() && emoji in skinToneEmojis) {
-                                    emoji + selectedSkinTone
-                                } else emoji
+                                val displayEmoji =
+                                    if (selectedSkinTone.isNotEmpty() && emoji in skinToneEmojis) {
+                                        emoji + selectedSkinTone
+                                    } else emoji
                                 Surface(
                                     onClick = { onEmojiSelect(displayEmoji) },
                                     color = Color.Transparent,
@@ -2288,7 +2682,8 @@ private fun EmojiPickerPanel(onEmojiSelect: (String) -> Unit) {
 }
 
 private fun openImagePicker(onImagePicked: (org.w3c.files.File?) -> Unit) {
-    val input = kotlinx.browser.document.createElement("input") as org.w3c.dom.HTMLInputElement
+    val input = kotlinx.browser.document.createElement("input") as
+            org.w3c.dom.HTMLInputElement
     input.apply {
         type = "file"
         accept = "*/*"
@@ -2303,7 +2698,8 @@ private fun openImagePicker(onImagePicked: (org.w3c.files.File?) -> Unit) {
 
 @Composable
 fun FileAttachmentCard(attachment: ChatAttachment, modifier: Modifier = Modifier) {
-    val ext = attachment.title.substringAfterLast('.', "").uppercase()
+    val ext = attachment.title.substringAfterLast(
+        '.', "").uppercase()
     val accentColor = when {
         ext == "PDF" -> Color(0xFFE53935)
         ext in listOf("DOC", "DOCX") -> Color(0xFF2196F3)
@@ -2406,9 +2802,25 @@ private fun getFileIcon(mimeType: String, fileName: String): String {
     return when {
         mimeType.contains("pdf") || ext == "pdf" -> "\uD83D\uDCC4"       // 📄
         mimeType.contains("word") || ext in listOf("doc", "docx") -> "\uD83D\uDCC3"  // 📃
-        mimeType.contains("sheet") || mimeType.contains("excel") || ext in listOf("xls", "xlsx", "csv") -> "\uD83D\uDCCA" // 📊
-        mimeType.contains("presentation") || mimeType.contains("powerpoint") || ext in listOf("ppt", "pptx") -> "\uD83D\uDCCA"
-        mimeType.contains("zip") || mimeType.contains("archive") || ext in listOf("zip", "rar", "7z", "tar", "gz") -> "\uD83D\uDDC4\uFE0F"
+        mimeType.contains("sheet") || mimeType.contains("excel") || ext in listOf(
+            "xls",
+            "xlsx",
+            "csv"
+        ) -> "\uD83D\uDCCA" // 📊
+        mimeType.contains("presentation") || mimeType.contains("powerpoint") ||
+                ext in listOf(
+            "ppt",
+            "pptx"
+        ) -> "\uD83D\uDCCA"
+
+        mimeType.contains("zip") || mimeType.contains("archive") || ext in listOf(
+            "zip",
+            "rar",
+            "7z",
+            "tar",
+            "gz"
+        ) -> "\uD83D\uDDC4\uFE0F"
+
         mimeType.contains("text") || ext == "txt" -> "\uD83D\uDCC4"
         mimeType.contains("audio") -> "\uD83C\uDFB5"                      // 🎵
         mimeType.contains("video") -> "\uD83C\uDFA5"                      // 🎥
@@ -2424,6 +2836,7 @@ private fun formatFileSize(bytes: Long): String {
             val mb = (bytes * 10 / (1024 * 1024)).toDouble() / 10
             "$mb MB"
         }
+
         else -> {
             val gb = (bytes * 10 / (1024 * 1024 * 1024)).toDouble() / 10
             "$gb GB"
@@ -2439,7 +2852,9 @@ fun LinkPreviewCard(attachment: ChatAttachment, modifier: Modifier = Modifier) {
             val url = attachment.titleLink.ifEmpty { attachment.thumbUrl }
             url.removePrefix("https://").removePrefix("http://").removePrefix("www.")
                 .substringBefore("/").substringBefore("?")
-        } catch (_: Exception) { "" }
+        } catch (_: Exception) {
+            ""
+        }
     }
 
     Surface(
@@ -2459,7 +2874,8 @@ fun LinkPreviewCard(attachment: ChatAttachment, modifier: Modifier = Modifier) {
             Box(
                 modifier = Modifier
                     .width(4.dp)
-                    .height(if (attachment.thumbUrl.isNotEmpty() || attachment.imageUrl.isNotEmpty()) 180.dp else 70.dp)
+                    .height(if (attachment.thumbUrl.isNotEmpty() ||
+                        attachment.imageUrl.isNotEmpty()) 180.dp else 70.dp)
                     .background(Color(0xFF4ea4e8))
             )
             Column {
@@ -2527,40 +2943,60 @@ fun LinkPreviewCard(attachment: ChatAttachment, modifier: Modifier = Modifier) {
 
 private fun parseAttachments(jsonString: String): List<ChatAttachment> {
     if (jsonString.isBlank() || jsonString == "[]") return emptyList()
-    
+
     val attachments = mutableListOf<ChatAttachment>()
-    
+
     try {
         val objects = jsonString.split("},{", "}, {")
         for (obj in objects) {
-            val type = Regex(""""type"\s*:\s*"([^"]+)"""").find(obj)?.groupValues?.get(1) ?: ""
-            val title = Regex(""""title"\s*:\s*"([^"]+)"""").find(obj)?.groupValues?.get(1) ?: ""
-            val text = Regex(""""text"\s*:\s*"([^"]+)"""").find(obj)?.groupValues?.get(1) ?: ""
-            val titleLink = Regex(""""title_link"\s*:\s*"([^"]+)"""").find(obj)?.groupValues?.get(1) ?: Regex(""""og_scrape_url"\s*:\s*"([^"]+)"""").find(obj)?.groupValues?.get(1) ?: ""
-            val thumbUrl = Regex(""""thumb_url"\s*:\s*"([^"]+)"""").find(obj)?.groupValues?.get(1) ?: ""
-            val imageUrl = Regex(""""image_url"\s*:\s*"([^"]+)"""").find(obj)?.groupValues?.get(1) ?: ""
-            val assetUrl = Regex(""""asset_url"\s*:\s*"([^"]+)"""").find(obj)?.groupValues?.get(1) ?: ""
-            val fileSize = Regex(""""file_size"\s*:\s*(\d+)""").find(obj)?.groupValues?.get(1)?.toLongOrNull() ?: 0L
-            val mimeType = Regex(""""mime_type"\s*:\s*"([^"]+)"""").find(obj)?.groupValues?.get(1) ?: ""
-            
+            val type = Regex(""""type"\s*:\s*"([^"]+)"""")
+                .find(obj)?.groupValues?.get(1) ?: ""
+            val title = Regex(""""title"\s*:\s*"([^"]+)"""")
+                .find(obj)?.groupValues?.get(1) ?: ""
+            val text = Regex(""""text"\s*:\s*"([^"]+)"""")
+                .find(obj)?.groupValues?.get(1) ?: ""
+            val titleLink =
+                Regex(""""title_link"\s*:\s*"([^"]+)"""")
+                    .find(obj)?.groupValues?.get(1) ?: Regex(
+                    """"og_scrape_url"\s*:\s*"([^"]+)""""
+                ).find(obj)?.groupValues?.get(1) ?: ""
+            val thumbUrl =
+                Regex(""""thumb_url"\s*:\s*"([^"]+)"""")
+                    .find(obj)?.groupValues?.get(1) ?: ""
+            val imageUrl =
+                Regex(""""image_url"\s*:\s*"([^"]+)"""")
+                    .find(obj)?.groupValues?.get(1) ?: ""
+            val assetUrl =
+                Regex(""""asset_url"\s*:\s*"([^"]+)"""")
+                    .find(obj)?.groupValues?.get(1) ?: ""
+            val fileSize =
+                Regex(""""file_size"\s*:\s*(\d+)""")
+                    .find(obj)?.groupValues?.get(1)?.toLongOrNull()
+                    ?: 0L
+            val mimeType =
+                Regex(""""mime_type"\s*:\s*"([^"]+)"""")
+                    .find(obj)?.groupValues?.get(1) ?: ""
+
             if (type.isNotEmpty() || title.isNotEmpty()) {
-                attachments.add(ChatAttachment(
-                    type = type,
-                    title = title,
-                    text = text,
-                    titleLink = titleLink,
-                    thumbUrl = thumbUrl,
-                    imageUrl = imageUrl.ifEmpty { if (type != "file") assetUrl else "" },
-                    fileUrl = if (type == "file") assetUrl else "",
-                    fileSize = fileSize,
-                    mimeType = mimeType
-                ))
+                attachments.add(
+                    ChatAttachment(
+                        type = type,
+                        title = title,
+                        text = text,
+                        titleLink = titleLink,
+                        thumbUrl = thumbUrl,
+                        imageUrl = imageUrl.ifEmpty { if (type != "file") assetUrl else "" },
+                        fileUrl = if (type == "file") assetUrl else "",
+                        fileSize = fileSize,
+                        mimeType = mimeType
+                    )
+                )
             }
         }
     } catch (e: Exception) {
         println("Error parsing attachments JSON: ${e.message}")
     }
-    
+
     return attachments
 }
 
@@ -2572,7 +3008,7 @@ fun NewChatDialog(
     onDismiss: () -> Unit
 ) {
     var query by remember { mutableStateOf("") }
-    
+
     androidx.compose.runtime.LaunchedEffect(Unit) {
         onSearch("")
     }
@@ -2591,10 +3027,10 @@ fun NewChatDialog(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
-                
+
                 TextField(
                     value = query,
-                    onValueChange = { 
+                    onValueChange = {
                         query = it
                         onSearch(it)
                     },
@@ -2611,9 +3047,9 @@ fun NewChatDialog(
                     shape = RoundedCornerShape(8.dp),
                     singleLine = true
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 if (searchResults.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         if (query.isBlank()) {
@@ -2645,7 +3081,7 @@ fun NewChatDialog(
                                             model = user.image,
                                             contentDescription = "${user.name} avatar",
                                             modifier = Modifier.fillMaxSize().clip(CircleShape),
-                                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                            contentScale = ContentScale.Crop
                                         )
                                     } else {
                                         Text(
@@ -2694,7 +3130,11 @@ fun ThreadPanel(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black),
                 actions = {
                     IconButton(onClick = onClose) {
-                        Icon(Icons.Default.Close, contentDescription = "Close thread", tint = Color.White)
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Close thread",
+                            tint = Color.White
+                        )
                     }
                 }
             )
@@ -2815,12 +3255,20 @@ fun ThreadPanel(
                 TextField(
                     value = replyText,
                     onValueChange = { replyText = it },
-                    placeholder = { Text("Reply in thread...", color = Color.Gray, fontSize = 13.sp) },
+                    placeholder = {
+                        Text(
+                            "Reply in thread...",
+                            color = Color.Gray,
+                            fontSize = 13.sp
+                        )
+                    },
                     modifier = Modifier
                         .weight(1f)
                         .heightIn(min = 36.dp, max = 100.dp)
                         .onKeyEvent { event ->
-                            if (event.key == Key.Enter && !event.isShiftPressed && replyText.isNotBlank()) {
+                            if (event.key == Key.Enter
+                                && !event.isShiftPressed && replyText.isNotBlank())
+                            {
                                 onSendReply(replyText)
                                 replyText = ""
                                 true
@@ -2869,8 +3317,9 @@ fun GifSearchPanel(
     onDismiss: () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
-    // Triple: previewUrl, fullUrl, title
-    var gifResults by remember { mutableStateOf<List<Triple<String, String, String>>>(emptyList()) }
+    var gifResults by remember {
+        mutableStateOf<List<Triple<String, String, String>>>(emptyList())
+    }
     var isLoading by remember { mutableStateOf(false) }
 
     Surface(
@@ -2883,7 +3332,12 @@ fun GifSearchPanel(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("GIF Search", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(
+                    "GIF Search",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
                 Spacer(Modifier.weight(1f))
                 Icon(
                     Icons.Default.Close,
@@ -2921,11 +3375,20 @@ fun GifSearchPanel(
             )
             Spacer(Modifier.height(8.dp))
             if (isLoading) {
-                Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Color(0xFFFF7F33), modifier = Modifier.size(24.dp))
+                Box(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        color = Color(0xFFFF7F33),
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             } else if (gifResults.isEmpty() && searchQuery.length >= 2) {
-                Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text("No GIFs found", color = Color.Gray, fontSize = 13.sp)
                 }
             } else {
@@ -2985,7 +3448,13 @@ private fun searchGiphy(query: String, onResults: (List<Triple<String, String, S
                 val previewUrl = item[0]?.toString() ?: ""
                 val fullUrl = item[1]?.toString() ?: ""
                 val title = item[2]?.toString() ?: ""
-                if (previewUrl.isNotEmpty()) results.add(Triple(previewUrl, fullUrl.ifEmpty { previewUrl }, title))
+                if (previewUrl.isNotEmpty()) results.add(
+                    Triple(
+                        previewUrl,
+                        fullUrl.ifEmpty { previewUrl },
+                        title
+                    )
+                )
             }
         }
         onResults(results)
@@ -3001,14 +3470,92 @@ fun UserProfilePopover(
     userImage: String,
     isOnline: Boolean,
     userId: String,
-    onDismiss: () -> Unit
+    isSelf: Boolean = false,
+    isBlocked: Boolean = false,
+    onDismiss: () -> Unit,
+    onBlock: () -> Unit = {},
+    onUnblock: () -> Unit = {},
+    onReportClick: () -> Unit = {}
 ) {
     // Look up member profile from the members list
     val members = LocalMembers.current
     val member = remember(userName, members) {
-        members.filterNotNull().firstOrNull { it.name.equals(userName, ignoreCase = true) }
+        members.filterNotNull().firstOrNull {
+            it.name.equals(userName, ignoreCase = true)
+        }
     }
     val profileImage = member?.profilePictureUrl?.takeIf { it.isNotEmpty() } ?: userImage
+
+    var showConfirmBlock by remember { mutableStateOf(false) }
+
+    // Block confirmation dialog
+    if (showConfirmBlock) {
+        Dialog(onDismissRequest = { showConfirmBlock = false }) {
+            Surface(
+                color = Color(0xFF1E1E30),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.widthIn(max = 280.dp)
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text(
+                        if (isBlocked) "Unblock $userName?" else "Block $userName?",
+                        color = Color.White,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 16.sp
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        if (isBlocked)
+                            "You will see their messages again and they will appear in the member" +
+                                    "directory."
+                        else
+                            "Their messages will be hidden and they won't appear in your member" +
+                                    "directory.",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 13.sp
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.End,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Surface(
+                            color = Color(0xFF2C2C2C),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.clickable { showConfirmBlock = false }
+                        ) {
+                            Text(
+                                "Cancel",
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Surface(
+                            color = if (isBlocked) Color(0xFF4ea4e8) else Color(0xFFe54545),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.clickable {
+                                showConfirmBlock = false
+                                if (isBlocked) onUnblock() else onBlock()
+                                onDismiss()
+                            }
+                        ) {
+                            Text(
+                                if (isBlocked) "Unblock" else "Block",
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -3109,7 +3656,10 @@ fun UserProfilePopover(
                 // Member profile details
                 if (member != null) {
                     Spacer(Modifier.height(12.dp))
-                    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF333333)))
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(1.dp)
+                            .background(Color(0xFF333333))
+                    )
                     Spacer(Modifier.height(8.dp))
                     // Profession & Company
                     if (member.profession.isNotEmpty()) {
@@ -3167,6 +3717,75 @@ fun UserProfilePopover(
                         }
                     }
                 }
+
+                // ─── Moderation actions (not shown for self) ────────────────
+                if (!isSelf) {
+                    Spacer(Modifier.height(12.dp))
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(1.dp)
+                            .background(Color(0xFF333333))
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Block / Unblock
+                        Surface(
+                            color = if (isBlocked) Color(0xFF3a3a3a) else Color(0xFFe54545).copy(
+                                alpha = 0.15f
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f).clickable { showConfirmBlock = true }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(vertical = 8.dp).fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Block,
+                                    contentDescription = if (isBlocked) "Unblock" else "Block",
+                                    tint = if (isBlocked) Color.White else Color(0xFFe54545),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    text = if (isBlocked) "Unblock" else "Block",
+                                    color = if (isBlocked) Color.White else Color(0xFFe54545),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                        Surface(
+                            color = Color(0xFFFF7F33).copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f).clickable { onReportClick() }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(vertical = 8.dp).fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Flag,
+                                    contentDescription = "Report",
+                                    tint = Color(0xFFFF7F33),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    text = "Report",
+                                    color = Color(0xFFFF7F33),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+                }
+
                 Spacer(Modifier.height(16.dp))
                 // Close button
                 Surface(
@@ -3184,6 +3803,141 @@ fun UserProfilePopover(
                         modifier = Modifier.padding(vertical = 10.dp).fillMaxWidth(),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ReportUserDialog(
+    userName: String,
+    onDismiss: () -> Unit,
+    onSubmit: (reason: String?, category: String) -> Unit
+) {
+    val categories = listOf("SPAM", "HARASSMENT", "INAPPROPRIATE", "OTHER")
+    val categoryLabels = listOf("Spam", "Harassment", "Inappropriate Content", "Other")
+    var selectedCategory by remember { mutableStateOf("OTHER") }
+    var reason by remember { mutableStateOf("") }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            color = Color(0xFF1E1E30),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.widthIn(max = 320.dp)
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text(
+                    "Report $userName",
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 16.sp
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Select a reason for reporting this user.",
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 12.sp
+                )
+                Spacer(Modifier.height(16.dp))
+
+                // Category chips
+                categories.forEachIndexed { index, cat ->
+                    val isSelected = selectedCategory == cat
+                    Surface(
+                        color = if (isSelected) Color(0xFFFF7F33).copy(alpha = 0.2f) else
+                            Color(0xFF2C2C2C),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp)
+                            .clickable { selectedCategory = cat }
+                            .then(
+                                if (isSelected) Modifier.border(
+                                    1.dp,
+                                    Color(0xFFFF7F33),
+                                    RoundedCornerShape(
+                                        8.dp
+                                    )
+                                ) else Modifier
+                            )
+                    ) {
+                        Text(
+                            text = categoryLabels[index],
+                            color = if (isSelected) Color(0xFFFF7F33) else
+                                Color.White.copy(alpha = 0.8f),
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Optional reason
+                Text(
+                    "Additional details (optional)",
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 12.sp
+                )
+                Spacer(Modifier.height(4.dp))
+                androidx.compose.material3.OutlinedTextField(
+                    value = reason,
+                    onValueChange = { reason = it },
+                    placeholder = {
+                        Text(
+                            "Describe the issue...", color = Color
+                                .White.copy(alpha = 0.3f), fontSize = 13.sp
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp),
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Color(0xFFFF7F33),
+                        unfocusedBorderColor = Color(0xFF444444),
+                        cursorColor = Color(0xFFFF7F33)
+                    ),
+                    textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp),
+                    maxLines = 3
+                )
+
+                Spacer(Modifier.height(16.dp))
+                Row(
+                    horizontalArrangement = Arrangement.End,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Surface(
+                        color = Color(0xFF2C2C2C),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.clickable { onDismiss() }
+                    ) {
+                        Text(
+                            "Cancel",
+                            color = Color.White,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Surface(
+                        color = Color(0xFFFF7F33),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.clickable {
+                            onSubmit(
+                                reason.takeIf { it.isNotBlank() },
+                                selectedCategory
+                            )
+                        }
+                    ) {
+                        Text(
+                            "Submit Report",
+                            color = Color.White,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
                 }
             }
         }
@@ -3402,7 +4156,10 @@ fun ChannelInfoPanel(
                                 modifier = Modifier
                                     .size(8.dp)
                                     .clip(CircleShape)
-                                    .background(if (member.online) Color(0xFF4CAF50) else Color.Gray)
+                                    .background(
+                                        if (member.online) Color(0xFF4CAF50) else
+                                            Color.Gray
+                                    )
                                     .align(Alignment.BottomEnd)
                             )
                         }
@@ -3422,10 +4179,119 @@ fun ChannelInfoPanel(
                                     member.role,
                                     color = Color(0xFFFF7F33),
                                     fontSize = 9.sp,
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                    modifier = Modifier
+                                        .padding(horizontal = 4.dp, vertical = 1.dp)
                                 )
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─── Chat Settings Dialog ────────────────────────────────────────────────────
+
+@Composable
+fun ChatSettingsDialog(
+    blockedUsers: List<JsStreamUser>,
+    onUnblock: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF1E1E1E),
+        modifier = Modifier.widthIn(min = 340.dp, max = 480.dp),
+        title = {
+            Text(
+                "Blocked Users",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp
+            )
+        },
+        text = {
+            BlockedUsersSection(
+                blockedUsers = blockedUsers,
+                onUnblock = onUnblock
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close", color = Color(0xFFFF7F33))
+            }
+        }
+    )
+}
+
+@Composable
+private fun BlockedUsersSection(
+    blockedUsers: List<JsStreamUser>,
+    onUnblock: (String) -> Unit
+) {
+    if (blockedUsers.isEmpty()) {
+        Text(
+            "No blocked users",
+            color = Color.Gray,
+            modifier = Modifier.padding(vertical = 16.dp)
+        )
+    } else {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 350.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            blockedUsers.forEach { user ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFFF7F33)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (user.image.isNotEmpty()) {
+                            AsyncImage(
+                                model = user.image,
+                                contentDescription = "${user.name} avatar",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Text(
+                                text = user.name.take(1).uppercase(),
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        user.name,
+                        color = Color.White,
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedButton(
+                        onClick = { onUnblock(user.id) },
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Color(0xFFFF7F33)
+                        ),
+                        border = BorderStroke(1.dp, Color(0xFFFF7F33)),
+                        contentPadding = PaddingValues(
+                            horizontal = 12.dp, vertical = 4.dp
+                        )
+                    ) {
+                        Text("Unblock", fontSize = 12.sp)
                     }
                 }
             }

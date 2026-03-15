@@ -86,4 +86,12 @@ interface ApiService {
     suspend fun sendPasswordResetEmail(email: String): Boolean
     suspend fun fetchStreamToken(): net.winedownwednesday.web.data.models.StreamTokenResponse?
 
+    // Moderation
+    suspend fun blockUser(targetEmail: String): Boolean
+    suspend fun unblockUser(targetEmail: String): Boolean
+    suspend fun flagUser(targetEmail: String, reason: String?, category: String): Boolean
+    suspend fun flagMessage(messageId: String, reason: String?, category: String): Boolean
+    suspend fun getBlockedUsers(): List<String>
+    suspend fun deleteAccount(confirmPhrase: String): Boolean
+
 }

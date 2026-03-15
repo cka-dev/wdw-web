@@ -8,8 +8,15 @@ external object StreamBridge {
     fun queryChannels(): Promise<JsArray<JsChatChannel>>
     fun getMessages(channelId: String): Promise<JsArray<JsChatMessage>>
     fun sendMessage(channelId: String, text: String): Promise<JsChatMessage?>
-    fun sendReply(channelId: String, parentMessageId: String, text: String): Promise<JsChatMessage?>
-    fun getThreadReplies(channelId: String, parentMessageId: String): Promise<JsArray<JsChatMessage>>
+    fun sendReply(
+        channelId: String,
+        parentMessageId: String,
+        text: String
+    ): Promise<JsChatMessage?>
+    fun getThreadReplies(
+        channelId: String,
+        parentMessageId: String
+    ): Promise<JsArray<JsChatMessage>>
     fun deleteMessage(messageId: String): Promise<JsBoolean>
     fun editMessage(messageId: String, newText: String): Promise<JsBoolean>
     fun isAdmin(): Boolean
@@ -18,10 +25,19 @@ external object StreamBridge {
     fun startTyping(channelId: String): Promise<JsBoolean>
     fun stopTyping(channelId: String): Promise<JsBoolean>
     fun markRead(channelId: String): Promise<JsBoolean>
-    fun sendImageMessage(channelId: String, text: String, file: org.w3c.files.File): Promise<JsChatMessage?>
-    fun sendFileMessage(channelId: String, text: String, file: org.w3c.files.File): Promise<JsChatMessage?>
+    fun sendImageMessage(
+        channelId: String,
+        text: String,
+        file: org.w3c.files.File
+    ): Promise<JsChatMessage?>
+    fun sendFileMessage(
+        channelId: String,
+        text: String,
+        file: org.w3c.files.File
+    ): Promise<JsChatMessage?>
     fun onMessageNew(callback: (JsChatEvent) -> Unit)
     fun searchUsers(query: String): Promise<JsArray<JsStreamUser>>
+    fun queryUsersByIds(userIdsCsv: String): Promise<JsArray<JsStreamUser>>
     fun queryAllUsers(): Promise<JsArray<JsStreamUser>>
     fun createDirectChannel(otherUserId: String): Promise<JsChatChannel?>
     fun joinCommunityChannel(): Promise<JsChatChannel?>
@@ -29,7 +45,11 @@ external object StreamBridge {
     fun pinMessage(messageId: String): Promise<JsBoolean>
     fun unpinMessage(messageId: String): Promise<JsBoolean>
     fun getPinnedMessages(channelId: String): Promise<JsArray<JsChatMessage>>
-    fun sendGiphyMessage(channelId: String, gifUrl: String, gifTitle: String): Promise<JsChatMessage?>
+    fun sendGiphyMessage(
+        channelId: String,
+        gifUrl: String,
+        gifTitle: String
+    ): Promise<JsChatMessage?>
     fun getChannelMembers(channelId: String): Promise<JsArray<JsChannelMember>>
     fun addDevice(token: String, pushProvider: String): Promise<JsBoolean>
     fun removeDevice(token: String): Promise<JsBoolean>
@@ -55,9 +75,11 @@ external interface JsChatChannel : JsAny {
     val name: String
     val image: String
     val lastMessage: String
+    val lastMessageUserId: String
     val unreadCount: Int
     val isDirectMessage: Boolean
     val otherUserOnline: Boolean
+    val otherUserId: String
 }
 
 external interface JsChatMessage : JsAny {

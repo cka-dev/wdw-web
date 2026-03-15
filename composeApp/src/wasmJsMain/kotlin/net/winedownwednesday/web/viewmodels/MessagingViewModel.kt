@@ -4,7 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.await
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import net.winedownwednesday.web.JsChatChannel
 import net.winedownwednesday.web.JsChatMessage
@@ -32,7 +35,22 @@ class MessagingViewModel(
     val selectedChannelId = _selectedChannelId.asStateFlow()
 
     private val _messages = MutableStateFlow<List<JsChatMessage>>(emptyList())
-    val messages = _messages.asStateFlow()
+
+    // Blocked user IDs (declared early so `messages` can reference it)
+    private val _blockedEmails = MutableStateFlow<List<String>>(emptyList())
+    val blockedEmails = _blockedEmails.asStateFlow()
+
+    // Derived: automatically hides messages from blocked users
+    val messages = combine(
+        _messages, _blockedEmails
+    ) { msgs, blocked ->
+        if (blocked.isEmpty()) msgs
+        else msgs.filter { it.userId !in blocked }
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        emptyList()
+    )
 
     private val _isConnecting = MutableStateFlow(false)
     val isConnecting = _isConnecting.asStateFlow()
@@ -277,14 +295,18 @@ class MessagingViewModel(
     fun flagMessage(messageId: String) {
         viewModelScope.launch {
             try {
-                val success = StreamBridge.flagMessage(messageId).await<JsBoolean>()
-                if (success.toBoolean()) {
-                    println("MessagingViewModel: Message $messageId flagged successfully")
+                val success = appRepository.flagMessage(
+                    messageId = messageId,
+                    reason = null,
+                    category = "OTHER"
+                )
+                if (success) {
+                    showModerationFeedback("Message reported. Thank you.")
                 } else {
-                    println("MessagingViewModel: Failed to flag message $messageId")
+                    showModerationFeedback("Failed to report message. Please try again.")
                 }
             } catch (e: Exception) {
-                println("MessagingViewModel: Error flagging message: ${e.message}")
+                showModerationFeedback("Error reporting message: ${e.message}")
             }
         }
     }
@@ -620,6 +642,122 @@ class MessagingViewModel(
             _messages.value = emptyList()
             _selectedChannelId.value = null
             _isAdmin.value = false
+            _blockedEmails.value = emptyList()
+        }
+    }
+
+    // ─── Moderation ─────────────────────────────────────────────────────────
+
+    private val _moderationLoading = MutableStateFlow(false)
+    val moderationLoading = _moderationLoading.asStateFlow()
+
+    private val _moderationMessage = MutableStateFlow<String?>(null)
+    val moderationMessage = _moderationMessage.asStateFlow()
+
+    fun clearModerationMessage() {
+        _moderationMessage.value = null
+    }
+
+    private fun showModerationFeedback(msg: String) {
+        _moderationMessage.value = msg
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(3000)
+            if (_moderationMessage.value == msg) {
+                _moderationMessage.value = null
+            }
+        }
+    }
+
+    // Report dialog state — stored in ViewModel so it survives layout changes
+    data class ReportTarget(val userName: String, val userId: String)
+
+    private val _reportDialogTarget = MutableStateFlow<ReportTarget?>(null)
+    val reportDialogTarget = _reportDialogTarget.asStateFlow()
+
+    fun openReportDialog(userName: String, userId: String) {
+        _reportDialogTarget.value = ReportTarget(userName, userId)
+    }
+
+    fun dismissReportDialog() {
+        _reportDialogTarget.value = null
+    }
+
+    private val _blockedUserProfiles = MutableStateFlow<List<JsStreamUser>>(emptyList())
+    val blockedUserProfiles = _blockedUserProfiles.asStateFlow()
+
+    fun fetchBlockedUserProfiles() {
+        viewModelScope.launch {
+            val ids = _blockedEmails.value
+            if (ids.isEmpty()) {
+                _blockedUserProfiles.value = emptyList()
+                return@launch
+            }
+            val csv = ids.joinToString(",")
+            val users = StreamBridge.queryUsersByIds(csv).await<JsArray<JsStreamUser>>()
+            val result = mutableListOf<JsStreamUser>()
+            for (i in 0 until users.length) {
+                result.add(users[i]!!)
+            }
+            _blockedUserProfiles.value = result
+        }
+    }
+
+    fun fetchBlockedUsers() {
+        viewModelScope.launch {
+            _blockedEmails.value = appRepository.getBlockedUsers()
+        }
+    }
+
+    fun blockUser(targetUserId: String, onComplete: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            _moderationLoading.value = true
+            val success = appRepository.blockUser(targetUserId)
+            if (success) {
+                _blockedEmails.value = _blockedEmails.value + targetUserId
+                kotlinx.coroutines.delay(500)
+                _selectedChannelId.value?.let { loadMessages(it) }
+                showModerationFeedback("User blocked successfully.")
+            } else {
+                showModerationFeedback("Failed to block user. Please try again.")
+            }
+            _moderationLoading.value = false
+            onComplete(success)
+        }
+    }
+
+    fun unblockUser(targetUserId: String, onComplete: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            _moderationLoading.value = true
+            val success = appRepository.unblockUser(targetUserId)
+            if (success) {
+                _blockedEmails.value = _blockedEmails.value - targetUserId
+                kotlinx.coroutines.delay(500)
+                _selectedChannelId.value?.let { loadMessages(it) }
+                showModerationFeedback("User unblocked.")
+            } else {
+                showModerationFeedback("Failed to unblock user. Please try again.")
+            }
+            _moderationLoading.value = false
+            onComplete(success)
+        }
+    }
+
+    fun flagUser(
+        targetUserId: String,
+        reason: String?,
+        category: String,
+        onComplete: (Boolean) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            _moderationLoading.value = true
+            val success = appRepository.flagUser(targetUserId, reason, category)
+            _moderationLoading.value = false
+            if (success) {
+                showModerationFeedback("Report submitted. Thank you.")
+            } else {
+                showModerationFeedback("Failed to submit report. Please try again.")
+            }
+            onComplete(success)
         }
     }
 }

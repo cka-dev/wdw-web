@@ -160,7 +160,8 @@ fun ProfilePage(
                                     profile = userProfile,
                                     editMode = editMode,
                                     onSave = { updatedProfile ->
-                                        viewModel.saveProfile(updatedProfile) { success ->
+                                        viewModel.saveProfile(updatedProfile)
+                                        { success ->
                                             if (success) {
                                                 editMode = false
                                                 showSuccessToast = true
@@ -258,6 +259,14 @@ fun ProfilePage(
                                         Text("Sign Out")
                                     }
                                 }
+                            }
+
+                            // ── Danger Zone: Delete Account ──
+                            item {
+                                DeleteAccountSection(
+                                    viewModel = viewModel,
+                                    onLogout = onLogout
+                                )
                             }
                         }
                     }
@@ -568,12 +577,22 @@ fun ProfileEditSection(
     var phone by remember(profile) { mutableStateOf(profile?.phone?.replace(
         numericRegex, "")?.take(10) ?: "") }
     var aboutMe by remember(profile) { mutableStateOf(profile?.aboutMe ?: "") }
-    var profileImageBitmap by remember(profile) { mutableStateOf(profile?.profileImageBitmap) }
+    var profileImageBitmap by remember(profile) {
+        mutableStateOf(profile?.profileImageBitmap)
+    }
     var birthDate by remember(profile) { mutableStateOf(profile?.birthDate) }
-    val isVerified by remember(profile) { mutableStateOf(profile?.isVerified ?: false) }
-    val isMember by remember(profile) { mutableStateOf(profile?.isMember ?: false) }
-    val hasPassword by remember(profile) { mutableStateOf(profile?.hasPassword ?: false) }
-    val hasPasskey by remember(profile) { mutableStateOf(profile?.hasPasskey ?: false) }
+    val isVerified by remember(profile) {
+        mutableStateOf(profile?.isVerified ?: false)
+    }
+    val isMember by remember(profile) {
+        mutableStateOf(profile?.isMember ?: false)
+    }
+    val hasPassword by remember(profile) {
+        mutableStateOf(profile?.hasPassword ?: false)
+    }
+    val hasPasskey by remember(profile) {
+        mutableStateOf(profile?.hasPasskey ?: false)
+    }
     val showDatePicker = remember { mutableStateOf(false) }
 
     val updatedProfile = UserProfileData(
@@ -935,6 +954,130 @@ fun ProfilePictureSection(
                 )
             ) {
                 Text("Change Image")
+            }
+        }
+    }
+}
+
+// ─── Delete Account Section ─────────────────────────────────────────────────
+
+@Composable
+fun DeleteAccountSection(
+    viewModel: AuthPageViewModel,
+    onLogout: () -> Unit
+) {
+    var showConfirm by remember { mutableStateOf(false) }
+    var confirmText by remember { mutableStateOf("") }
+    var isDeleting by remember { mutableStateOf(false) }
+    val requiredPhrase = "DELETE MY ACCOUNT"
+
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF2A1A1A)
+        ),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                "Danger Zone",
+                color = Color(0xFFFF6B6B),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleSmall
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Permanently delete your account and all associated data. " +
+                    "This action cannot be undone.",
+                color = Color.Gray,
+                style = MaterialTheme.typography.bodySmall
+            )
+            Spacer(Modifier.height(12.dp))
+
+            if (!showConfirm) {
+                Button(
+                    onClick = { showConfirm = true },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF4A2020),
+                        contentColor = Color(0xFFFF6B6B)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Delete My Account")
+                }
+            } else {
+                Text(
+                    "Type \"$requiredPhrase\" to confirm:",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = confirmText,
+                    onValueChange = { confirmText = it },
+                    singleLine = true,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFF1A1A1A),
+                        unfocusedContainerColor = Color(0xFF1A1A1A),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        cursorColor = Color(0xFFFF6B6B),
+                        focusedIndicatorColor = Color(0xFFFF6B6B),
+                        unfocusedIndicatorColor = Color(0xFF444444)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Button(
+                        onClick = {
+                            showConfirm = false
+                            confirmText = ""
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.DarkGray,
+                            contentColor = Color.White
+                        ),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Cancel")
+                    }
+                    Button(
+                        onClick = {
+                            isDeleting = true
+                            viewModel.deleteAccount(confirmText) { success ->
+                                isDeleting = false
+                                if (success) {
+                                    onLogout()
+                                }
+                            }
+                        },
+                        enabled = confirmText == requiredPhrase && !isDeleting,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFFF6B6B),
+                            disabledContainerColor = Color(0xFF333333)
+                        ),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            if (isDeleting) "Deleting..."
+                            else "Delete Forever",
+                            color = Color.White
+                        )
+                    }
+                }
             }
         }
     }

@@ -40,7 +40,7 @@ Since the project runs on Wasm, it interacts with JavaScript libraries for Fireb
 To prevent leaking project identifiers, some JavaScript files are excluded from version control. Templates are provided for development:
 - **`firebase-bridge.js`**: Bridges Kotlin to Firebase JS SDK. Template: `firebase-bridge.js.example`.
 - **`firebase-messaging-sw.js`**: Firebase Messaging Service Worker. Template: `firebase-messaging-sw.js.example`.
-- **`webauthn-bridge.js`**: Utility functions for WebAuthn cryptography.
+- **`webauthn-bridge.js`**: Utility functions for WebAuthn cryptography. Template: `webauthn-bridge.js.example`.
 - **`stream-bridge.js`**: Bridges Kotlin to Stream JS SDK. Template: `stream-bridge.js.example`.
 
 ## 3. Key Features
@@ -100,6 +100,22 @@ To prevent leaking project identifiers, some JavaScript files are excluded from 
 - **UI & Interaction Polish**:
     - **Enter-to-send**: Users can press Enter to send messages, and Shift+Enter to insert newlines.
     - **Conversation List**: Elevated channel cards with subtle gradients and active-state accent bars provide a modern two-pane chatting experience.
+- **User Moderation (Block & Flag)**:
+    - **Block/Unblock**: Accessible from the `UserProfilePopover` (click any avatar). Blocks are persisted in Firestore (`blockedEmails` + `blockedUserIds` arrays on `userProfiles`) and synced to Stream Chat server-side. Blocked users' messages are filtered client-side via a derived `messages` flow that combines the raw message list with the blocked user IDs.
+    - **Blocked Conversations**: DM channels with blocked users appear in a collapsed "BLOCKED (N)" section at the bottom of the channel list. Clicking a blocked conversation shows an unblock confirmation dialog instead of loading the chat.
+    - **Blocked Users Management**: A settings gear icon (⚙️) in the chat header opens a `ChatSettingsDialog` showing blocked users with avatars and unblock buttons. Profiles are fetched via `queryUsersByIds` on the Stream JS bridge.
+    - **Report**: Unified moderation system — both user reports and message flags are routed through backend Cloud Functions (`flagUser`, `flagMessage`) and stored in the `moderation_flags` Firestore collection with `type` field (`USER`, `MESSAGE`, `AUTO_ESCALATED`). Category-based reporting (Spam, Harassment, Inappropriate, Other) with optional text reason. Both types also forward to Stream's moderation dashboard. **Auto-escalation**: When a user accumulates 3+ pending message flags, a `type: AUTO_ESCALATED` user-level flag is automatically created. **Admin Notifications**: A Firestore trigger (`onModerationFlagCreated`) sends both email (via `mail` collection / Firebase Trigger Email extension) and FCM push notifications to all admin users (`isAdmin === true`) whenever a new flag is created. Auto-escalated flags receive higher visual emphasis (🚨 vs 🛡️).
+    - **Admin Moderation Queue**: Admin dashboard includes a dedicated Moderation page (`/moderation`) with status/type filters, color-coded flag cards, expandable review panel with admin notes, dismiss/review actions, a pending-count stat card on the Dashboard, and a quick "Block User" button on pending flags. Backend endpoints: `adminGetModerationFlags` (GET with optional `?status=&type=` filters) and `adminUpdateModerationFlag` (POST, updates status/notes/reviewedBy). The Users page shows a "⚠️ N reports" badge next to users with pending flags.
+    - **Backend Guards**: `flagUser` and `flagMessage` enforce duplicate report prevention (409 Conflict if a PENDING flag already exists from the same reporter) and rate limiting (429 Too Many Requests if more than 5 reports per hour). Required Firestore composite indexes are declared in `firestore.indexes.json`.
+    - **Moderation Feedback**: All moderation actions (block, unblock, flag user, flag message) show a toast notification at the bottom of the chat area — green for success, red for errors. Auto-dismisses after 3 seconds.
+    - **Report Dialog State**: The `ReportUserDialog` state is managed via `MessagingViewModel.reportDialogTarget` (not local `remember`) so it survives layout changes (e.g., window resize between desktop and compact modes).
+    - **Self-protection**: Users cannot block or report themselves; the buttons are hidden on the user's own profile popover.
+    - **Cross-platform**: Blocked list syncs via Firestore; blocking on web also takes effect on Android and vice versa.
+- **Account Deletion (Play Store Compliance)**:
+    - Users can permanently delete their account from the **Profile page** "Danger Zone" section.
+    - Requires typing "DELETE MY ACCOUNT" as a confirmation phrase.
+    - Backend `deleteAccount` Cloud Function chains: hard-delete from Stream Chat → delete Firestore profile → delete Firebase Auth account.
+    - On success, the client signs out via `FirebaseBridge.signOut()`.
 
 ## 4. Technical Implementation Details
 

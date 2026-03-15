@@ -228,11 +228,15 @@ class AppRepository (
         return remoteDataSource.verifyPasskeyAuthenticationWithToken(credential, email)
     }
 
-    suspend fun registerWithEmailPassword(request: EmailPasswordRequest): ApiResult<FirebaseAuthResponse> {
+    suspend fun registerWithEmailPassword(
+        request: EmailPasswordRequest
+    ): ApiResult<FirebaseAuthResponse> {
         return remoteDataSource.registerWithEmailPassword(request)
     }
 
-    suspend fun signInWithEmailPassword(request: EmailPasswordRequest): ApiResult<FirebaseAuthResponse> {
+    suspend fun signInWithEmailPassword(
+        request: EmailPasswordRequest
+    ): ApiResult<FirebaseAuthResponse> {
         return remoteDataSource.signInWithEmailPassword(request)
     }
 
@@ -250,6 +254,32 @@ class AppRepository (
 
     suspend fun fetchStreamToken(): net.winedownwednesday.web.data.models.StreamTokenResponse? {
         return remoteDataSource.fetchStreamToken()
+    }
+
+    // ─── Moderation ─────────────────────────────────────────────────────────
+
+    suspend fun blockUser(targetEmail: String): Boolean {
+        return remoteDataSource.blockUser(targetEmail)
+    }
+
+    suspend fun unblockUser(targetEmail: String): Boolean {
+        return remoteDataSource.unblockUser(targetEmail)
+    }
+
+    suspend fun flagUser(targetEmail: String, reason: String?, category: String): Boolean {
+        return remoteDataSource.flagUser(targetEmail, reason, category)
+    }
+
+    suspend fun flagMessage(messageId: String, reason: String?, category: String): Boolean {
+        return remoteDataSource.flagMessage(messageId, reason, category)
+    }
+
+    suspend fun getBlockedUsers(): List<String> {
+        return remoteDataSource.getBlockedUsers()
+    }
+
+    suspend fun deleteAccount(confirmPhrase: String): Boolean {
+        return remoteDataSource.deleteAccount(confirmPhrase)
     }
 
     companion object{

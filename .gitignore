@@ -1,6 +1,8 @@
 AGENTS.md
 composeApp/src/wasmJsMain/resources/firebase-messaging-sw.js
 composeApp/src/wasmJsMain/resources/firebase-bridge.js
+composeApp/src/wasmJsMain/resources/stream-bridge.js
+composeApp/src/wasmJsMain/resources/webauthn-bridge.js
 *.iml
 .kotlin
 .gradle
