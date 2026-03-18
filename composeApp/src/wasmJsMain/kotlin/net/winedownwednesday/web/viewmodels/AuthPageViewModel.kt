@@ -109,13 +109,10 @@ class AuthPageViewModel(
         viewModelScope.launch {
             _isFetchingProfile.value = true
             try {
-                println("$TAG: fetchProfile called with email=$userEmail")
                 val profile = repository.fetchProfileFromServer(userEmail)
-                println("$TAG: fetchProfile result: name=${profile?.name}, email=${profile?.email}, imageUrl=${profile?.profileImageUrl}")
                 _profileData.value = profile
             } catch (e: Exception) {
                 println("$TAG: fetchProfile EXCEPTION: ${e.message}")
-                _isFetchingProfile.value = false
             } finally {
                 _isFetchingProfile.value = false
             }
@@ -385,9 +382,7 @@ class AuthPageViewModel(
     }
 
     fun checkIsNewUser(isNewUser: Boolean) {
-        viewModelScope.launch {
-            _isNewUser.value = isNewUser
-        }
+        _isNewUser.value = isNewUser
     }
 
     suspend fun logout() {
@@ -416,9 +411,7 @@ class AuthPageViewModel(
     }
 
     fun setEmail(email: String) {
-        viewModelScope.launch {
-            _email.value = email
-        }
+        _email.value = email
     }
 
     fun hasUserRsvped(eventId: Long?): Boolean {
@@ -559,23 +552,9 @@ class AuthPageViewModel(
 
     override fun onCleared() {
         super.onCleared()
-        viewModelScope.launch {
-            val currentEmail = email.value
-            val currentToken = fcmToken.value ?: ""
-            if (currentEmail.isNotBlank() && currentToken.isNotBlank()) {
-                try {
-                    unRegisterFcmInstanceId(
-                        fcmToken = currentToken,
-                        email = currentEmail
-                    )
-                } catch (e: Exception) {
-//                    println("Error unregistering FCM instance ID in onCleared: ${e.message}")
-                }
-            } else {
-//                println("FCM token or email missing during onCleared; skipping unregister.")
-            }
-            firebaseSignOut()
-        }
+        // Note: we intentionally do NOT sign out here.
+        // Firebase auth session should persist across ViewModel GC;
+        // only an explicit call to logout() should end the session.
     }
 
     fun deleteAccount(

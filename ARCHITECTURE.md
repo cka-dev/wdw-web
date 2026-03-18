@@ -8,9 +8,10 @@ This document provides a detailed overview of the architecture, features, and te
 ## 2. Architecture
 
 ### Technology Stack
-- **Language**: Kotlin 2.1.0
-- **UI Framework**: Compose Multiplatform (WasmJs target)
-- **Dependency Injection**: Koin
+- **Language**: Kotlin 2.2.20
+- **UI Framework**: Compose Multiplatform 1.10.2 (WasmJs target)
+- **Navigation**: Jetpack Navigation 3 (`org.jetbrains.androidx.navigation3:navigation3-ui:1.0.0-alpha06`) — Alpha multiplatform support via CMP 1.10.2
+- **Dependency Injection**: Koin (with KSP 2.2.20-2.0.4)
 - **Networking**: Ktor Client
 - **Authentication**: Hybrid Model (Passkeys/WebAuthn + Server-Side Password Validation)
 - **Messaging**: Stream Chat SDK (with custom Cloud Function token generation)
@@ -132,10 +133,19 @@ For Firebase Functions v2 (e.g., Passkey Auth, Messaging), the application uses 
 Uses `Material3WindowSizeClass` to adapt layouts between mobile (Compact) and desktop screens. The top navigation bar shows the user's profile picture (from `UserProfileData.profileImageUrl`) as a circular avatar instead of the generic account icon when logged in.
 
 ### Navigation
-Top-level navigation is managed via `AppBarState` enum. On desktop, a horizontal `TopNavBar` shows all tabs. On compact/mobile screens, a hybrid pattern (matching the Android app) is used:
+Top-level navigation uses **Jetpack Navigation 3** (`NavDisplay` + `rememberNavBackStack`). Routes are defined as a `@Serializable sealed interface Route : NavKey`. A polymorphic `SerializersModule` registered in `SavedStateConfiguration` enables Nav3's saved-state serialization for all route subtypes on Wasm.
+
+**Browser history integration** (custom JS interop via `kotlinx.browser`):
+- `LaunchedEffect(currentRoute)` pushes `window.history.pushState()` whenever the active route changes, keeping the URL hash (e.g. `#about`) in sync.
+- `LaunchedEffect(Unit)` reads the initial hash on first load to support bookmarked / deep-linked URLs.
+- `DisposableEffect(Unit)` attaches a `popstate` listener so the browser Back/Forward buttons update the back stack.
+
+> **Note**: Full browser address-bar integration (path-based URLs rather than hash fragments) is postponed to a future CMP release per JetBrains roadmap.
+
+On desktop, a horizontal `TopNavBar` shows all tabs. On compact/mobile screens, a hybrid pattern (matching the Android app) is used:
 - **Bottom bar** (`MobileBottomNavBar`): 5 primary tabs — About, Podcasts, Events, Our Wine, Chat
 - **Hamburger drawer** (`NavDrawerContent`): secondary tabs — Members, Blog (labeled "More")
-- **Top bar**: ☰ hamburger + logo + profile avatar/login icon
+- **Top bar**: ☰ hamburger + logo (40dp height) + profile avatar/login icon
 - Footer is hidden on compact screens (bottom bar replaces it)
 
 ### Footer (`Footer.kt`)

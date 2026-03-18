@@ -1,9 +1,10 @@
 [versions]
-androidx-lifecycle = "2.8.4"
-compose-multiplatform = "1.7.3"
+androidx-lifecycle = "2.10.0-beta01"
+compose-multiplatform = "1.10.2"
 junit = "4.13.2"
-kotlin = "2.1.0"
+kotlin = "2.2.20"
 koin-bom = "4.0.0"
+navigation3 = "1.0.0-alpha06"
 coilComposeCore = "3.0.4"
 agp = "8.6.1"
 runner = "1.0.2"
@@ -17,6 +18,15 @@ jetbrainsKotlinJvm = "1.9.0"
 #junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-lifecycle-viewmodel = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-viewmodel", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-runtime-compose = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
+# Compose direct references (replaces deprecated compose.* plugin aliases from CMP 1.10+)
+compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose-multiplatform" }
+compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "compose-multiplatform" }
+compose-material = { module = "org.jetbrains.compose.material:material", version.ref = "compose-multiplatform" }
+compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "compose-multiplatform" }
+compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "compose-multiplatform" }
+compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "compose-multiplatform" }
+compose-components-uiToolingPreview = { module = "org.jetbrains.compose.components:components-ui-tooling-preview", version.ref = "compose-multiplatform" }
+navigation3-ui = { module = "org.jetbrains.androidx.navigation3:navigation3-ui", version.ref = "navigation3" }
 koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin-bom" }
 koin-core = { module = "io.insert-koin:koin-core", version.ref ="koin-bom" }
 koin-viewModel = { module = "io.insert-koin:koin-core-viewmodel", version.ref ="koin-bom"}

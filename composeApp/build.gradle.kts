@@ -5,29 +5,32 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
-    kotlin("plugin.serialization") version "2.1.0"
+    kotlin("plugin.serialization")
     id("com.google.devtools.ksp")
 }
 
 kotlin {
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
-        moduleName = "composeApp"
+        outputModuleName.set("composeApp")
         browser {
             val rootDirPath = project.rootDir.path
             val projectDirPath = project.projectDir.path
             commonWebpackConfig {
                 outputFileName = "composeApp.js"
                 devServer = (devServer ?: KotlinWebpackConfig.DevServer()).apply {
-                    static = (static ?: mutableListOf()).apply {
-                        // Serve sources to debug inside browser
-                        add(rootDirPath)
-                        add(projectDirPath)
+                    // Append source paths for debugging — don't replace CMP's automatic paths
+                    static = (static ?: mutableListOf()).also {
+                        it.addAll(listOf(rootDirPath, projectDirPath))
                     }
                 }
             }
         }
         binaries.executable()
+        compilerOptions {
+            // Entire target is WasmJs — opt-in once here rather than annotating every file
+            freeCompilerArgs.add("-opt-in=kotlin.js.ExperimentalWasmJsInterop")
+        }
     }
     
     sourceSets {
@@ -42,8 +45,8 @@ kotlin {
             implementation(compose.components.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtime.compose)
-            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0-RC")
-            implementation("org.jetbrains.androidx.navigation:navigation-compose:2.8.0-alpha10")
+            implementation(libs.navigation3.ui)
+            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
             implementation("io.ktor:ktor-client-core:3.0.2")
             implementation("io.ktor:ktor-client-json:3.0.2")
             implementation("io.ktor:ktor-client-logging:3.0.2")
@@ -56,7 +59,7 @@ kotlin {
             implementation(libs.koin.compose)
             // Koin Annotations
             api("io.insert-koin:koin-annotations:1.4.0")
-            implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.8.2")
+            implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0-beta01")
 
             // Markdown rendering
             implementation("com.mikepenz:multiplatform-markdown-renderer:0.32.0")
@@ -68,7 +71,7 @@ kotlin {
             implementation(libs.coil.network.ktor)
 
             //Kotlinx DateTime
-            implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
+            implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.7.1-0.6.x-compat")
 
             //Video Player
 //            implementation("io.github.khubaibkhan4:mediaplayer-kmp:2.0.4")
@@ -77,7 +80,6 @@ kotlin {
 //            implementation(project(":libraries:Kotlin-Wasm-Html-Interop-master"))
 
             implementation("dev.chrisbanes.material3:material3-window-size-class-multiplatform:0.5.0")
-            implementation("org.jetbrains.kotlinx:kotlinx-browser:0.3")
 
             // File Picker
             // Enables FileKit without Compose dependencies
@@ -86,7 +88,6 @@ kotlin {
             // Enables FileKit with Composable utilities
             implementation("io.github.vinceglb:filekit-compose:0.8.8")
 
-            implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
 
             // Emoji support (Noto images for Wasm)
             implementation("org.kodein.emoji:emoji-compose-m3:2.0.1")

@@ -46,6 +46,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -70,11 +71,11 @@ import wdw_web.composeapp.generated.resources.wdw_new_logo
 @Composable
 fun TopNavItem(
     label: String,
-    target: AppBarState,
-    currentState: AppBarState,
+    target: Route,
+    currentRoute: Route,
     onClick: () -> Unit
 ) {
-    val isSelected = currentState == target
+    val isSelected = currentRoute == target
 
     val textColor by animateColorAsState(
         targetValue = if (isSelected) Color(0xFFFF7F33)
@@ -104,7 +105,7 @@ fun TopNavItem(
             modifier = Modifier
                 .height(indicatorHeight)
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.primary)
+                .background(Color(0xFFFF7F33))
         )
     }
 }
@@ -112,8 +113,9 @@ fun TopNavItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopNavBar(
-    appBarState: MutableState<AppBarState>,
+    currentRoute: Route,
     uiState: LoginUIState,
+    onNavigate: (Route) -> Unit,
     onLogout: () -> Unit,
     userProfileImageUrl: String? = null,
     isCompactScreen: Boolean = false,
@@ -136,24 +138,17 @@ fun TopNavBar(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Start,
-                    modifier = Modifier.clickable {
-                        appBarState.value = AppBarState.HOME
-                    }
+                    modifier = Modifier.clickable { onNavigate(Route.Home) }
                 ) {
                     Image(
                         painter = painterResource(Res.drawable.wdw_new_logo),
                         contentDescription = "Wine Down Wednesday Logo",
-                        modifier = Modifier.clickable {
-                            appBarState.value = AppBarState.HOME
-                        }
+                        modifier = Modifier.height(40.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Wine Down Wednesday",
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.clickable {
-                            appBarState.value = AppBarState.HOME
-                        }
+                        fontWeight = FontWeight.Bold
                     )
                 }
             },
@@ -162,7 +157,7 @@ fun TopNavBar(
                     // Compact: just profile avatar or login
                     if (uiState is LoginUIState.Authenticated) {
                         IconButton(
-                            onClick = { appBarState.value = AppBarState.PROFILE }
+                            onClick = { onNavigate(Route.Profile) }
                         ) {
                             if (!userProfileImageUrl.isNullOrEmpty()) {
                                 AsyncImage(
@@ -183,7 +178,7 @@ fun TopNavBar(
                         }
                     } else if (uiState is LoginUIState.Idle) {
                         IconButton(
-                            onClick = { appBarState.value = AppBarState.LOGIN }
+                            onClick = { onNavigate(Route.Login) }
                         ) {
                             Icon(
                                 imageVector = Icons.Default.AccountCircle,
@@ -194,38 +189,39 @@ fun TopNavBar(
                     }
                 } else {
                     // Desktop: full horizontal nav
-                    val navItems = mutableListOf(
-                        "Home" to AppBarState.HOME,
-                        "About" to AppBarState.ABOUT,
-                        "Blog" to AppBarState.BLOG,
-                        "Members" to AppBarState.MEMBERS,
-                        "Uncorked Conversations" to AppBarState.PODCASTS,
-                        "Events" to AppBarState.EVENTS,
-                        "Our Wine" to AppBarState.WINES
-                    )
-
-                    if (uiState is LoginUIState.Authenticated) {
-                        navItems.add("Messages" to AppBarState.MESSAGING)
+                    val navItems by remember(uiState) {
+                        derivedStateOf {
+                            buildList {
+                                add("Home"                    to Route.Home)
+                                add("About"                   to Route.About)
+                                add("Blog"                    to Route.Blog)
+                                add("Members"                 to Route.Members)
+                                add("Uncorked Conversations"  to Route.Podcasts)
+                                add("Events"                  to Route.Events)
+                                add("Our Wine"                to Route.Wines)
+                                if (uiState is LoginUIState.Authenticated) {
+                                    add("Messages" to Route.Messaging)
+                                }
+                            }
+                        }
                     }
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.horizontalScroll(rememberScrollState())
                     ) {
-                        navItems.forEach { (label, state) ->
+                        navItems.forEach { (label, route) ->
                             TopNavItem(
-                                label = label,
-                                target = state,
-                                currentState = appBarState.value,
-                                onClick = { appBarState.value = state }
+                                label        = label,
+                                target       = route,
+                                currentRoute = currentRoute,
+                                onClick      = { onNavigate(route) }
                             )
                         }
                         if (uiState is LoginUIState.Authenticated) {
                             Spacer(modifier = Modifier.width(16.dp))
                             IconButton(
-                                onClick = {
-                                    appBarState.value = AppBarState.PROFILE
-                                }
+                                onClick = { onNavigate(Route.Profile) }
                             ) {
                                 if (!userProfileImageUrl.isNullOrEmpty()) {
                                     AsyncImage(
@@ -247,10 +243,10 @@ fun TopNavBar(
                         } else if (uiState is LoginUIState.Idle) {
                             Spacer(modifier = Modifier.width(16.dp))
                             TopNavItem(
-                                label = "Member Login",
-                                target = AppBarState.LOGIN,
-                                currentState = appBarState.value,
-                                onClick = { appBarState.value = AppBarState.LOGIN }
+                                label        = "Member Login",
+                                target       = Route.Login,
+                                currentRoute = currentRoute,
+                                onClick      = { onNavigate(Route.Login) }
                             )
                         }
                     }
@@ -265,15 +261,16 @@ fun TopNavBar(
 
 @Composable
 fun MobileBottomNavBar(
-    appBarState: MutableState<AppBarState>,
-    uiState: LoginUIState
+    currentRoute: Route,
+    uiState: LoginUIState,
+    onNavigate: (Route) -> Unit
 ) {
     val bottomTabs = listOf(
-        Triple("About", Icons.Default.Home, AppBarState.HOME),
-        Triple("Podcasts", Icons.Default.Podcasts, AppBarState.PODCASTS),
-        Triple("Events", Icons.Default.Event, AppBarState.EVENTS),
-        Triple("Our Wine", Icons.Default.WineBar, AppBarState.WINES),
-        Triple("Chat", Icons.AutoMirrored.Filled.Chat, AppBarState.MESSAGING)
+        Triple("About",    Icons.Default.Home,                  Route.Home),
+        Triple("Podcasts", Icons.Default.Podcasts,              Route.Podcasts),
+        Triple("Events",   Icons.Default.Event,                 Route.Events),
+        Triple("Our Wine", Icons.Default.WineBar,               Route.Wines),
+        Triple("Chat",     Icons.AutoMirrored.Filled.Chat,      Route.Messaging)
     )
 
     Surface(
@@ -287,8 +284,8 @@ fun MobileBottomNavBar(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            bottomTabs.forEach { (label, icon, state) ->
-                val isSelected = appBarState.value == state
+            bottomTabs.forEach { (label, icon, route) ->
+                val isSelected = currentRoute == route
                 val color by animateColorAsState(
                     targetValue = if (isSelected) Color(0xFFFF7F33) else Color.Gray,
                     animationSpec = tween(200)
@@ -297,10 +294,10 @@ fun MobileBottomNavBar(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .clickable {
-                            if (state == AppBarState.MESSAGING && uiState !is LoginUIState.Authenticated) {
-                                appBarState.value = AppBarState.LOGIN
+                            if (route == Route.Messaging && uiState !is LoginUIState.Authenticated) {
+                                onNavigate(Route.Login)
                             } else {
-                                appBarState.value = state
+                                onNavigate(route)
                             }
                         }
                         .padding(horizontal = 4.dp, vertical = 4.dp)
@@ -325,12 +322,12 @@ fun MobileBottomNavBar(
 
 @Composable
 fun NavDrawerContent(
-    appBarState: MutableState<AppBarState>,
-    onItemSelected: () -> Unit
+    currentRoute: Route,
+    onNavigate: (Route) -> Unit
 ) {
     val drawerItems = listOf(
-        Triple("Members", Icons.Default.People, AppBarState.MEMBERS),
-        Triple("Blog", Icons.AutoMirrored.Filled.Article, AppBarState.BLOG)
+        Triple("Members", Icons.Default.People,                  Route.Members),
+        Triple("Blog",    Icons.AutoMirrored.Filled.Article,     Route.Blog)
     )
 
     Column(
@@ -347,15 +344,14 @@ fun NavDrawerContent(
             modifier = Modifier.padding(bottom = 24.dp)
         )
 
-        drawerItems.forEach { (label, icon, state) ->
-            val isSelected = appBarState.value == state
+        drawerItems.forEach { (label, icon, route) ->
+            val isSelected = currentRoute == route
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
-                        appBarState.value = state
-                        onItemSelected()
+                        onNavigate(route)
                     }
                     .background(
                         if (isSelected) Color(0xFF333333) else Color.Transparent,

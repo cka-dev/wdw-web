@@ -4,8 +4,8 @@ plugins {
     alias(libs.plugins.composeMultiplatform) apply false
     alias(libs.plugins.composeCompiler) apply false
     alias(libs.plugins.kotlinMultiplatform) apply false
-    kotlin("plugin.serialization") version "2.1.0" apply false
-    id ("com.google.devtools.ksp") version "2.1.0-1.0.29"
+    kotlin("plugin.serialization") version "2.2.20" apply false
+    id ("com.google.devtools.ksp") version "2.2.20-2.0.4"
     alias(libs.plugins.androidApplication) apply false
     alias(libs.plugins.kotlinAndroid) apply false
     alias(libs.plugins.jetbrainsKotlinJvm) apply false

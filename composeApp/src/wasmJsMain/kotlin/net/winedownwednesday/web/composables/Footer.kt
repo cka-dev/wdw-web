@@ -60,7 +60,7 @@ private const val PRIVACY_POLICY_URL = "https://www.freeprivacypolicy.com/live/6
 // ──────────────────────────────────────────────────────────
 @Composable
 fun Footer(
-    onNavClick: (AppBarState) -> Unit,
+    onNavClick: (Route) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showContactForm by remember { mutableStateOf(false) }
@@ -118,13 +118,13 @@ fun Footer(
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 FooterSectionHeader("Navigate")
                 val navLinks = listOf(
-                    "Home"                   to AppBarState.HOME,
-                    "About"                  to AppBarState.ABOUT,
-                    "Blog"                   to AppBarState.BLOG,
-                    "Members"                to AppBarState.MEMBERS,
-                    "Events"                 to AppBarState.EVENTS,
-                    "Our Wine"               to AppBarState.WINES,
-                    "Uncorked Conversations" to AppBarState.PODCASTS,
+                    "Home"                   to Route.Home,
+                    "About"                  to Route.About,
+                    "Blog"                   to Route.Blog,
+                    "Members"                to Route.Members,
+                    "Events"                 to Route.Events,
+                    "Our Wine"               to Route.Wines,
+                    "Uncorked Conversations" to Route.Podcasts,
                 )
                 val half = (navLinks.size + 1) / 2
                 Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {

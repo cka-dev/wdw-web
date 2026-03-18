@@ -477,7 +477,6 @@ class MessagingViewModel(
     fun editMessage(messageId: String, newText: String) {
         viewModelScope.launch {
             try {
-                println("MessagingViewModel: Editing message '$messageId' to '$newText'")
                 StreamBridge.editMessage(messageId, newText).await<JsBoolean>()
                 _editingMessage.value = null
                 _selectedChannelId.value?.let { loadMessages(it) }
@@ -514,12 +513,12 @@ class MessagingViewModel(
     }
 
     fun notifyTyping() {
-        if (typingJob?.isActive == true) {
-            typingJob?.cancel()
-        } else {
+        // Only send typing.start if the timer was not already running
+        if (typingJob?.isActive != true) {
             startTyping()
         }
-        
+        // Always reset the 3-second stop timer
+        typingJob?.cancel()
         typingJob = viewModelScope.launch {
             kotlinx.coroutines.delay(3000)
             stopTyping()
