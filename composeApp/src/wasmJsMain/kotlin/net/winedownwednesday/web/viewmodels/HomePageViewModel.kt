@@ -13,6 +13,7 @@ import net.winedownwednesday.web.data.Event
 import net.winedownwednesday.web.data.Member
 import net.winedownwednesday.web.data.Wine
 import net.winedownwednesday.web.data.repositories.AppRepository
+import net.winedownwednesday.web.utils.toEventLocalDate
 
 class HomePageViewModel(
     private val repository: AppRepository
@@ -43,8 +44,9 @@ class HomePageViewModel(
                     val today = Clock.System.now()
                         .toLocalDateTime(TimeZone.currentSystemDefault()).date
                     _upcomingEvents.value = events.filter {
-                        stringToDate(it.date) >= today
-                    }.sortedBy { it.date }
+                        val d = it.date.toEventLocalDate() ?: return@filter false
+                        d >= today
+                    }.sortedBy { it.date.toEventLocalDate() }
                     _eventsLoaded.value = true
                 }
             }
@@ -67,10 +69,6 @@ class HomePageViewModel(
         }
     }
 
-    private fun stringToDate(date: String): LocalDate {
-        val (year, month, day) = date.split(", ").map { it.toInt() }
-        return LocalDate(year, month, day)
-    }
 
     companion object {
         private const val TAG = "HomePageViewModel"

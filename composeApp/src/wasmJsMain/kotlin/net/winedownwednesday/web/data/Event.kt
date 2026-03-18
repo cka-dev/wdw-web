@@ -8,7 +8,7 @@ import kotlinx.serialization.json.JsonIgnoreUnknownKeys
 @Serializable
 @JsonIgnoreUnknownKeys
 data class Event(
-    val id: Int,
+    val id: Long,                       // Long: Date.now() timestamps overflow Int
     val name: String,
     val date: String,
     val time: String?,
@@ -19,7 +19,8 @@ data class Event(
     val wineSelector: String?,
     val location: String,
     val additionalInfo: String?,
-    val gallery: List<MediaItem>
+    val gallery: List<MediaItem>,
+    val rsvpDeadline: String? = null    // ISO date "YYYY-MM-DD"; null = no deadline
 )
 
 

@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Member(
-    val id: Int,
+    val id: Long,                       // Long: Date.now() timestamps overflow Int
     val name: String,
     val role: String,
     val memberType: MembershipType,

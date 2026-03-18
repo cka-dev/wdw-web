@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Episode(
-    val id: Int,
+    val id: Long,                       // Long: Date.now() timestamps overflow Int
     val title: String,
     val guestName: String,
     val guestPictureUrl: String,

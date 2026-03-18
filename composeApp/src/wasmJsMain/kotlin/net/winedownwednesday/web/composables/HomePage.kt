@@ -62,6 +62,7 @@ import kotlin.math.abs
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import net.winedownwednesday.web.utils.toEventDisplayDate
 
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -506,7 +507,7 @@ fun HomePageEventCard(
                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
             )
             Text(
-                text = "Date: ${event.date}",
+                text = "Date: ${event.date.toEventDisplayDate()}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
             )
@@ -636,7 +637,7 @@ fun EventDetailsDialog(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Date: ${event.date} ${event.time.orEmpty()}",
+                    text = "Date: ${event.date.toEventDisplayDate()} ${event.time.orEmpty()}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )

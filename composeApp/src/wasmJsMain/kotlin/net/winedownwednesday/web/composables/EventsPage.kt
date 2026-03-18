@@ -82,6 +82,9 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import net.winedownwednesday.web.utils.toEventDisplayDate
+import net.winedownwednesday.web.utils.toEventLocalDate
+import net.winedownwednesday.web.utils.toDisplayString
 import kotlinx.dom.appendElement
 import net.winedownwednesday.web.HtmlView
 import net.winedownwednesday.web.LocalLayerContainer
@@ -320,7 +323,7 @@ fun EventCard(
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = "Date: ${formatDate(stringToDate(event.date))}",
+                text = "Date: ${event.date.toEventDisplayDate()}",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.LightGray,
                 minLines = 1,
@@ -528,7 +531,7 @@ fun EventDetailContent(
 
         EventDetailRow(
             label = "Date",
-            value = formatDate(stringToDate(event.date))
+            value = event.date.toEventDisplayDate()
         )
         if (!event.time.isNullOrBlank()) {
             EventDetailRow(label = "Time", value = event.time)
@@ -550,7 +553,8 @@ fun EventDetailContent(
             EventDetailRow(label = "Additional Info", value = event.additionalInfo)
         }
 
-        if (stringToDate(event.date) > Clock.System.now()
+        val eventLocalDate = event.date.toEventLocalDate()
+        if (eventLocalDate != null && eventLocalDate > Clock.System.now()
                 .toLocalDateTime(
                     TimeZone.currentSystemDefault()
                 ).date
@@ -1490,30 +1494,11 @@ fun NonCompactReservationFields(
 }
 
 
-fun stringToDate(date: String): LocalDate {
-    val (year, month, day) = date.split(", ").map { it.toInt() }
-    return LocalDate(year, month, day)
-}
+// Backward-compatible: handles "2025, 3, 19" AND "2025-03-19"
+fun stringToDate(date: String): LocalDate? = date.toEventLocalDate()
 
-private fun formatDate(date: LocalDate): String {
-    val month = when (date.monthNumber) {
-        1 -> "Jan"
-        2 -> "Feb"
-        3 -> "Mar"
-        4 -> "Apr"
-        5 -> "May"
-        6 -> "Jun"
-        7 -> "Jul"
-        8 -> "Aug"
-        9 -> "Sep"
-        10 -> "Oct"
-        11 -> "Nov"
-        12 -> "Dec"
-        else -> ""
-    }
+private fun formatDate(date: LocalDate): String = date.toDisplayString()
 
-    return "$month ${date.dayOfMonth}, ${date.year}"
-}
 
 sealed class SubmissionStatus {
     object Idle : SubmissionStatus()

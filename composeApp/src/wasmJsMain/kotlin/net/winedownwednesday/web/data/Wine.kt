@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Wine(
-    val id: Int,
+    val id: Long,                       // Long: Date.now() timestamps overflow Int
     val name: String,
     val type: String,
     val year: Int,

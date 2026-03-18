@@ -421,13 +421,13 @@ class AuthPageViewModel(
         }
     }
 
-    fun hasUserRsvped(eventId: Int?): Boolean {
+    fun hasUserRsvped(eventId: Long?): Boolean {
         val currentProfile = _profileData.value ?: return false
         if (eventId == null) return false
         return currentProfile.eventRsvps?.containsKey(eventId) ?: false
     }
 
-    fun getRsvpForEvent(eventId: Int?): RSVPRequest? {
+    fun getRsvpForEvent(eventId: Long?): RSVPRequest? {
         if (eventId == null) return null
         return _profileData.value?.eventRsvps?.get(eventId)
     }

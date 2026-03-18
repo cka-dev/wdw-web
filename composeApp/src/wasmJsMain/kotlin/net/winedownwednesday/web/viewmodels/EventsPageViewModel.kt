@@ -12,6 +12,7 @@ import kotlinx.datetime.toLocalDateTime
 import net.winedownwednesday.web.data.Event
 import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.data.repositories.AppRepository
+import net.winedownwednesday.web.utils.toEventLocalDate
 
 class EventsPageViewModel(
     private val repository: AppRepository
@@ -53,23 +54,20 @@ class EventsPageViewModel(
 
     private fun updateUpcomingPastEvents(eventsToProcess: List<Event>) {
         _upcomingEvents.value = eventsToProcess.filter {
-            val eventDate = stringToDate(it.date)
-            eventDate > today || eventDate == today
-        }.sortedBy { it.date }
+            val eventDate = it.date.toEventLocalDate() ?: return@filter false
+            eventDate >= today
+        }.sortedBy { it.date.toEventLocalDate() }
 
         _pastEvents.value = eventsToProcess.filter {
-            stringToDate(it.date) < today
+            val eventDate = it.date.toEventLocalDate() ?: return@filter false
+            eventDate < today
         }
 
         _pastEventsByYear.value = _pastEvents.value?.groupBy {
-            stringToDate(it.date).year
+            it.date.toEventLocalDate()?.year ?: 0
         } ?: emptyMap()
     }
 
-    private fun stringToDate(date: String): LocalDate {
-        val (year, month, day) = date.split(", ").map { it.toInt() }
-        return LocalDate(year, month, day)
-    }
 
     fun setSelectedEvent(event: Event?) {
         _selectedEvent.value = event
