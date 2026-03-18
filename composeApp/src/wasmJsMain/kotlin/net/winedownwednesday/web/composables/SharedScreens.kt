@@ -1,6 +1,5 @@
 package net.winedownwednesday.web.composables
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -20,7 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Icon
@@ -45,7 +43,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -67,9 +64,7 @@ import kotlinx.coroutines.delay
 import net.winedownwednesday.web.viewmodels.LoginUIState
 import org.jetbrains.compose.resources.painterResource
 import wdw_web.composeapp.generated.resources.Res
-import wdw_web.composeapp.generated.resources.ig_logo_96
-import wdw_web.composeapp.generated.resources.wdw_logo_2_96
-import wdw_web.composeapp.generated.resources.yt_logo_96
+import wdw_web.composeapp.generated.resources.wdw_new_logo
 
 
 @Composable
@@ -146,7 +141,7 @@ fun TopNavBar(
                     }
                 ) {
                     Image(
-                        painter = painterResource(Res.drawable.wdw_logo_2_96),
+                        painter = painterResource(Res.drawable.wdw_new_logo),
                         contentDescription = "Wine Down Wednesday Logo",
                         modifier = Modifier.clickable {
                             appBarState.value = AppBarState.HOME
@@ -386,142 +381,6 @@ fun NavDrawerContent(
     }
 }
 
-@Composable
-fun Footer(
-    isMobile: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    val instagramLink = "https://www.instagram.com/uncorked.conversations/"
-    val youtubeLink = "https://www.youtube.com/@FreeHDvideosnocopyright"
-
-    MaterialTheme(
-        colorScheme = darkColorScheme(
-            primary = Color(0xFF1E1E1E),
-            secondary = Color(0xFF333333),
-            surface = Color(0xFF141414),
-            onSurface = Color.White,
-            onPrimary = Color.White
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp)
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.SpaceAround,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = "Connect with Us",
-                        fontWeight = FontWeight.Bold,
-                    )
-
-                    Row {
-                        Icon(
-                            painter = painterResource(Res.drawable.ig_logo_96),
-                            contentDescription = "Instagram logo",
-                            tint = Color.White,
-                            modifier = Modifier
-                                .clickable {
-                                    window.open(instagramLink)
-                                }
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Icon(
-                            painter = painterResource(Res.drawable.yt_logo_96),
-                            contentDescription = "Youtube logo",
-                            tint = Color.White,
-                            modifier = Modifier.clickable {
-                                window.open(youtubeLink)
-                            }
-                        )
-                    }
-                }
-                FooterColumn(
-                    title = "Contact",
-                    items = listOf("info@winedownwednesday.net", "+1 (404) 939-3370"),
-                    onLinkClicked = {}
-                )
-                AnimatedVisibility(!isMobile){
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = "Get our Apps",
-                            fontWeight = FontWeight.Bold,
-                        )
-
-                        Text(
-                            text = "Coming Soon",
-                            modifier = Modifier.selectable(
-                                selected = false,
-                                enabled = true,
-                                onClick = {}
-                            )
-                        )
-
-//                        Row {
-//                            Icon(
-//                                painter = painterResource(Res.drawable.Google_Play_App),
-//                                contentDescription = "Get it on Google Play",
-//                                tint = Color.White,
-//                                modifier = Modifier
-//                                    .clickable {
-//                                        window.open(instagramLink)
-//                                    }
-//                            )
-//                            Spacer(modifier = Modifier.width(4.dp))
-//                            Icon(
-//                                painter = painterResource(Res.drawable.yt_logo_96),
-//                                contentDescription = "Youtube logo",
-//                                tint = Color.White,
-//                                modifier = Modifier.clickable {
-//                                    window.open(youtubeLink)
-//                                }
-//                            )
-//                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun FooterColumn(
-    title: String,
-    items: List<String>,
-    isLinks: Boolean = false,
-    onLinkClicked: () -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            text = title,
-            fontWeight = FontWeight.Bold,
-        )
-        items.forEach { item ->
-            if (isLinks) {
-                Text(
-                    text = item,
-                    modifier = Modifier.selectable(
-                        selected = false,
-                        enabled = true,
-                        onClick = { onLinkClicked() }
-                    )
-                )
-            } else {
-                Text(
-                    text = item,
-                    modifier = Modifier.selectable(
-                        selected = false,
-                        enabled = true,
-                        onClick = {}
-                    )
-                )
-            }
-        }
-    }
-}
 
 @Composable
 fun SearchBar(

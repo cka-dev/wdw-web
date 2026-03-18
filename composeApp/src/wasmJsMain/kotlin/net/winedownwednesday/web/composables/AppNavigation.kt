@@ -176,13 +176,14 @@ fun AppNavigation(
                     }
 
                     if (isCompactScreen) {
+                        CompactFooter()
                         MobileBottomNavBar(
                             appBarState = appBarState,
                             uiState = uiState
                         )
                     } else {
                         Footer(
-                            isMobile = isCompactScreen,
+                            onNavClick = { appBarState.value = it },
                             modifier = Modifier.fillMaxWidth()
                         )
                     }

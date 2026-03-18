@@ -138,7 +138,28 @@ Top-level navigation is managed via `AppBarState` enum. On desktop, a horizontal
 - **Top bar**: ☰ hamburger + logo + profile avatar/login icon
 - Footer is hidden on compact screens (bottom bar replaces it)
 
+### Footer (`Footer.kt`)
+A full-width 4-column dark-themed footer rendered below all desktop page content:
+- **Brand**: Logo (`wdw_new_logo`), tagline
+- **Navigate**: 7-link site map split into 2 sub-columns; links use `onPointerEvent(Enter/Exit)` for true hover detection (required in Kotlin/WASM — `clickable` alone causes hover state to stick)
+- **Connect**: IG/YT icons (white-tinted), clickable email (opens `ContactFormDialog`), clickable phone number (`tel:` deep link — opens dialer on mobile, FaceTime/Skype on desktop)
+- **Get our Apps**: Google Play badge + Apple App Store badge (official SVGs/PNGs from `/drawable`), linking to store listings; deep-linked to app stores on mobile
+
+A `CompactFooter` strip is shown on mobile above the `MobileBottomNavBar`.
+
+### Contact Form (`ContactFormDialog.kt`)
+A `BasicAlertDialog` modal triggered by clicking the email address in the footer.
+- Fields: Name, reply-to email, message (multiline)
+- Inline field validation before submit
+- HTTP POST to `sendContactEmail` Cloud Function
+- **WASM JS interop pattern**: Uses `@JsFun` with callbacks (`onSuccess`/`onError`) + `suspendCancellableCoroutine` to bridge async JS fetch to Kotlin coroutines. `Promise<T>` cannot be used as a `@JsFun` return type in Kotlin/WASM 2.1; the callback pattern is the correct approach.
+- Loading spinner during submit; success screen with `Icons.Default.CheckCircle` on completion
+
+### Logo
+The app logo is stored as `wdw_new_logo.png` in `composeApp/src/commonMain/composeResources/drawable/` and referenced in both `SharedScreens.kt` (TopNavBar) and `Footer.kt` (brand column) via `painterResource(Res.drawable.wdw_new_logo)`.
+
 ## 5. Deployment Info
 - **Hosting**: Firebase Hosting.
-- **Build Command**: `./gradlew :composeApp:wasmJsBrowserDistribution`.
+- **Build Command**: `./gradlew :composeApp:wasmJsBrowserDistribution`
+- **Memory**: Production WASM compilation requires at least 6 GB heap. Set in `gradle.properties`: `kotlin.daemon.jvmargs=-Xmx6G` and `org.gradle.jvmargs=-Xmx6G`.
 - **Headers**: `firebase.json` is configured to serve `.wasm` files with `application/wasm` MIME type and specific caching headers for performance.
