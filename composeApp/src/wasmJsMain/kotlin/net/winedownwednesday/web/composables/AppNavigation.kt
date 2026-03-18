@@ -226,45 +226,53 @@ fun AppNavigation(
                         NavDisplay(
                             backStack = backStack,
                             entryProvider = entryProvider {
-                                entry<Route.Home>      { HomePage(isCompactScreen = isCompactScreen) }
-                                entry<Route.About>     { AboutPage(isCompactScreen = isCompactScreen) }
+                                entry<Route.Home>      { FadeInPage { HomePage(isCompactScreen = isCompactScreen) } }
+                                entry<Route.About>     { FadeInPage { AboutPage(isCompactScreen = isCompactScreen) } }
                                 entry<Route.Members>   {
-                                    MembersPage(
-                                        isCompactScreen = isCompactScreen,
-                                        uiState         = uiState,
-                                        userProfileData = userProfileData
-                                    )
+                                    FadeInPage {
+                                        MembersPage(
+                                            isCompactScreen = isCompactScreen,
+                                            uiState         = uiState,
+                                            userProfileData = userProfileData
+                                        )
+                                    }
                                 }
-                                entry<Route.Podcasts>  { PodcastsPage(isCompactScreen = isCompactScreen) }
+                                entry<Route.Podcasts>  { FadeInPage { PodcastsPage(isCompactScreen = isCompactScreen) } }
                                 entry<Route.Events>    {
-                                    EventsPage(
-                                        isCompactScreen   = isCompactScreen,
-                                        uiState           = uiState,
-                                        authPageViewModel = authViewModel
-                                    )
+                                    FadeInPage {
+                                        EventsPage(
+                                            isCompactScreen   = isCompactScreen,
+                                            uiState           = uiState,
+                                            authPageViewModel = authViewModel
+                                        )
+                                    }
                                 }
-                                entry<Route.Wines>     { WinePage(isCompactScreen = isCompactScreen) }
+                                entry<Route.Wines>     { FadeInPage { WinePage(isCompactScreen = isCompactScreen) } }
                                 entry<Route.Login>     {
                                     if (!isLoggedIn) {
-                                        LoginScreen(
-                                            isCompactScreen = isCompactScreen,
-                                            onLoginSuccess  = { },
-                                            viewModel       = authViewModel
-                                        )
+                                        FadeInPage {
+                                            LoginScreen(
+                                                isCompactScreen = isCompactScreen,
+                                                onLoginSuccess  = { },
+                                                viewModel       = authViewModel
+                                            )
+                                        }
                                     } else {
                                         LaunchedEffect(Unit) { replaceTop(Route.Home) }
                                     }
                                 }
                                 entry<Route.Profile>   {
-                                    ProfilePage(
-                                        isCompactScreen = isCompactScreen,
-                                        onLogout        = { scope.launch { authViewModel.logout() } },
-                                        isNewUser       = isNewUser,
-                                        viewModel       = authViewModel,
-                                        userEmail       = userEmail
-                                    )
+                                    FadeInPage {
+                                        ProfilePage(
+                                            isCompactScreen = isCompactScreen,
+                                            onLogout        = { scope.launch { authViewModel.logout() } },
+                                            isNewUser       = isNewUser,
+                                            viewModel       = authViewModel,
+                                            userEmail       = userEmail
+                                        )
+                                    }
                                 }
-                                entry<Route.Blog>      { BlogPage(isCompactScreen = isCompactScreen) }
+                                entry<Route.Blog>      { FadeInPage { BlogPage(isCompactScreen = isCompactScreen) } }
                                 entry<Route.Messaging> {
                                     if (isLoggedIn) {
                                         MessagingScreen(isCompactScreen = isCompactScreen)

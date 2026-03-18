@@ -1,5 +1,7 @@
 package net.winedownwednesday.web.composables
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -114,11 +117,13 @@ fun AboutPage(
             item { Spacer(modifier = Modifier.height(32.dp)) }
 
             if (isCompactScreen) {
-                items(aboutSections) { aboutSection ->
-                    CompactScreenAboutCard(
-                        section = aboutSection,
-                        onClick = { selectedSection = aboutSection }
-                    )
+                itemsIndexed(aboutSections) { index, aboutSection ->
+                    GridItemReveal(index = index) {
+                        CompactScreenAboutCard(
+                            section = aboutSection,
+                            onClick = { selectedSection = aboutSection }
+                        )
+                    }
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             } else {
@@ -126,20 +131,22 @@ fun AboutPage(
 
                 items(chunkedSections.size) { chunkIndex ->
                     val chunk = chunkedSections[chunkIndex]
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        chunk.forEachIndexed { indexInChunk, section ->
-                            Box(modifier = Modifier
-                                .weight(1f)
-                            ) {
-                                LSAboutCard(
-                                    section = section,
-                                    onClick = { selectedSection = section }
-                                )
+                    GridItemReveal(index = chunkIndex) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            chunk.forEachIndexed { indexInChunk, section ->
+                                Box(modifier = Modifier
+                                    .weight(1f)
+                                ) {
+                                    LSAboutCard(
+                                        section = section,
+                                        onClick = { selectedSection = section }
+                                    )
+                                }
                             }
                         }
                     }
@@ -148,12 +155,67 @@ fun AboutPage(
             }
         }
     }
-    
     selectedSection?.let { section ->
         AboutSectionDialog(
             section = section,
             onDismiss = { selectedSection = null }
         )
+    }
+}
+
+@Composable
+fun AboutSectionDialog(
+    section: AboutSection,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+                elevation = CardDefaults.cardElevation(24.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    AboutImage(
+                        imageRes = section.imageRes,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp)
+                    ) {
+                        Text(
+                            text = section.title,
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = section.body,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.LightGray.copy(alpha = 0.9f)
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(onClick = onDismiss) {
+                                Text("Close", color = Color.White)
+                            }
+                        }
+                    }
+                }
+            }
     }
 }
 
@@ -166,6 +228,7 @@ fun LSAboutCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
+            .hoverScale()
             .clip(RoundedCornerShape(16.dp))
             .clickable { onClick() },
         elevation = CardDefaults.cardElevation(8.dp),
@@ -205,6 +268,7 @@ fun CompactScreenAboutCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
+            .hoverScale()
             .clip(RoundedCornerShape(16.dp))
             .clickable { onClick() },
         elevation = CardDefaults.cardElevation(6.dp),
@@ -302,12 +366,18 @@ fun AutoScrollingImageCarousel(
                 .clip(RectangleShape),
             contentAlignment = Alignment.Center
         ) {
-            Image(
-                painter = painterResource(imagePaths[currentIndex]),
-                contentDescription = "Carousel Image",
-                contentScale = ContentScale.Crop, // crops evenly now, but limited in width
-                modifier = Modifier.fillMaxSize()
-            )
+            Crossfade(
+                targetState  = currentIndex,
+                animationSpec = tween(durationMillis = 600),
+                label        = "carouselCrossfade"
+            ) { index ->
+                Image(
+                    painter = painterResource(imagePaths[index]),
+                    contentDescription = "Carousel Image",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
         Box(
             modifier = Modifier
@@ -327,65 +397,4 @@ fun AutoScrollingImageCarousel(
         }
     }
 }
-
-@Composable
-fun AboutSectionDialog(
-    section: AboutSection,
-    onDismiss: () -> Unit
-) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
-            elevation = CardDefaults.cardElevation(24.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-            ) {
-                AboutImage(
-                    imageRes = section.imageRes,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                )
-                
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp)
-                ) {
-                    Text(
-                        text = section.title,
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = section.body,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.LightGray.copy(alpha = 0.9f)
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        TextButton(onClick = onDismiss) {
-                            Text("Close", color = Color.White)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-
-
-
 

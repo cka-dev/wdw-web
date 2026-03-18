@@ -168,7 +168,30 @@ A `BasicAlertDialog` modal triggered by clicking the email address in the footer
 ### Logo
 The app logo is stored as `wdw_new_logo.png` in `composeApp/src/commonMain/composeResources/drawable/` and referenced in both `SharedScreens.kt` (TopNavBar) and `Footer.kt` (brand column) via `painterResource(Res.drawable.wdw_new_logo)`.
 
-## 5. Deployment Info
+## 5. Animation System
+
+All animation primitives live in `composables/AnimationUtils.kt` for consistent, maintainable reuse.
+
+| Composable / Modifier | Description |
+|---|---|
+| `Modifier.hoverScale(scale)` | Scales on mouse hover. Scale is tunable: `1.04f` cards, `1.12f` nav items. |
+| `shimmerBrush()` | Animated diagonal shimmer `Brush` for loading skeleton placeholders. |
+| `SlideInCard(delayMs)` | Right-to-left slide entrance (60dp offset → 0). Staggered delays on HomePage cards. |
+| `FadeInPage()` | Page-level alpha fade via `graphicsLayer`. Used on all 10 nav routes. |
+| `GridItemReveal(index)` | Bottom-up 40dp entrance for grid items with 60ms/index stagger (cap 360ms, 500ms EaseOut). Used on EventsPage. |
+
+**Page-level highlights:**
+- **HomePage**: Typewriter hero text, post-title subtitle fade, 3-card staggered slide-in, inner carousel delayed 1800ms
+- **EventsPage**: Bottom-up staggered grid reveal, toggle color animation, gallery dot size animation
+- **WinePage / PodcastsPage**: Selection highlight `animateColorAsState`
+- **TopNavItem**: Active tab underline pulse + glow bloom (`InfiniteTransition`)
+- **All routes**: `FadeInPage` transition wrapper
+
+> **Note on dialog animations**: Compose Multiplatform's `Dialog` uses a browser-level popup whose backdrop cannot be animated via Compose. `DialogReveal` (available in `AnimationUtils.kt`) was evaluated but removed — the system animation and Compose animation conflict caused jarring results.
+
+---
+
+## 6. Deployment Info
 - **Hosting**: Firebase Hosting.
 - **Build Command**: `./gradlew :composeApp:wasmJsBrowserDistribution`
 - **Memory**: Production WASM compilation requires at least 6 GB heap. Set in `gradle.properties`: `kotlin.daemon.jvmargs=-Xmx6G` and `org.gradle.jvmargs=-Xmx6G`.

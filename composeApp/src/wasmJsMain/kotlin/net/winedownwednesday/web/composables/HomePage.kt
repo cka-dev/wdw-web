@@ -2,8 +2,10 @@ package net.winedownwednesday.web.composables
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.clickable
@@ -83,6 +85,7 @@ fun HomePage(
     val maxListSize = maxOf(upcomingEvents.size, featuredWines.size)
     LaunchedEffect(maxListSize) {
         if (maxListSize >= 1) {
+            delay(1800L) // wait for all cards to finish sliding in (~1650ms total)
             while (true) {
                 delay(5000L)
                 currentIndex = (currentIndex + 1) % maxListSize
@@ -108,21 +111,40 @@ fun HomePage(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Text(
-                    text = "Welcome to the Wine Down Wednesday Social Club",
-                    fontSize = 24.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onBackground
+                val fullTitle = "Welcome to the Wine Down Wednesday Social Club"
+                var displayedTitle by remember { mutableStateOf("") }
+                var subtitleVisible by remember { mutableStateOf(false) }
+                val subtitleAlpha by animateFloatAsState(
+                    targetValue  = if (subtitleVisible) 1f else 0f,
+                    animationSpec = tween(700, easing = EaseOut),
+                    label        = "subtitleFade"
                 )
-            }
-            item {
-                Text(
-                    text = "Connecting wine enthusiasts from around Atlanta and the world.",
-                    fontSize = 16.sp,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-                )
+                LaunchedEffect(Unit) {
+                    for (i in 1..fullTitle.length) {
+                        delay(38L)
+                        displayedTitle = fullTitle.take(i)
+                    }
+                    subtitleVisible = true
+                }
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = displayedTitle,
+                        fontSize = 24.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Connecting wine enthusiasts from around Atlanta and the world.",
+                        fontSize = 16.sp,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                        modifier = Modifier.graphicsLayer { alpha = subtitleAlpha }
+                    )
+                }
             }
             item {
                 Spacer(modifier = Modifier.height(verticalPadding))
@@ -133,25 +155,31 @@ fun HomePage(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    AutoScrollingEventDisplay(
-                        events = upcomingEvents,
-                        currentIndex = currentIndex,
-                        isCompactScreen = isCompactScreen,
-                        onEventDetailsClick = { event -> selectedEvent = event },
-                        isLoaded = eventsLoaded
-                    )
-                    AutoScrollingWineListHorizontal(
-                        title = campaignName,
-                        description = campaignDescription,
-                        wines = featuredWines,
-                        currentIndex = currentIndex,
-                        isCompactScreen = isCompactScreen,
-                        onWineDetailsClick = { wine -> selectedWine = wine }
-                    )
-                    MemberSpotlightCard(
-                        member = highlightedMember,
-                        isCompactScreen = isCompactScreen
-                    )
+                    SlideInCard(delayMs = 200) {
+                        AutoScrollingEventDisplay(
+                            events = upcomingEvents,
+                            currentIndex = currentIndex,
+                            isCompactScreen = isCompactScreen,
+                            onEventDetailsClick = { event -> selectedEvent = event },
+                            isLoaded = eventsLoaded
+                        )
+                    }
+                    SlideInCard(delayMs = 400) {
+                        AutoScrollingWineListHorizontal(
+                            title = campaignName,
+                            description = campaignDescription,
+                            wines = featuredWines,
+                            currentIndex = currentIndex,
+                            isCompactScreen = isCompactScreen,
+                            onWineDetailsClick = { wine -> selectedWine = wine }
+                        )
+                    }
+                    SlideInCard(delayMs = 650) {
+                        MemberSpotlightCard(
+                            member = highlightedMember,
+                            isCompactScreen = isCompactScreen
+                        )
+                    }
                 }
             }
         }
@@ -196,7 +224,8 @@ fun AutoScrollingEventDisplay(
             )
             .then(
                 if (!isCompactScreen) Modifier.height(500.dp) else Modifier.heightIn(min = 350.dp)
-            ),
+            )
+            .hoverScale(),
         elevation = cardElevation(defaultElevation = 16.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
     ) {
@@ -270,7 +299,8 @@ fun AutoScrollingWineListHorizontal(
         shape = RoundedCornerShape(16.dp),
         modifier = modifier
             .then(if (!isCompactScreen) Modifier.fillMaxWidth(0.3f) else Modifier.fillMaxWidth())
-            .then(if (!isCompactScreen) Modifier.height(500.dp) else Modifier.heightIn(min = 350.dp)),
+            .then(if (!isCompactScreen) Modifier.height(500.dp) else Modifier.heightIn(min = 350.dp))
+            .hoverScale(),
         elevation = cardElevation(defaultElevation = 16.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
     ) {
@@ -767,6 +797,7 @@ fun MemberSpotlightCard(
     Card(
         shape = RoundedCornerShape(16.dp),
         modifier = modifier
+            .hoverScale()
             .then(
                 if (!isCompactScreen) Modifier.fillMaxWidth(0.3f)
                 else Modifier.fillMaxWidth()

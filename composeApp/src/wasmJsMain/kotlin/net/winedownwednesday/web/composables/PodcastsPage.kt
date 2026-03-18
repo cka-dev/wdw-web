@@ -1,5 +1,7 @@
 package net.winedownwednesday.web.composables
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -133,18 +136,20 @@ fun LargeScreenPodcastPage(
                 ) {
                     filteredEpisodes?.let { episodes ->
                         items(episodes) { episode ->
-                            EpisodeListItem(
-                                episode = episode,
-                                isSelected = (
-                                        if (selectedEpisode != null) {
-                                            episode == selectedEpisode
-                                        } else {
-                                            false
-                                        }),
-                                onClick = {
-                                    onEpisodeSelected(episode)
-                                }
-                            )
+                            ScrollReveal {
+                                EpisodeListItem(
+                                    episode = episode,
+                                    isSelected = (
+                                            if (selectedEpisode != null) {
+                                                episode == selectedEpisode
+                                            } else {
+                                                false
+                                            }),
+                                    onClick = {
+                                        onEpisodeSelected(episode)
+                                    }
+                                )
+                            }
                             Spacer(modifier = Modifier.height(16.dp))
                         }
                     }
@@ -193,12 +198,17 @@ fun EpisodeListItem(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val bgColor = if (isSelected) Color(0xFF333333) else Color(0xFF1E1E1E)
+    val bgColor by animateColorAsState(
+        targetValue  = if (isSelected) Color(0xFF333333) else Color(0xFF1E1E1E),
+        animationSpec = tween(durationMillis = 250),
+        label        = "episodeSelection"
+    )
 
     Card(
         colors = CardDefaults.cardColors(containerColor = bgColor),
         modifier = Modifier
             .fillMaxWidth()
+            .hoverScale()
             .clickable { onClick() }
     ) {
         Row(
@@ -384,11 +394,13 @@ fun CompactPodcastsScreen(
                     .fillMaxSize()
             ) {
                 if (!filteredEpisodes.isNullOrEmpty()) {
-                    items(filteredEpisodes) { episode ->
-                        EpisodeCard(
-                            episode = episode,
-                            onClick = { onSelectedEpisodeChange(episode) }
-                        )
+                    itemsIndexed(filteredEpisodes) { index, episode ->
+                        GridItemReveal(index = index) {
+                            EpisodeCard(
+                                episode = episode,
+                                onClick = { onSelectedEpisodeChange(episode) }
+                            )
+                        }
                     }
                 }
             }
@@ -409,6 +421,7 @@ fun EpisodeCard(episode: Episode, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
+            .hoverScale()
             .clickable(onClick = onClick)
             .wrapContentSize(),
         shape = RoundedCornerShape(16.dp),

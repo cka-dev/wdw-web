@@ -1,6 +1,9 @@
 package net.winedownwednesday.web.composables
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,6 +29,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
@@ -139,13 +143,23 @@ fun EventsPage(
                 color = Color.White
             )
 
+        val upcomingColor by animateColorAsState(
+            targetValue  = if (showUpcoming) Color(0xFFFF7F33) else Color(0xFF2A2A2A),
+            animationSpec = tween(durationMillis = 300),
+            label        = "upcomingToggle"
+        )
+        val pastColor by animateColorAsState(
+            targetValue  = if (!showUpcoming) Color(0xFFFF7F33) else Color(0xFF2A2A2A),
+            animationSpec = tween(durationMillis = 300),
+            label        = "pastToggle"
+        )
+
             Row {
                 Button(
                     onClick = { showUpcoming = true },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (showUpcoming)
-                            Color(0xFFFF7F33) else Color(0xFF2A2A2A),
-                        contentColor = Color.White
+                        containerColor = upcomingColor,
+                        contentColor   = Color.White
                     ),
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.padding(end = 8.dp)
@@ -156,9 +170,8 @@ fun EventsPage(
                 Button(
                     onClick = { showUpcoming = false },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (!showUpcoming)
-                            Color(0xFFFF7F33) else Color(0xFF2A2A2A),
-                        contentColor = Color.White
+                        containerColor = pastColor,
+                        contentColor   = Color.White
                     ),
                     shape = RoundedCornerShape(8.dp)
                 ) {
@@ -177,25 +190,27 @@ fun EventsPage(
                 .fillMaxSize()
         ) {
             if (!eventsToDisplay.isNullOrEmpty()) {
-                items(eventsToDisplay) { event ->
-                    EventCard(
-                        event = event,
-                        onEventSelectedChange = {
-                            viewModel.setSelectedEvent(it)
-                        },
-                        viewModel = viewModel,
-                        showUpcoming = showUpcoming,
-                        isCompactScreen = isCompactScreen,
-                        uiState = uiState,
-                        authPageViewModel = authPageViewModel,
-                        onRsvpClick = {
-                            eventForRsvp = event
-                        },
-                        onDismissRequest = {
-                            eventForRsvp = null
-                        },
-                        eventForRsvp = eventForRsvp,
-                    )
+                itemsIndexed(eventsToDisplay) { index, event ->
+                    GridItemReveal(index = index, animationKey = showUpcoming) {
+                        EventCard(
+                            event = event,
+                            onEventSelectedChange = {
+                                viewModel.setSelectedEvent(it)
+                            },
+                            viewModel = viewModel,
+                            showUpcoming = showUpcoming,
+                            isCompactScreen = isCompactScreen,
+                            uiState = uiState,
+                            authPageViewModel = authPageViewModel,
+                            onRsvpClick = {
+                                eventForRsvp = event
+                            },
+                            onDismissRequest = {
+                                eventForRsvp = null
+                            },
+                            eventForRsvp = eventForRsvp,
+                        )
+                    }
                 }
             }
         }
@@ -262,6 +277,7 @@ fun EventCard(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 250.dp)
+            .hoverScale()
             .clip(RoundedCornerShape(12.dp))
             .clickable {
                 onEventSelectedChange(event)
@@ -737,9 +753,14 @@ fun CustomPagerIndicator(
     ) {
         repeat(pageCount) { index ->
             val isSelected = (index == currentPage)
+            val dotSize by animateDpAsState(
+                targetValue  = if (isSelected) 12.dp else 8.dp,
+                animationSpec = tween(durationMillis = 200),
+                label        = "dotSize"
+            )
             Box(
                 modifier = Modifier
-                    .size(if (isSelected) 12.dp else 8.dp)
+                    .size(dotSize)
                     .clip(CircleShape)
                     .background(if (isSelected) Color.White else Color.Gray)
             )
@@ -868,11 +889,11 @@ fun RSVPComponent(
 
     Dialog(onDismissRequest = onDismissRequest) {
         Column {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
 
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp),

@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -108,6 +109,7 @@ fun MemberCard(
         modifier = Modifier
             .width(200.dp)
             .aspectRatio(1f)
+            .hoverScale()
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFF282828)
@@ -186,15 +188,17 @@ fun CompactScreenMembersPage(
                     )
                 }
 
-                items(section.members.filter {
+                itemsIndexed(section.members.filter {
                     it.matchesQuery(searchQuery)
-                }) { member ->
-                    CompactMemberCard(
-                        member = member,
-                        onClick = {
-                            onSelectedMemberChange(member)
-                        }
-                    )
+                }) { index, member ->
+                    GridItemReveal(index = index, animationKey = searchQuery) {
+                        CompactMemberCard(
+                            member = member,
+                            onClick = {
+                                onSelectedMemberChange(member)
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -210,6 +214,7 @@ fun CompactScreenMembersPage(
     }
 }
 
+
 @Composable
 fun CompactMemberCard(
     member: Member,
@@ -220,6 +225,7 @@ fun CompactMemberCard(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(1f)
+            .hoverScale()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
@@ -266,12 +272,12 @@ fun CompactMemberDetailDialog(
 ) {
     Dialog(onDismissRequest = onDismissRequest, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(
-            modifier = modifier.fillMaxWidth().padding(16.dp),
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant
-        ) {
-            CompactMemberDetailContent(member, uiState,userProfileData, onDismissRequest)
-        }
+                modifier = modifier.fillMaxWidth().padding(16.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                CompactMemberDetailContent(member, uiState, userProfileData, onDismissRequest)
+            }
     }
 }
 
@@ -505,13 +511,15 @@ fun LargeScreenMemberPage(
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
                     }
-                    items(section.members) { member ->
-                        MemberCard(
-                            member = member,
-                            onClick = { onSelectedMemberChange(member) },
-                            modifier = Modifier
-                                .aspectRatio(1f)
-                        )
+                    itemsIndexed(section.members) { index, member ->
+                        GridItemReveal(index = index) {
+                            MemberCard(
+                                member = member,
+                                onClick = { onSelectedMemberChange(member) },
+                                modifier = Modifier
+                                    .aspectRatio(1f)
+                            )
+                        }
                     }
                 }
             }

@@ -1,5 +1,8 @@
 package net.winedownwednesday.web.composables
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -93,7 +97,11 @@ fun WineListItem(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val bgColor = if (isSelected) Color(0xFFFF7F33) else Color(0xFF2A2A2A)
+    val bgColor by animateColorAsState(
+        targetValue  = if (isSelected) Color(0xFFFF7F33) else Color(0xFF2A2A2A),
+        animationSpec = tween(durationMillis = 300),
+        label        = "wineSelection"
+    )
 
     Card(
         modifier = Modifier
@@ -225,6 +233,7 @@ fun WineCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
+            .hoverScale()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -279,14 +288,14 @@ fun WineCard(
 fun WineDetailPopup(wine: Wine, onDismissRequest: () -> Unit) {
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier
-                .wrapContentSize()
-                .padding(16.dp)
-        ) {
-            WineDetailContent(wine = wine, onCloseClick = onDismissRequest)
-        }
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier
+                    .wrapContentSize()
+                    .padding(16.dp)
+            ) {
+                WineDetailContent(wine = wine, onCloseClick = onDismissRequest)
+            }
     }
 }
 
@@ -387,15 +396,17 @@ fun CompactScreenWinePage(
             )
         }
 
-        items(favoriteWines.filter { it.matchesQuery(searchQuery) }) { wine ->
-            WineCard(
-                wine = wine,
-                isFavorite = true,
-                onClick = {
-                    onWineClick(wine)
-                    showDialog = true
-                }
-            )
+        itemsIndexed(favoriteWines.filter { it.matchesQuery(searchQuery) }) { index, wine ->
+            GridItemReveal(index = index, animationKey = searchQuery) {
+                WineCard(
+                    wine = wine,
+                    isFavorite = true,
+                    onClick = {
+                        onWineClick(wine)
+                        showDialog = true
+                    }
+                )
+            }
         }
 
         item {
@@ -409,18 +420,10 @@ fun CompactScreenWinePage(
 
     if (showDialog) {
         selectedWine?.let { wine ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                WineDetailPopup(
-                    wine = wine,
-                    onDismissRequest = { showDialog = false }
-                )
-            }
+            WineDetailPopup(
+                wine = wine,
+                onDismissRequest = { showDialog = false }
+            )
         }
     }
 }
@@ -471,11 +474,13 @@ fun LargeScreenWinePage(
                         modifier = Modifier.fillMaxSize()
                     ) {
                         items(filteredWines) { wine ->
-                            WineListItem(
-                                wine = wine,
-                                isSelected = (wine == selectedWine),
-                                onClick = { onSelectedWineChange(wine) }
-                            )
+                            ScrollReveal {
+                                WineListItem(
+                                    wine = wine,
+                                    isSelected = (wine == selectedWine),
+                                    onClick = { onSelectedWineChange(wine) }
+                                )
+                            }
                             Spacer(modifier = Modifier.height(16.dp))
                         }
                     }
@@ -493,21 +498,27 @@ fun LargeScreenWinePage(
                 modifier = Modifier.padding(16.dp),
                 elevation = CardDefaults.cardElevation(4.dp),
             ){
-                if (selectedWine == null) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Select a wine to see details",
-                            color = Color.LightGray,
-                            style = MaterialTheme.typography.titleMedium
+                Crossfade(
+                    targetState  = selectedWine,
+                    animationSpec = tween(durationMillis = 280),
+                    label        = "wineDetailCrossfade"
+                ) { wine ->
+                    if (wine == null) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Select a wine to see details",
+                                color = Color.LightGray,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+                    } else {
+                        WineDetail(
+                            wine = wine,
                         )
                     }
-                } else {
-                    WineDetail(
-                        wine =  selectedWine,
-                    )
                 }
             }
         }
