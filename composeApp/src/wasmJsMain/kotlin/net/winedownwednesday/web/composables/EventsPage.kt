@@ -5,6 +5,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +17,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,18 +31,21 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
@@ -57,6 +63,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -86,9 +93,6 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import net.winedownwednesday.web.utils.toEventDisplayDate
-import net.winedownwednesday.web.utils.toEventLocalDate
-import net.winedownwednesday.web.utils.toDisplayString
 import kotlinx.dom.appendElement
 import net.winedownwednesday.web.HtmlView
 import net.winedownwednesday.web.LocalLayerContainer
@@ -98,6 +102,9 @@ import net.winedownwednesday.web.data.MediaItem
 import net.winedownwednesday.web.data.MediaType
 import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.data.models.UserProfileData
+import net.winedownwednesday.web.utils.toDisplayString
+import net.winedownwednesday.web.utils.toEventDisplayDate
+import net.winedownwednesday.web.utils.toEventLocalDate
 import net.winedownwednesday.web.viewmodels.AuthPageViewModel
 import net.winedownwednesday.web.viewmodels.EventsPageViewModel
 import net.winedownwednesday.web.viewmodels.LoginUIState
@@ -189,38 +196,50 @@ fun EventsPage(
             WidthClass.Large    -> 380.dp
             WidthClass.XLarge   -> 420.dp
         }
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = colMinSize),
-            contentPadding = PaddingValues(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier
-                .fillMaxSize()
-        ) {
-            if (!eventsToDisplay.isNullOrEmpty()) {
-                itemsIndexed(eventsToDisplay) { index, event ->
-                    GridItemReveal(index = index, animationKey = showUpcoming) {
-                        EventCard(
-                            event = event,
-                            onEventSelectedChange = {
-                                viewModel.setSelectedEvent(it)
-                            },
-                            viewModel = viewModel,
-                            showUpcoming = showUpcoming,
-                            isCompactScreen = sizeInfo.useCompactNav,
-                            uiState = uiState,
-                            authPageViewModel = authPageViewModel,
-                            onRsvpClick = {
-                                eventForRsvp = event
-                            },
-                            onDismissRequest = {
-                                eventForRsvp = null
-                            },
-                            eventForRsvp = eventForRsvp,
-                        )
+        val gridState = rememberLazyGridState()
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = colMinSize),
+                state = gridState,
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
+                if (!eventsToDisplay.isNullOrEmpty()) {
+                    itemsIndexed(eventsToDisplay) { index, event ->
+                        GridItemReveal(index = index, animationKey = showUpcoming) {
+                            EventCard(
+                                event = event,
+                                onEventSelectedChange = {
+                                    viewModel.setSelectedEvent(it)
+                                },
+                                viewModel = viewModel,
+                                showUpcoming = showUpcoming,
+                                isCompactScreen = sizeInfo.useCompactNav,
+                                uiState = uiState,
+                                authPageViewModel = authPageViewModel,
+                                onRsvpClick = {
+                                    eventForRsvp = event
+                                },
+                                onDismissRequest = {
+                                    eventForRsvp = null
+                                },
+                                eventForRsvp = eventForRsvp,
+                            )
+                        }
                     }
                 }
             }
+            VerticalScrollbar(
+                adapter  = rememberScrollbarAdapter(gridState),
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .fillMaxHeight()
+                    .padding(end = 4.dp),
+                style = wdwScrollbarStyle()
+            )
         }
     }
 
@@ -307,13 +326,14 @@ fun EventCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(150.dp)
+                    .aspectRatio(16f / 9f)
                     .clip(RoundedCornerShape(8.dp))
             ) {
                 AsyncImage(
                     model = event.imageUrl,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
                 )
             }
 
@@ -454,12 +474,18 @@ fun LargeScreenEventDetailPopup(
             modifier = Modifier
                 .align(Alignment.Center)
                 .fillMaxWidth(0.4f)
+                .fillMaxHeight(0.85f)
                 .padding(16.dp)
+                .clickable(
+                    interactionSource = null,
+                    indication = null
+                ) { /* consume click so it doesn't reach dismissing background */ }
         ) {
             EventDetailContent(
                 event = selectedEvent,
                 onCloseClick = onDismissRequest,
-                onRsvpClick = onRsvpClick
+                onRsvpClick = onRsvpClick,
+                modifier = Modifier.fillMaxSize()
             )
         }
     }
@@ -484,12 +510,18 @@ fun CompactScreenEventDetailPopup(
             modifier = Modifier
                 .align(Alignment.Center)
                 .fillMaxWidth(0.9f)
+                .fillMaxHeight(0.85f)
                 .padding(16.dp)
+                .clickable(
+                    interactionSource = null,
+                    indication = null
+                ) { /* consume click so it doesn't reach dismissing background */ }
         ) {
             EventDetailContent(
                 event = event,
                 onCloseClick = onDismissRequest,
-                onRsvpClick = onRsvpClick
+                onRsvpClick = onRsvpClick,
+                modifier = Modifier.fillMaxSize()
             )
         }
     }
@@ -503,99 +535,110 @@ fun EventDetailContent(
     modifier: Modifier = Modifier
 ) {
 
-    Column(
-        modifier = Modifier
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState())
-            .windowInsetsPadding(WindowInsets.systemBars)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = event.name,
-                style = MaterialTheme.typography.headlineSmall,
-                color = Color.White
-            )
-            IconButton(onClick = onCloseClick) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Close"
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Image(
-            painter = rememberAsyncImagePainter(
-                model = event.imageUrl,
-                placeholder = painterResource(Res.drawable.placeholder),
-//                error = painterResource(R.drawable.error_placeholder)
-            ),
-            contentDescription = "${event.name} Image",
-            contentScale = ContentScale.Crop,
+    val scrollState = rememberScrollState()
+    Box(modifier = modifier) {
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp)
-                .clip(RoundedCornerShape(16.dp))
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        EventDetailRow(
-            label = "Date",
-            value = event.date.toEventDisplayDate()
-        )
-        if (!event.time.isNullOrBlank()) {
-            EventDetailRow(label = "Time", value = event.time)
-        }
-        EventDetailRow(
-            label = "Event Type", value = event
-                .eventType.toString().replace('_', ' ')
-        )
-        EventDetailRow(label = "Location", value = event.location)
-        EventDetailRow(label = "Description", value = event.description)
-
-        if (event.wineSelection != null) {
-            EventDetailRow(label = "Wine Selection", value = event.wineSelection)
-        }
-        if (event.wineSelector != null) {
-            EventDetailRow(label = "Wine Selector", value = event.wineSelector)
-        }
-        if (event.additionalInfo != null) {
-            EventDetailRow(label = "Additional Info", value = event.additionalInfo)
-        }
-
-        val eventLocalDate = event.date.toEventLocalDate()
-        if (eventLocalDate != null && eventLocalDate > Clock.System.now()
-                .toLocalDateTime(
-                    TimeZone.currentSystemDefault()
-                ).date
+                .padding(16.dp)
+                .verticalScroll(scrollState)
+                .windowInsetsPadding(WindowInsets.systemBars)
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = {
-                    onRsvpClick()
-                },
-                modifier = Modifier.fillMaxWidth()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "Register")
+                Text(
+                    text = event.name,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White
+                )
+                IconButton(onClick = onCloseClick) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close"
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Image(
+                painter = rememberAsyncImagePainter(
+                    model = event.imageUrl,
+                    placeholder = painterResource(Res.drawable.placeholder),
+//                error = painterResource(R.drawable.error_placeholder)
+                ),
+                contentDescription = "${event.name} Image",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 250.dp)
+                    .clip(RoundedCornerShape(16.dp))
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            EventDetailRow(
+                label = "Date",
+                value = event.date.toEventDisplayDate()
+            )
+            if (!event.time.isNullOrBlank()) {
+                EventDetailRow(label = "Time", value = event.time)
+            }
+            EventDetailRow(
+                label = "Event Type", value = event
+                    .eventType.toString().replace('_', ' ')
+            )
+            EventDetailRow(label = "Location", value = event.location)
+            EventDetailRow(label = "Description", value = event.description)
+
+            if (event.wineSelection != null) {
+                EventDetailRow(label = "Wine Selection", value = event.wineSelection)
+            }
+            if (event.wineSelector != null) {
+                EventDetailRow(label = "Wine Selector", value = event.wineSelector)
+            }
+            if (event.additionalInfo != null) {
+                EventDetailRow(label = "Additional Info", value = event.additionalInfo)
+            }
+
+            val eventLocalDate = event.date.toEventLocalDate()
+            if (eventLocalDate != null && eventLocalDate > Clock.System.now()
+                    .toLocalDateTime(
+                        TimeZone.currentSystemDefault()
+                    ).date
+            ) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = {
+                        onRsvpClick()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = "Register")
+                }
+            }
+
+            if (event.gallery.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Gallery",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                MediaGallery(mediaItems = event.gallery)
             }
         }
-
-        if (event.gallery.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Gallery",
-                style = MaterialTheme.typography.headlineSmall,
-                color = Color.White
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            MediaGallery(mediaItems = event.gallery)
-        }
+        VerticalScrollbar(
+            adapter  = rememberScrollbarAdapter(scrollState),
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight()
+                .padding(end = 2.dp),
+            style = wdwScrollbarStyle()
+        )
     }
 }
 
@@ -666,17 +709,48 @@ fun GalleryViewer(
         initialPage = initialPage,
         pageCount = { mediaItems.size }
     )
+    val coroutineScope = rememberCoroutineScope()
+
+    // Keyboard navigation: left/right arrows + Escape
+    DisposableEffect(Unit) {
+        val listener: (org.w3c.dom.events.Event) -> Unit = { event ->
+            val keyEvent = event.unsafeCast<org.w3c.dom.events.KeyboardEvent>()
+            when (keyEvent.key) {
+                "ArrowLeft" -> {
+                    keyEvent.preventDefault()
+                    if (pagerState.currentPage > 0) {
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                        }
+                    }
+                }
+                "ArrowRight" -> {
+                    keyEvent.preventDefault()
+                    if (pagerState.currentPage < mediaItems.size - 1) {
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                        }
+                    }
+                }
+                "Escape" -> {
+                    keyEvent.preventDefault()
+                    onDismissRequest()
+                }
+            }
+        }
+        window.addEventListener("keydown", listener)
+        onDispose { window.removeEventListener("keydown", listener) }
+    }
 
     CompositionLocalProvider(LocalLayerContainer provides document.body!!) {
         Dialog(onDismissRequest = onDismissRequest) {
-            Card(
-
-            ) {
+            Card {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(Color.Black)
                 ) {
+                    // Main pager
                     HorizontalPager(
                         state = pagerState,
                         pageSpacing = 16.dp,
@@ -712,6 +786,25 @@ fun GalleryViewer(
                         }
                     }
 
+                    // Image counter (e.g. "3 / 12")
+                    if (mediaItems.size > 1) {
+                        Surface(
+                            color = Color.Black.copy(alpha = 0.6f),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(top = 16.dp)
+                        ) {
+                            Text(
+                                text = "${pagerState.currentPage + 1} / ${mediaItems.size}",
+                                color = Color.White,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
+
+                    // Close button
                     IconButton(
                         onClick = onDismissRequest,
                         modifier = Modifier
@@ -725,6 +818,57 @@ fun GalleryViewer(
                         )
                     }
 
+                    // Previous arrow
+                    if (pagerState.currentPage > 0) {
+                        IconButton(
+                            onClick = {
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                                }
+                            },
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .padding(8.dp)
+                                .background(
+                                    Color.Black.copy(alpha = 0.4f),
+                                    CircleShape
+                                )
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                contentDescription = "Previous",
+                                tint = Color.White,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                    }
+
+                    // Next arrow
+                    if (pagerState.currentPage < mediaItems.size - 1) {
+                        IconButton(
+                            onClick = {
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                                }
+                            },
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .padding(8.dp)
+                                .background(
+                                    Color.Black.copy(alpha = 0.4f),
+                                    CircleShape
+                                )
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = "Next",
+                                tint = Color.White,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                    }
+
+                    // Pager indicator
                     CustomPagerIndicator(
                         pagerState = pagerState,
                         modifier = Modifier
@@ -735,7 +879,6 @@ fun GalleryViewer(
             }
         }
     }
-
 }
 
 @Composable

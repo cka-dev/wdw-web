@@ -12,7 +12,6 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.rememberDrawerState
-import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -91,7 +90,7 @@ private fun routeFromHash(hash: String): Route {
 // ---------------------------------------------------------------------------
 // AppNavigation — main entry point composable
 // ---------------------------------------------------------------------------
-@OptIn(ExperimentalMaterial3WindowSizeClassApi::class, ExperimentalWasmJsInterop::class)
+@OptIn(ExperimentalWasmJsInterop::class)
 @Composable
 fun AppNavigation(
     authViewModel: AuthPageViewModel = koinInject()

@@ -16,7 +16,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -33,6 +36,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
@@ -245,7 +249,7 @@ fun AnimatedScrimOverlay(
  * Usage: GridItemReveal(index = index) { YourCard(...) }
  */
 @Composable
-fun GridItemReveal(index: Int, animationKey: Any? = Unit, content: @Composable () -> Unit) {
+fun GridItemReveal(index: Int, animationKey: Any? = Unit, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val delayMs = 120L + minOf((index * (index + 1) / 2) * 70L, 600L)
     var appeared by remember(animationKey) { mutableStateOf(false) }
     LaunchedEffect(animationKey) {
@@ -261,7 +265,7 @@ fun GridItemReveal(index: Int, animationKey: Any? = Unit, content: @Composable (
         label        = "gridItemReveal"
     )
     Box(
-        modifier = Modifier.graphicsLayer {
+        modifier = modifier.graphicsLayer {
             translationY = offsetPx * (1f - progress)
             alpha        = progress
         }
@@ -300,10 +304,35 @@ fun ScrollReveal(content: @Composable () -> Unit) {
 
 // ── Shared scrollbar style (visible on dark backgrounds) ─────────────────
 fun wdwScrollbarStyle() = ScrollbarStyle(
-    minimalHeight       = 32.dp,
-    thickness           = 6.dp,
-    shape               = RoundedCornerShape(3.dp),
+    minimalHeight       = 48.dp,
+    thickness           = 10.dp,
+    shape               = RoundedCornerShape(5.dp),
     hoverDurationMillis = 300,
-    unhoverColor        = Color.White.copy(alpha = 0.25f),
-    hoverColor          = Color(0xFFFF7F33).copy(alpha = 0.7f)
+    unhoverColor        = Color(0xFFFF7F33).copy(alpha = 0.6f),
+    hoverColor          = Color(0xFFFF7F33)
 )
+
+// ── Always-visible scrollbar track ───────────────────────────────────────
+// Renders a subtle persistent track strip so the scrollbar gutter is always
+// visible even when content doesn't overflow.  The real VerticalScrollbar
+// thumb renders on top via the `scrollbar` slot.
+@Composable
+fun BoxScope.WdwScrollbarTrack(
+    endPadding: Dp = 4.dp,
+    scrollbar: @Composable BoxScope.() -> Unit,
+) {
+    // Persistent track background
+    Box(
+        modifier = Modifier
+            .align(Alignment.CenterEnd)
+            .fillMaxHeight()
+            .padding(vertical = 8.dp, horizontal = endPadding)
+            .width(10.dp)
+            .background(
+                Color(0xFFFF7F33).copy(alpha = 0.12f),
+                RoundedCornerShape(5.dp)
+            )
+    )
+    // Actual scrollbar thumb on top
+    scrollbar()
+}

@@ -4,6 +4,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,11 +12,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -24,9 +25,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.VerticalScrollbar
-import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -176,8 +176,10 @@ fun WineDetail(
         Image(
             painter = rememberAsyncImagePainter(wine.imageUrl),
             contentDescription = "Wine Image",
+            contentScale = ContentScale.Fit,
             modifier = Modifier
                 .fillMaxWidth()
+                .heightIn(max = 350.dp)
                 .clip(RoundedCornerShape(16.dp))
         )
 
@@ -252,10 +254,10 @@ fun WineCard(
             AsyncImage(
                 model = wine.imageUrl,
                 contentDescription = "${wine.name} Image",
-                contentScale = ContentScale.Crop,
+                contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(300.dp)
+                    .heightIn(max = 300.dp)
                     .clip(RoundedCornerShape(16.dp))
             )
 
@@ -340,9 +342,10 @@ fun WineDetailContent(wine: Wine, onCloseClick: () -> Unit) {
         AsyncImage(
             model = wine.imageUrl,
             contentDescription = "${wine.name} Image",
-            contentScale = ContentScale.Crop,
+            contentScale = ContentScale.Fit,
             modifier = Modifier
-                .aspectRatio(3f / 2f)
+                .fillMaxWidth()
+                .heightIn(max = 300.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .align(Alignment.CenterHorizontally),
         )
@@ -389,6 +392,7 @@ fun CompactScreenWinePage(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
+            .background(Color(0xFF0D0D0D))
     ) {
         item {
             SearchBar(
@@ -417,14 +421,6 @@ fun CompactScreenWinePage(
                     }
                 )
             }
-        }
-
-        item {
-            Text(
-                text = "Wines We've Tried",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(16.dp)
-            )
         }
     }
 

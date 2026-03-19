@@ -16,13 +16,14 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -55,16 +56,16 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
-import net.winedownwednesday.web.data.Event
-import net.winedownwednesday.web.data.Member
-import net.winedownwednesday.web.data.Wine
-import net.winedownwednesday.web.viewmodels.HomePageViewModel
-import org.koin.compose.koinInject
-import kotlin.math.abs
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import net.winedownwednesday.web.data.Event
+import net.winedownwednesday.web.data.Member
+import net.winedownwednesday.web.data.Wine
 import net.winedownwednesday.web.utils.toEventDisplayDate
+import net.winedownwednesday.web.viewmodels.HomePageViewModel
+import org.koin.compose.koinInject
+import kotlin.math.abs
 
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -373,7 +374,9 @@ fun AutoScrollingWineListHorizontal(
                         WineCard(
                             wine = wine,
                             onDetailsClick = { onWineDetailsClick(wine) },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .fillMaxWidth()
                         )
                     }
                 }
@@ -549,13 +552,14 @@ fun HomePageEventCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(150.dp)
+                    .aspectRatio(16f / 9f)
                     .clip(RoundedCornerShape(8.dp))
             ) {
                 AsyncImage(
                     model = event.imageUrl,
                     contentDescription = null,
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -577,18 +581,7 @@ fun HomePageEventCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
             )
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                horizontalArrangement = Arrangement.End,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Button(
-                    onClick = onDetailsClick,
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text("Details")
-                }
-            }
+
         }
     }
 }
@@ -620,13 +613,14 @@ fun WineCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(150.dp)
+                    .aspectRatio(16f / 9f)
                     .clip(RoundedCornerShape(8.dp))
             ) {
                 AsyncImage(
                     model = wine.imageUrl,
                     contentDescription = null,
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -643,24 +637,7 @@ fun WineCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Transparent
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                horizontalArrangement = Arrangement.End,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Button(
-                    onClick = onDetailsClick,
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text("Learn More")
-                }
-            }
+
         }
     }
 }

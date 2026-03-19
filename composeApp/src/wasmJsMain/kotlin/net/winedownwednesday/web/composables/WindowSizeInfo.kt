@@ -1,8 +1,5 @@
 package net.winedownwednesday.web.composables
 
-import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
-import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
-import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalDensity
@@ -11,7 +8,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 // ---------------------------------------------------------------------------
-// Width breakpoints (matches Material3 + extended large / xlarge)
+// Width breakpoints (matches Material3 Adaptive + extended large / xlarge)
 // ---------------------------------------------------------------------------
 enum class WidthClass {
     /** < 600dp  — phones portrait */
@@ -97,17 +94,18 @@ data class WindowSizeInfo(
 }
 
 // ---------------------------------------------------------------------------
-// Composable factory — computes WindowSizeInfo reactively
+// Composable factory — pure dp-based calculation, no external library needed.
+// Both width (5 classes incl. Large/XLarge) and height follow Material3 specs.
+// The adaptive:1.1.0 library is used for layout composables (Phase 3).
 // ---------------------------------------------------------------------------
-@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun rememberWindowSizeInfo(): WindowSizeInfo {
-    val wsc        = calculateWindowSizeClass()
     val windowInfo = LocalWindowInfo.current
     val density    = LocalDensity.current
 
-    return remember(wsc, windowInfo.containerSize) {
-        val widthDp = with(density) { windowInfo.containerSize.width.toDp() }
+    return remember(windowInfo.containerSize) {
+        val widthDp  = with(density) { windowInfo.containerSize.width.toDp() }
+        val heightDp = with(density) { windowInfo.containerSize.height.toDp() }
 
         val widthClass = when {
             widthDp <  600.dp  -> WidthClass.Compact
@@ -117,10 +115,10 @@ fun rememberWindowSizeInfo(): WindowSizeInfo {
             else               -> WidthClass.XLarge
         }
 
-        val heightClass = when (wsc.heightSizeClass) {
-            WindowHeightSizeClass.Compact  -> HeightClass.Compact
-            WindowHeightSizeClass.Expanded -> HeightClass.Expanded
-            else                           -> HeightClass.Medium
+        val heightClass = when {
+            heightDp < 480.dp -> HeightClass.Compact
+            heightDp < 900.dp -> HeightClass.Medium
+            else              -> HeightClass.Expanded
         }
 
         WindowSizeInfo(widthClass = widthClass, heightClass = heightClass)

@@ -79,7 +79,12 @@ kotlin {
 //            implementation("com.github.Hamamas:Kotlin-Wasm-Html-Interop:1.0.1")
 //            implementation(project(":libraries:Kotlin-Wasm-Html-Interop-master"))
 
-            implementation("dev.chrisbanes.material3:material3-window-size-class-multiplatform:0.5.0")
+            // Adaptive layout components — uncomment for Phase 3 (ListDetailPaneScaffold etc.)
+            // Causes Kotlin/Wasm compiler hangs if added before they're actually imported
+            // implementation("org.jetbrains.compose.material3.adaptive:adaptive:1.1.0")
+            // implementation("org.jetbrains.compose.material3.adaptive:adaptive-layout:1.1.0")
+            // Phase 2 — correct group is material3, not adaptive subgroup
+            // implementation("org.jetbrains.compose.material3:material3-adaptive-navigation-suite:1.1.0")
 
             // File Picker
             // Enables FileKit without Compose dependencies
