@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,13 +27,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.browser.window
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.painterResource
-import androidx.compose.ui.input.pointer.onPointerEvent
 import wdw_web.composeapp.generated.resources.Download_on_the_App_Store_Badge_US_UK_RGB_wht_092917
 import wdw_web.composeapp.generated.resources.Google_Play_App
 import wdw_web.composeapp.generated.resources.Res
@@ -51,13 +54,16 @@ private val TextMuted     = Color(0xFF666666)
 // ── External links ────────────────────────────────────────
 private const val INSTAGRAM_URL    = "https://www.instagram.com/uncorked.conversations/"
 private const val YOUTUBE_URL      = "https://www.youtube.com/@WineDownWednesdayAtl"
-private const val PLAY_STORE_URL   = "https://play.google.com/store/apps/details?id=net.winedownwednesday.android"
+private const val PLAY_STORE_URL   =
+    "https://play.google.com/store/apps/details?id=net.winedownwednesday.android"
 private const val APP_STORE_URL    = "https://winedownwednesday.net/"   // placeholder until live
-private const val PRIVACY_POLICY_URL = "https://www.freeprivacypolicy.com/live/6a72afcb-3f5c-4093-aee9-98a35c3b637c"
+private const val PRIVACY_POLICY_URL =
+    "https://www.freeprivacypolicy.com/live/6a72afcb-3f5c-4093-aee9-98a35c3b637c"
 
 // ──────────────────────────────────────────────────────────
 //  Full desktop / tablet footer
 // ──────────────────────────────────────────────────────────
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun Footer(
     onNavClick: (Route) -> Unit,
@@ -67,6 +73,12 @@ fun Footer(
 
     if (showContactForm) {
         ContactFormDialog(onDismiss = { showContactForm = false })
+    }
+
+    var imagesReady by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(300)
+        imagesReady = true
     }
 
     Column(
@@ -95,11 +107,13 @@ fun Footer(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.widthIn(max = 200.dp)
             ) {
-                Image(
-                    painter = painterResource(Res.drawable.wdw_new_logo),
-                    contentDescription = "Wine Down Wednesday logo",
-                    modifier = Modifier.size(48.dp)
-                )
+                if (imagesReady) {
+                    Image(
+                        painter = painterResource(Res.drawable.wdw_new_logo),
+                        contentDescription = "Wine Down Wednesday logo",
+                        modifier = Modifier.size(48.dp)
+                    )
+                }
                 Text(
                     text = "Wine Down Wednesday",
                     fontWeight = FontWeight.Bold,
@@ -126,17 +140,20 @@ fun Footer(
                     "Our Wine"               to Route.Wines,
                     "Uncorked Conversations" to Route.Podcasts,
                 )
-                val half = (navLinks.size + 1) / 2
+                val third = (navLinks.size + 2) / 3
                 Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                    // First half
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        navLinks.take(half).forEach { (label, state) ->
+                        navLinks.take(third).forEach { (label, state) ->
                             FooterLink(text = label, onClick = { onNavClick(state) })
                         }
                     }
-                    // Second half
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        navLinks.drop(half).forEach { (label, state) ->
+                        navLinks.drop(third).take(third).forEach { (label, state) ->
+                            FooterLink(text = label, onClick = { onNavClick(state) })
+                        }
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        navLinks.drop(third * 2).forEach { (label, state) ->
                             FooterLink(text = label, onClick = { onNavClick(state) })
                         }
                     }
@@ -148,23 +165,25 @@ fun Footer(
                 FooterSectionHeader("Connect")
 
                 // White-tinted social icons
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Icon(
-                        painter = painterResource(Res.drawable.ig_logo_96),
-                        contentDescription = "Instagram",
-                        tint = Color.White,
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clickable { window.open(INSTAGRAM_URL) }
-                    )
-                    Icon(
-                        painter = painterResource(Res.drawable.yt_logo_96),
-                        contentDescription = "YouTube",
-                        tint = Color.White,
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clickable { window.open(YOUTUBE_URL) }
-                    )
+                if (imagesReady) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(
+                            painter = painterResource(Res.drawable.ig_logo_96),
+                            contentDescription = "Instagram",
+                            tint = Color.White,
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clickable { window.open(INSTAGRAM_URL) }
+                        )
+                        Icon(
+                            painter = painterResource(Res.drawable.yt_logo_96),
+                            contentDescription = "YouTube",
+                            tint = Color.White,
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clickable { window.open(YOUTUBE_URL) }
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(4.dp))
@@ -191,64 +210,29 @@ fun Footer(
             ) {
                 FooterSectionHeader("Get our Apps")
 
-                // Google Play badge — fillMaxWidth so both badges are equal width
-                Image(
-                    painter = painterResource(Res.drawable.Google_Play_App),
-                    contentDescription = "Get it on Google Play",
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(44.dp)
-                        .clickable { window.open(PLAY_STORE_URL) }
-                )
-
-                // App Store badge — same fixed width
-                Image(
-                    painter = painterResource(Res.drawable.Download_on_the_App_Store_Badge_US_UK_RGB_wht_092917),
-                    contentDescription = "Download on the App Store",
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(44.dp)
-                        .clickable { window.open(APP_STORE_URL) }
-                )
-            }
-        } // end Row
-
-        // Copyright + Privacy Policy bar
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(FooterBarBg)
-                .padding(vertical = 12.dp, horizontal = 48.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "© 2026 Wine Down Wednesday · All rights reserved",
-                fontSize = 11.sp,
-                color = TextMuted
-            )
-            Text(
-                text = "  ·  ",
-                fontSize = 11.sp,
-                color = TextMuted
-            )
-            var privHovered by remember { mutableStateOf(false) }
-            val privColor by animateColorAsState(
-                targetValue = if (privHovered) AccentOrange else TextMuted,
-                animationSpec = tween(150)
-            )
-            Text(
-                text = "Privacy Policy",
-                fontSize = 11.sp,
-                color = privColor,
-                modifier = Modifier.clickable {
-                    privHovered = true
-                    window.open(PRIVACY_POLICY_URL)
+                if (imagesReady) {
+                    Image(
+                        painter = painterResource(Res.drawable.Google_Play_App),
+                        contentDescription = "Get it on Google Play",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                            .clickable { window.open(PLAY_STORE_URL) }
+                    )
+                    Image(
+                        painter = painterResource(Res.drawable
+                            .Download_on_the_App_Store_Badge_US_UK_RGB_wht_092917),
+                        contentDescription = "Download on the App Store",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                            .clickable { window.open(APP_STORE_URL) }
+                    )
                 }
-            )
-        }
+            }
+        }   // end Row
     }
 }
 
@@ -257,6 +241,11 @@ fun Footer(
 // ──────────────────────────────────────────────────────────
 @Composable
 fun CompactFooter(modifier: Modifier = Modifier) {
+    var badgesReady by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(300)
+        badgesReady = true
+    }
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -277,52 +266,50 @@ fun CompactFooter(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Social icons (white tinted)
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Icon(
-                    painter = painterResource(Res.drawable.ig_logo_96),
-                    contentDescription = "Instagram",
-                    tint = Color.White,
-                    modifier = Modifier
-                        .size(22.dp)
-                        .clickable { window.open(INSTAGRAM_URL) }
-                )
-                Icon(
-                    painter = painterResource(Res.drawable.yt_logo_96),
-                    contentDescription = "YouTube",
-                    tint = Color.White,
-                    modifier = Modifier
-                        .size(22.dp)
-                        .clickable { window.open(YOUTUBE_URL) }
-                )
+            if (badgesReady) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(
+                        painter = painterResource(Res.drawable.ig_logo_96),
+                        contentDescription = "Instagram",
+                        tint = Color.White,
+                        modifier = Modifier
+                            .size(22.dp)
+                            .clickable { window.open(INSTAGRAM_URL) }
+                    )
+                    Icon(
+                        painter = painterResource(Res.drawable.yt_logo_96),
+                        contentDescription = "YouTube",
+                        tint = Color.White,
+                        modifier = Modifier
+                            .size(22.dp)
+                            .clickable { window.open(YOUTUBE_URL) }
+                    )
+                }
             }
 
-            // Copyright
-            Text(
-                text = "© 2026 WDW",
-                fontSize = 10.sp,
-                color = TextMuted
-            )
-
             // Store badges
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Image(
-                    painter = painterResource(Res.drawable.Google_Play_App),
-                    contentDescription = "Google Play",
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .height(24.dp)
-                        .widthIn(max = 80.dp)
-                        .clickable { window.open(PLAY_STORE_URL) }
-                )
-                Image(
-                    painter = painterResource(Res.drawable.Download_on_the_App_Store_Badge_US_UK_RGB_wht_092917),
-                    contentDescription = "App Store",
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .height(24.dp)
-                        .widthIn(max = 80.dp)
-                        .clickable { window.open(APP_STORE_URL) }
-                )
+            if (badgesReady) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Image(
+                        painter = painterResource(Res.drawable.Google_Play_App),
+                        contentDescription = "Google Play",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .height(24.dp)
+                            .widthIn(max = 80.dp)
+                            .clickable { window.open(PLAY_STORE_URL) }
+                    )
+                    Image(
+                        painter = painterResource(Res.drawable
+                            .Download_on_the_App_Store_Badge_US_UK_RGB_wht_092917),
+                        contentDescription = "App Store",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .height(24.dp)
+                            .widthIn(max = 80.dp)
+                            .clickable { window.open(APP_STORE_URL) }
+                    )
+                }
             }
         }
     }
@@ -354,8 +341,8 @@ private fun FooterLink(text: String, onClick: () -> Unit) {
         fontSize = 13.sp,
         color = color,
         modifier = Modifier
-            .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Enter) { hovered = true }
-            .onPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Exit) { hovered = false }
+            .onPointerEvent(PointerEventType.Enter) { hovered = true }
+            .onPointerEvent(PointerEventType.Exit) { hovered = false }
             .clickable { onClick() }
     )
 }

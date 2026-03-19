@@ -168,17 +168,23 @@ fun TopNavBar(
                 }
             },
             title = {
+                val logoReady by remember { mutableStateOf(false) }.let { state ->
+                    LaunchedEffect(Unit) { delay(300); state.value = true }
+                    state
+                }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Start,
                     modifier = Modifier.clickable { onNavigate(Route.Home) }
                 ) {
-                    Image(
-                        painter = painterResource(Res.drawable.wdw_new_logo),
-                        contentDescription = "Wine Down Wednesday Logo",
-                        modifier = Modifier.height(40.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    if (logoReady) {
+                        Image(
+                            painter = painterResource(Res.drawable.wdw_new_logo),
+                            contentDescription = "Wine Down Wednesday Logo",
+                            modifier = Modifier.height(40.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
                     Text(
                         text = "Wine Down Wednesday",
                         fontWeight = FontWeight.Bold

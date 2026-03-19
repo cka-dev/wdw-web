@@ -1,10 +1,13 @@
 package net.winedownwednesday.web.composables
 
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -30,7 +33,7 @@ import org.koin.compose.koinInject
 
 @Composable
 fun BlogPage(
-    isCompactScreen: Boolean,
+    sizeInfo: WindowSizeInfo,
     viewModel: BlogPageViewModel = koinInject()
 ) {
     val blogPosts by viewModel.blogPosts.collectAsState()
@@ -39,7 +42,13 @@ fun BlogPage(
     // Simple state to hold the currently selected post for reading, null means list view.
     var selectedPost by remember { mutableStateOf<BlogPost?>(null) }
     
-    val padding = if (isCompactScreen) 16.dp else 48.dp
+    val padding = when (sizeInfo.widthClass) {
+        WidthClass.Compact  -> 16.dp
+        WidthClass.Medium   -> 24.dp
+        WidthClass.Expanded -> 48.dp
+        WidthClass.Large    -> 80.dp
+        WidthClass.XLarge   -> 120.dp
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.TopCenter) {
         if (isLoading && blogPosts.isNullOrEmpty()) {
@@ -108,46 +117,60 @@ fun BlogPage(
                 }
             } else {
                 // List View - Grid or Centered List
-                LazyColumn(
-                    contentPadding = PaddingValues(padding),
-                    verticalArrangement = Arrangement.spacedBy(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    item {
-                        Column(modifier = Modifier.widthIn(max = 800.dp).fillMaxWidth()) {
-                            Text(
-                                text = "Latest from the Vine",
-                                style = MaterialTheme.typography.displaySmall,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(bottom = 8.dp),
-                                color = Color.White
-                            )
-                            Text(
-                                text = "Stories, news, and insights.",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = Color.LightGray,
-                                modifier = Modifier.padding(bottom = 16.dp)
-                            )
-                        }
-                    }
-                    
-                    val posts = blogPosts ?: emptyList()
-                    if (posts.isEmpty()) {
+                val blogListState = rememberLazyListState()
+                Box(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        state               = blogListState,
+                        contentPadding      = PaddingValues(padding),
+                        verticalArrangement = Arrangement.spacedBy(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier            = Modifier.fillMaxSize()
+                    ) {
                         item {
-                            Text(
-                                text = "No posts available at the moment.",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = Color.LightGray
-                            )
+                            Column(modifier = Modifier.widthIn(max = 800.dp).fillMaxWidth()) {
+                                Text(
+                                    text = "Latest from the Vine",
+                                    style = MaterialTheme.typography.displaySmall,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(bottom = 8.dp),
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = "Stories, news, and insights.",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = Color.LightGray,
+                                    modifier = Modifier.padding(bottom = 16.dp)
+                                )
+                            }
                         }
-                    } else {
-                        items(posts) { post ->
-                            Box(modifier = Modifier.widthIn(max = 800.dp)) {
-                                BlogSummaryCard(post = post, onClick = { selectedPost = post })
+
+                        val posts = blogPosts ?: emptyList()
+                        if (posts.isEmpty()) {
+                            item {
+                                Text(
+                                    text = "No posts available at the moment.",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = Color.LightGray
+                                )
+                            }
+                        } else {
+                            items(posts) { post ->
+                                Box(modifier = Modifier.widthIn(max = 800.dp)) {
+                                    ScrollReveal {
+                                        BlogSummaryCard(post = post, onClick = { selectedPost = post })
+                                    }
+                                }
                             }
                         }
                     }
+                    VerticalScrollbar(
+                        adapter  = rememberScrollbarAdapter(blogListState),
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .fillMaxHeight()
+                            .padding(end = 2.dp),
+                        style    = wdwScrollbarStyle()
+                    )
                 }
             }
         }

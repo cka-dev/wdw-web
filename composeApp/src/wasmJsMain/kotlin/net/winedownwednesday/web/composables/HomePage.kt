@@ -70,7 +70,7 @@ import net.winedownwednesday.web.utils.toEventDisplayDate
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HomePage(
-    isCompactScreen: Boolean,
+    sizeInfo: WindowSizeInfo,
     modifier: Modifier = Modifier
 ) {
     val viewModel: HomePageViewModel = koinInject()
@@ -96,7 +96,11 @@ fun HomePage(
     var selectedEvent by remember { mutableStateOf<Event?>(null) }
     var selectedWine by remember { mutableStateOf<Wine?>(null) }
 
-    val verticalPadding = if (isCompactScreen) 20.dp else 50.dp
+    val verticalPadding = when (sizeInfo.widthClass) {
+        WidthClass.Compact  -> 20.dp
+        WidthClass.Medium   -> 30.dp
+        else                -> 50.dp
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -159,7 +163,7 @@ fun HomePage(
                         AutoScrollingEventDisplay(
                             events = upcomingEvents,
                             currentIndex = currentIndex,
-                            isCompactScreen = isCompactScreen,
+                            sizeInfo = sizeInfo,
                             onEventDetailsClick = { event -> selectedEvent = event },
                             isLoaded = eventsLoaded
                         )
@@ -170,14 +174,14 @@ fun HomePage(
                             description = campaignDescription,
                             wines = featuredWines,
                             currentIndex = currentIndex,
-                            isCompactScreen = isCompactScreen,
+                            sizeInfo = sizeInfo,
                             onWineDetailsClick = { wine -> selectedWine = wine }
                         )
                     }
                     SlideInCard(delayMs = 650) {
                         MemberSpotlightCard(
                             member = highlightedMember,
-                            isCompactScreen = isCompactScreen
+                            sizeInfo = sizeInfo
                         )
                     }
                 }
@@ -188,14 +192,14 @@ fun HomePage(
     selectedEvent?.let { event ->
         EventDetailsDialog(
             event = event,
-            isCompactScreen = isCompactScreen,
+            isCompactScreen = sizeInfo.useCompactNav,
             onDismiss = { selectedEvent = null }
         )
     }
     selectedWine?.let { wine ->
         WineDetailsDialog(
             wine = wine,
-            isCompactScreen = isCompactScreen,
+            isCompactScreen = sizeInfo.useCompactNav,
             onDismiss = { selectedWine = null }
         )
     }
@@ -207,24 +211,30 @@ fun AutoScrollingEventDisplay(
     events: List<Event>,
     onEventDetailsClick: (Event) -> Unit = {},
     currentIndex: Int,
-    isCompactScreen: Boolean,
+    sizeInfo: WindowSizeInfo,
     isLoaded: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     if (events.size <= 1) {
-        SingleEventOrEmptyHorizontal(title, events, onEventDetailsClick, isCompactScreen, isLoaded, modifier)
+        SingleEventOrEmptyHorizontal(title, events, onEventDetailsClick, sizeInfo, isLoaded, modifier)
         return
     }
     val transition = updateTransition(targetState = currentIndex, label = "eventSlide")
+    val cardWidthMod = when (sizeInfo.widthClass) {
+        WidthClass.Compact  -> Modifier.fillMaxWidth()
+        WidthClass.Medium   -> Modifier.fillMaxWidth(0.8f)
+        else                -> Modifier.fillMaxWidth(0.3f)
+    }
+    val cardHeightMod = when (sizeInfo.widthClass) {
+        WidthClass.Compact -> Modifier.heightIn(min = 350.dp)
+        WidthClass.Medium  -> Modifier.height(420.dp)
+        else               -> Modifier.height(500.dp)
+    }
     Card(
         shape = RoundedCornerShape(16.dp),
         modifier = modifier
-            .then(
-                if (!isCompactScreen) Modifier.fillMaxWidth(0.3f) else Modifier.fillMaxWidth()
-            )
-            .then(
-                if (!isCompactScreen) Modifier.height(500.dp) else Modifier.heightIn(min = 350.dp)
-            )
+            .then(cardWidthMod)
+            .then(cardHeightMod)
             .hoverScale(),
         elevation = cardElevation(defaultElevation = 16.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
@@ -287,19 +297,29 @@ fun AutoScrollingWineListHorizontal(
     wines: List<Wine>,
     onWineDetailsClick: (Wine) -> Unit = {},
     currentIndex: Int,
-    isCompactScreen: Boolean,
+    sizeInfo: WindowSizeInfo,
     modifier: Modifier = Modifier
 ) {
     if (wines.size <= 1) {
-        SingleWineOrEmptyHorizontal(title, description, wines, onWineDetailsClick, isCompactScreen, modifier)
+        SingleWineOrEmptyHorizontal(title, description, wines, onWineDetailsClick, sizeInfo, modifier)
         return
     }
     val transition = updateTransition(targetState = currentIndex, label = "wineSlide")
+    val wineCardWidthMod = when (sizeInfo.widthClass) {
+        WidthClass.Compact  -> Modifier.fillMaxWidth()
+        WidthClass.Medium   -> Modifier.fillMaxWidth(0.8f)
+        else                -> Modifier.fillMaxWidth(0.3f)
+    }
+    val wineCardHeightMod = when (sizeInfo.widthClass) {
+        WidthClass.Compact -> Modifier.heightIn(min = 350.dp)
+        WidthClass.Medium  -> Modifier.height(420.dp)
+        else               -> Modifier.height(500.dp)
+    }
     Card(
         shape = RoundedCornerShape(16.dp),
         modifier = modifier
-            .then(if (!isCompactScreen) Modifier.fillMaxWidth(0.3f) else Modifier.fillMaxWidth())
-            .then(if (!isCompactScreen) Modifier.height(500.dp) else Modifier.heightIn(min = 350.dp))
+            .then(wineCardWidthMod)
+            .then(wineCardHeightMod)
             .hoverScale(),
         elevation = cardElevation(defaultElevation = 16.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
@@ -367,19 +387,25 @@ private fun SingleEventOrEmptyHorizontal(
     title: String,
     events: List<Event>,
     onEventDetailsClick: (Event) -> Unit,
-    isCompactScreen: Boolean,
+    sizeInfo: WindowSizeInfo,
     isLoaded: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val seWidthMod = when (sizeInfo.widthClass) {
+        WidthClass.Compact  -> Modifier.fillMaxWidth()
+        WidthClass.Medium   -> Modifier.fillMaxWidth(0.8f)
+        else                -> Modifier.fillMaxWidth(0.3f)
+    }
+    val seHeightMod = when (sizeInfo.widthClass) {
+        WidthClass.Compact -> Modifier.heightIn(min = 350.dp)
+        WidthClass.Medium  -> Modifier.height(420.dp)
+        else               -> Modifier.height(500.dp)
+    }
     Card(
         shape = RoundedCornerShape(16.dp),
         modifier = modifier
-            .then(
-                if (!isCompactScreen) Modifier.fillMaxWidth(0.3f) else Modifier.fillMaxWidth()
-            )
-            .then(
-                if (!isCompactScreen) Modifier.height(500.dp) else Modifier.heightIn(min = 350.dp)
-            ),
+            .then(seWidthMod)
+            .then(seHeightMod),
         elevation = cardElevation(defaultElevation = 16.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
     ) {
@@ -439,14 +465,24 @@ private fun SingleWineOrEmptyHorizontal(
     description: String,
     wines: List<Wine>,
     onWineDetailsClick: (Wine) -> Unit,
-    isCompactScreen: Boolean,
+    sizeInfo: WindowSizeInfo,
     modifier: Modifier = Modifier
 ) {
+    val swWidthMod = when (sizeInfo.widthClass) {
+        WidthClass.Compact  -> Modifier.fillMaxWidth()
+        WidthClass.Medium   -> Modifier.fillMaxWidth(0.8f)
+        else                -> Modifier.fillMaxWidth(0.3f)
+    }
+    val swHeightMod = when (sizeInfo.widthClass) {
+        WidthClass.Compact -> Modifier.heightIn(min = 350.dp)
+        WidthClass.Medium  -> Modifier.height(420.dp)
+        else               -> Modifier.height(500.dp)
+    }
     Card(
         shape = RoundedCornerShape(16.dp),
         modifier = modifier
-            .then(if (!isCompactScreen) Modifier.fillMaxWidth(0.3f) else Modifier.fillMaxWidth())
-            .then(if (!isCompactScreen) Modifier.height(500.dp) else Modifier.heightIn(min = 350.dp)),
+            .then(swWidthMod)
+            .then(swHeightMod),
         elevation = cardElevation(defaultElevation = 16.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
     ) {
@@ -789,23 +825,27 @@ fun WineDetailsDialog(wine: Wine, isCompactScreen: Boolean, onDismiss: () -> Uni
 @Composable
 fun MemberSpotlightCard(
     member: Member?,
-    isCompactScreen: Boolean,
+    sizeInfo: WindowSizeInfo,
     modifier: Modifier = Modifier
 ) {
     var showDetails by remember { mutableStateOf(false) }
 
+    val spotlightWidthMod = when (sizeInfo.widthClass) {
+        WidthClass.Compact  -> Modifier.fillMaxWidth()
+        WidthClass.Medium   -> Modifier.fillMaxWidth(0.8f)
+        else                -> Modifier.fillMaxWidth(0.3f)
+    }
+    val spotlightHeightMod = when (sizeInfo.widthClass) {
+        WidthClass.Compact -> Modifier.heightIn(min = 350.dp)
+        WidthClass.Medium  -> Modifier.height(420.dp)
+        else               -> Modifier.height(500.dp)
+    }
     Card(
         shape = RoundedCornerShape(16.dp),
         modifier = modifier
             .hoverScale()
-            .then(
-                if (!isCompactScreen) Modifier.fillMaxWidth(0.3f)
-                else Modifier.fillMaxWidth()
-            )
-            .then(
-                if (!isCompactScreen) Modifier.height(500.dp)
-                else Modifier.heightIn(min = 350.dp)
-            )
+            .then(spotlightWidthMod)
+            .then(spotlightHeightMod)
             .then(
                 if (member != null) Modifier.clickable { showDetails = true }
                 else Modifier
@@ -900,7 +940,7 @@ fun MemberSpotlightCard(
     if (showDetails && member != null) {
         MemberDetailsDialog(
             member = member,
-            isCompactScreen = isCompactScreen,
+            isCompactScreen = sizeInfo.useCompactNav,
             onDismiss = { showDetails = false }
         )
     }

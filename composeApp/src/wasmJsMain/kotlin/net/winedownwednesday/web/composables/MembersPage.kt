@@ -24,6 +24,9 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.VerticalScrollbar
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -39,6 +42,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,7 +65,7 @@ import org.koin.compose.koinInject
 
 @Composable
 fun MembersPage(
-    isCompactScreen: Boolean,
+    sizeInfo: WindowSizeInfo,
     uiState: LoginUIState,
     userProfileData: UserProfileData?
 ) {
@@ -71,27 +75,27 @@ fun MembersPage(
     val selectedMember by viewModel.selectedMember.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
 
-    if (isCompactScreen) {
+    if (sizeInfo.useCompactNav) {
+        // Compact (< 600dp) → 2-col grid | Medium (600–840dp) → 3-col grid
+        val gridColumns = if (sizeInfo.isCompact) 2 else 3
         CompactScreenMembersPage(
-            allMembers= memberSections,
+            allMembers = memberSections,
             selectedMember = selectedMember,
             searchQuery = searchQuery,
-            onSelectedMemberChange = { it?.let {
-                viewModel.setSelectedMember(it)
-            } },
-            onDismissRequest = {viewModel.clearSelectedMember()},
-            onSearchQueryChange = {viewModel.setSearchQuery(it)},
+            gridColumns = gridColumns,
+            onSelectedMemberChange = { it?.let { viewModel.setSelectedMember(it) } },
+            onDismissRequest = { viewModel.clearSelectedMember() },
+            onSearchQueryChange = { viewModel.setSearchQuery(it) },
             uiState = uiState,
             userProfileData = userProfileData,
         )
     } else {
+        // Expanded / Large / XLarge → side-by-side section panels
         LargeScreenMemberPage(
-            memberSections= memberSections,
+            memberSections = memberSections,
             selectedMember = selectedMember,
-            onSelectedMemberChange = { it?.let {
-                viewModel.setSelectedMember(it)
-            } },
-            onDismissRequest = {viewModel.clearSelectedMember()},
+            onSelectedMemberChange = { it?.let { viewModel.setSelectedMember(it) } },
+            onDismissRequest = { viewModel.clearSelectedMember() },
             uiState = uiState,
             userProfileData = userProfileData,
         )
@@ -152,6 +156,7 @@ fun CompactScreenMembersPage(
     allMembers: List<MemberSection>,
     selectedMember: Member?,
     searchQuery: String,
+    gridColumns: Int = 2,
     onSelectedMemberChange: (Member?) -> Unit = {},
     onDismissRequest: () -> Unit,
     onSearchQueryChange: (String) -> Unit = {},
@@ -159,6 +164,7 @@ fun CompactScreenMembersPage(
     userProfileData: UserProfileData?,
     modifier: Modifier = Modifier
 ) {
+    val compactGridState = rememberLazyGridState()
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -171,36 +177,46 @@ fun CompactScreenMembersPage(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            modifier = Modifier
-                .fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            allMembers.forEach { section ->
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    Text(
-                        text = section.title,
-                        style = MaterialTheme.typography.headlineMedium,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
-                }
-
-                itemsIndexed(section.members.filter {
-                    it.matchesQuery(searchQuery)
-                }) { index, member ->
-                    GridItemReveal(index = index, animationKey = searchQuery) {
-                        CompactMemberCard(
-                            member = member,
-                            onClick = {
-                                onSelectedMemberChange(member)
-                            }
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(gridColumns),
+                state  = compactGridState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                allMembers.forEach { section ->
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Text(
+                            text = section.title,
+                            style = MaterialTheme.typography.headlineMedium,
+                            modifier = Modifier.padding(vertical = 8.dp)
                         )
+                    }
+
+                    itemsIndexed(section.members.filter {
+                        it.matchesQuery(searchQuery)
+                    }) { index, member ->
+                        GridItemReveal(index = index, animationKey = searchQuery) {
+                            CompactMemberCard(
+                                member = member,
+                                onClick = {
+                                    onSelectedMemberChange(member)
+                                }
+                            )
+                        }
                     }
                 }
             }
+            VerticalScrollbar(
+                adapter  = rememberScrollbarAdapter(compactGridState),
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .fillMaxHeight()
+                    .padding(end = 2.dp),
+                style    = wdwScrollbarStyle()
+            )
         }
     }
 
@@ -494,32 +510,47 @@ fun LargeScreenMemberPage(
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             memberSections.forEach { section ->
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 200.dp),
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                    contentPadding = PaddingValues(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        Text(
-                            text = section.title,
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = Color.White,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                    }
-                    itemsIndexed(section.members) { index, member ->
-                        GridItemReveal(index = index) {
-                            MemberCard(
-                                member = member,
-                                onClick = { onSelectedMemberChange(member) },
-                                modifier = Modifier
-                                    .aspectRatio(1f)
-                            )
+                key(section.title) {
+                    val sectionGridState = rememberLazyGridState()
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                    ) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(minSize = 200.dp),
+                            state   = sectionGridState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            item(span = { GridItemSpan(maxLineSpan) }) {
+                                Text(
+                                    text = section.title,
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    color = Color.White,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                            }
+                            itemsIndexed(section.members) { index, member ->
+                                GridItemReveal(index = index) {
+                                    MemberCard(
+                                        member = member,
+                                        onClick = { onSelectedMemberChange(member) },
+                                        modifier = Modifier.aspectRatio(1f)
+                                    )
+                                }
+                            }
                         }
+                        VerticalScrollbar(
+                            adapter  = rememberScrollbarAdapter(sectionGridState),
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .fillMaxHeight()
+                                .padding(end = 2.dp),
+                            style    = wdwScrollbarStyle()
+                        )
                     }
                 }
             }

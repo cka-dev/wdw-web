@@ -105,10 +105,24 @@ private fun requestFocus(element: Element) : Unit = js("""
     }
 """)
 
-private fun initializingElement(element: Element) : Unit = js("""
+private fun initializingElement(element: Element): Unit = js("""
     {
         element.style.position = 'absolute';
         element.style.margin = '0px';
+        element.style.zIndex = '2147483647';
+    }
+""")
+
+private fun initializingContainer(element: Element): Unit = js("""
+    {
+        element.style.position = 'fixed';
+        element.style.top = '0px';
+        element.style.left = '0px';
+        element.style.width = '0px';
+        element.style.height = '0px';
+        element.style.overflow = 'visible';
+        element.style.zIndex = '2147483647';
+        element.style.pointerEvents = 'none';
     }
 """)
 
@@ -153,7 +167,8 @@ fun <T : Element> HtmlView(
     DisposableEffect(factory) {
         componentInfo.container = document.createElement("div",NoOpUpdate)
         componentInfo.component = document.factory()
-        root.insertBefore(componentInfo.container,root.firstChild)
+        root.appendChild(componentInfo.container)
+        initializingContainer(componentInfo.container)
         componentInfo.container.append(componentInfo.component)
         componentInfo.updater = Updater(componentInfo.component, update)
         initializingElement(componentInfo.component)

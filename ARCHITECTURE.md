@@ -191,7 +191,55 @@ All animation primitives live in `composables/AnimationUtils.kt` for consistent,
 
 ---
 
-## 6. Deployment Info
+## 6. Adaptive Layout System
+
+Responsive layout decisions are driven by a single `WindowSizeInfo` object, replacing the previous binary `isCompactScreen: Boolean` flag.
+
+### Breakpoints — `WindowSizeInfo.kt`
+
+| Class | Width | Principal devices |
+|---|---|---|
+| `WidthClass.Compact` | < 600 dp | Phones (portrait) |
+| `WidthClass.Medium` | 600 – 839 dp | Portrait tablets, large foldables |
+| `WidthClass.Expanded` | 840 – 1199 dp | Landscape tablets |
+| `WidthClass.Large` | 1200 – 1599 dp | Large tablet / small desktop |
+| `WidthClass.XLarge` | ≥ 1600 dp | Desktop / TV |
+
+| Height class | Height |
+|---|---|
+| `HeightClass.Compact` | < 480 dp (landscape phones) |
+| `HeightClass.Medium` | 480 – 899 dp |
+| `HeightClass.Expanded` | ≥ 900 dp (portrait tablets) |
+
+### Key Properties
+
+| Property | Description |
+|---|---|
+| `useCompactNav` | `true` for Compact + Medium → bottom nav + hamburger drawer |
+| `useWideNav` | `true` for Expanded+ → full top nav bar |
+| `horizontalPadding` | 16 / 24 / 48 / 80 / 120 dp by width class |
+| `maxContentWidth` | Content column cap: unset / 720 / 1100 / 1400 / 1600 dp |
+
+### `rememberWindowSizeInfo()`
+
+Top-level `@Composable` that uses `LocalWindowInfo.containerSize` + `LocalDensity` for precise pixel→dp mapping (more accurate than Material3's `calculateWindowSizeClass()` alone). Called once in `AppNavigation` and the result passed down.
+
+### Per-Page Adaptations
+
+| Page | Compact | Medium | Expanded | Large / XLarge |
+|---|---|---|---|---|
+| **HomePage** | Full-width cards | 80% cards, 420 dp | 30% cards, 500 dp | Same |
+| **AboutPage** | Single-column list | 2-col grid | 2-col grid | 2-col grid |
+| **MembersPage** | 2-col grid | 3-col grid | Side-by-side sections | Same |
+| **EventsPage** | 280 dp min col | 300 dp | 340 dp | 380 / 420 dp |
+| **WinePage** | Stacked list | Stacked list | 30 / 70 split | 25 / 75 split |
+| **PodcastsPage** | Stacked cards | Stacked cards | 1:2 list/video | 1:3 list/video |
+| **BlogPage** | 16 dp padding | 24 dp | 48 dp | 80 / 120 dp |
+| **Carousel** | 320 dp tall | 380 dp | 450 dp | 480 / 520 dp |
+
+---
+
+## 7. Deployment Info
 - **Hosting**: Firebase Hosting.
 - **Build Command**: `./gradlew :composeApp:wasmJsBrowserDistribution`
 - **Memory**: Production WASM compilation requires at least 6 GB heap. Set in `gradle.properties`: `kotlin.daemon.jvmargs=-Xmx6G` and `org.gradle.jvmargs=-Xmx6G`.

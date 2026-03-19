@@ -23,6 +23,9 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.VerticalScrollbar
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -60,7 +63,7 @@ import org.koin.compose.koinInject
 
 @Composable
 fun WinePage(
-    isCompactScreen: Boolean
+    sizeInfo: WindowSizeInfo
 ) {
     val viewModel: WinePageViewModel = koinInject()
     val wines by viewModel.wineList.collectAsState()
@@ -71,21 +74,28 @@ fun WinePage(
         wines.filter { it.matchesQuery(searchQuery) }
     }
 
-    if (isCompactScreen) {
+    if (sizeInfo.useCompactNav) {
+        // Compact + Medium → stacked list layout
         CompactScreenWinePage(
-            favoriteWines= filteredWines,
+            favoriteWines = filteredWines,
             selectedWine = selectedWine,
             searchQuery = searchQuery,
-            onSearchQueryChange = {viewModel.setSearchQuery(it)},
-            onWineClick = {viewModel.setSelectedWine(it)}
+            onSearchQueryChange = { viewModel.setSearchQuery(it) },
+            onWineClick = { viewModel.setSelectedWine(it) }
         )
     } else {
+        // Expanded / Large / XLarge → side-by-side list + detail
+        val listFraction = when (sizeInfo.widthClass) {
+            WidthClass.Large, WidthClass.XLarge -> 0.25f
+            else -> 0.30f  // Expanded
+        }
         LargeScreenWinePage(
             searchQuery = searchQuery,
-            onQueryChange = {viewModel.setSearchQuery(it)},
+            onQueryChange = { viewModel.setSearchQuery(it) },
             filteredWines = filteredWines,
             selectedWine = selectedWine,
-            onSelectedWineChange = {viewModel.setSelectedWine(it)}
+            onSelectedWineChange = { viewModel.setSelectedWine(it) },
+            listFraction = listFraction
         )
     }
 
@@ -98,7 +108,7 @@ fun WineListItem(
     onClick: () -> Unit
 ) {
     val bgColor by animateColorAsState(
-        targetValue  = if (isSelected) Color(0xFFFF7F33) else Color(0xFF2A2A2A),
+        targetValue  = if (isSelected) Color(0xFFFF7F33).copy(alpha = 0.4f) else Color(0xFF2A2A2A),
         animationSpec = tween(durationMillis = 300),
         label        = "wineSelection"
     )
@@ -434,13 +444,14 @@ fun LargeScreenWinePage(
     onQueryChange: (String) -> Unit,
     filteredWines: List<Wine>,
     selectedWine: Wine?,
-    onSelectedWineChange: (Wine) -> Unit
+    onSelectedWineChange: (Wine) -> Unit,
+    listFraction: Float = 0.30f
 ) {
     Row(modifier = Modifier.fillMaxSize()) {
 
         Column(
             modifier = Modifier
-                .fillMaxWidth(0.3f)
+                .fillMaxWidth(listFraction)
                 .fillMaxHeight()
                 .background(Color.Black)
         ) {
@@ -470,19 +481,31 @@ fun LargeScreenWinePage(
                         color = Color.White,
                         modifier = Modifier.padding(16.dp)
                     )
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(filteredWines) { wine ->
-                            ScrollReveal {
-                                WineListItem(
-                                    wine = wine,
-                                    isSelected = (wine == selectedWine),
-                                    onClick = { onSelectedWineChange(wine) }
-                                )
+                    val wineListState = rememberLazyListState()
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            state    = wineListState,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(filteredWines) { wine ->
+                                ScrollReveal {
+                                    WineListItem(
+                                        wine = wine,
+                                        isSelected = (wine == selectedWine),
+                                        onClick = { onSelectedWineChange(wine) }
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
                             }
-                            Spacer(modifier = Modifier.height(16.dp))
                         }
+                        VerticalScrollbar(
+                            adapter  = rememberScrollbarAdapter(wineListState),
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .fillMaxHeight()
+                                .padding(end = 2.dp),
+                            style    = wdwScrollbarStyle()
+                        )
                     }
                 }
             }

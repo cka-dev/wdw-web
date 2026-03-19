@@ -2,6 +2,7 @@ package net.winedownwednesday.web.composables
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -21,7 +23,9 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -35,7 +39,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -44,13 +48,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import kotlinx.browser.document
-import net.winedownwednesday.web.HtmlView
-import net.winedownwednesday.web.LocalLayerContainer
 import net.winedownwednesday.web.data.Episode
+import net.winedownwednesday.web.hideYouTubePlayer
+import net.winedownwednesday.web.showYouTubePlayer
+import net.winedownwednesday.web.updateYouTubePlayerPosition
 import net.winedownwednesday.web.viewmodels.PodcastsPageViewModel
 import net.winedownwednesday.web.viewmodels.matchesQuery
 import org.koin.compose.koinInject
@@ -58,7 +65,7 @@ import org.koin.compose.koinInject
 
 @Composable
 fun PodcastsPage(
-    isCompactScreen: Boolean
+    sizeInfo: WindowSizeInfo
 ) {
     val viewModel: PodcastsPageViewModel = koinInject()
     val episodes by viewModel.episodes.collectAsState()
@@ -71,22 +78,34 @@ fun PodcastsPage(
     }
     val selectedEpisode = viewModel.selectedEpisode.collectAsState()
 
-    if (isCompactScreen) {
+    if (sizeInfo.useCompactNav) {
+        // Compact + Medium → stacked card list
         CompactPodcastsScreen(
             episodes = filteredEpisodes,
             selectedEpisode = selectedEpisode.value,
             searchQuery = searchQuery,
-            onSelectedEpisodeChange = {viewModel.setSelectedEpisode(it)},
+            onSelectedEpisodeChange = { viewModel.setSelectedEpisode(it) },
             onDismissRequest = { viewModel.clearSelectedEpisode() },
             onSearchQueryChange = { viewModel.setSearchQuery(it) }
         )
     } else {
+        // Expanded / Large / XLarge → side-by-side list + video detail
+        val listWeight = when (sizeInfo.widthClass) {
+            WidthClass.Large, WidthClass.XLarge -> 1f  // narrower list on big screens
+            else -> 1f                                  // Expanded default
+        }
+        val detailWeight = when (sizeInfo.widthClass) {
+            WidthClass.Large, WidthClass.XLarge -> 3f
+            else -> 2f  // Expanded
+        }
         LargeScreenPodcastPage(
             searchQuery = searchQuery,
-            onQueryChange = {viewModel.setSearchQuery(it)},
+            onQueryChange = { viewModel.setSearchQuery(it) },
             filteredEpisodes = filteredEpisodes,
-            onEpisodeSelected = {viewModel.setSelectedEpisode(it)},
-            selectedEpisode = selectedEpisode.value
+            onEpisodeSelected = { viewModel.setSelectedEpisode(it) },
+            selectedEpisode = selectedEpisode.value,
+            listWeight = listWeight,
+            detailWeight = detailWeight
         )
     }
 
@@ -99,7 +118,9 @@ fun LargeScreenPodcastPage(
     onQueryChange: (String) -> Unit,
     filteredEpisodes: List<Episode>?,
     onEpisodeSelected: (Episode) -> Unit,
-    selectedEpisode: Episode?
+    selectedEpisode: Episode?,
+    listWeight: Float = 1f,
+    detailWeight: Float = 2f
 ){
     Row(
         modifier = Modifier
@@ -108,7 +129,7 @@ fun LargeScreenPodcastPage(
     ) {
         Column(
             modifier = Modifier
-                .weight(1f)
+                .weight(listWeight)
                 .fillMaxHeight()
                 .background(Color.Black)
         ) {
@@ -130,62 +151,72 @@ fun LargeScreenPodcastPage(
                     color = Color.White,
                     modifier = Modifier.padding(16.dp)
                 )
-
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    filteredEpisodes?.let { episodes ->
-                        items(episodes) { episode ->
-                            ScrollReveal {
-                                EpisodeListItem(
-                                    episode = episode,
-                                    isSelected = (
-                                            if (selectedEpisode != null) {
-                                                episode == selectedEpisode
-                                            } else {
-                                                false
-                                            }),
-                                    onClick = {
-                                        onEpisodeSelected(episode)
-                                    }
-                                )
+                val episodeListState = rememberLazyListState()
+                Box(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        state    = episodeListState,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        filteredEpisodes?.let { episodes ->
+                            items(episodes) { episode ->
+                                ScrollReveal {
+                                    EpisodeListItem(
+                                        episode = episode,
+                                        isSelected = (
+                                                if (selectedEpisode != null) {
+                                                    episode == selectedEpisode
+                                                } else {
+                                                    false
+                                                }),
+                                        onClick = {
+                                            onEpisodeSelected(episode)
+                                        }
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
                             }
-                            Spacer(modifier = Modifier.height(16.dp))
                         }
                     }
-
+                    VerticalScrollbar(
+                        adapter  = rememberScrollbarAdapter(episodeListState),
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .fillMaxHeight()
+                            .padding(end = 2.dp),
+                        style    = wdwScrollbarStyle()
+                    )
                 }
             }
 
         }
 
-        CompositionLocalProvider(LocalLayerContainer provides document.body!!) {
-            Column(
+        Column(
+            modifier = Modifier
+                .weight(detailWeight)
+                .fillMaxHeight()
+                .background(Color.Black)
+        ) {
+            Card(
                 modifier = Modifier
-                    .weight(2f)
-                    .fillMaxHeight()
-                    .background(Color.Black)
+                    .padding(16.dp)
+                    .fillMaxSize(),
+                elevation = CardDefaults.cardElevation(4.dp),
             ) {
-                Card(
-                    modifier = Modifier.padding(16.dp),
-                    elevation = CardDefaults.cardElevation(4.dp),
-                ) {
-                    if (selectedEpisode == null) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Select an episode to see the details and watch",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = Color.LightGray
-                            )
-                        }
-                    } else {
-                        EpisodeVideoDetail(
-                            episode = selectedEpisode!!
+                if (selectedEpisode == null) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Select an episode to see the details and watch",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.LightGray
                         )
                     }
+                } else {
+                    EpisodeVideoDetail(
+                        episode = selectedEpisode!!
+                    )
                 }
             }
         }
@@ -199,7 +230,7 @@ fun EpisodeListItem(
     onClick: () -> Unit
 ) {
     val bgColor by animateColorAsState(
-        targetValue  = if (isSelected) Color(0xFF333333) else Color(0xFF1E1E1E),
+        targetValue  = if (isSelected) Color(0xFFFF7F33).copy(alpha = 0.25f) else Color(0xFF1E1E1E),
         animationSpec = tween(durationMillis = 250),
         label        = "episodeSelection"
     )
@@ -258,75 +289,61 @@ fun EpisodeListItem(
 fun EpisodeVideoDetail(
     episode: Episode
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Text(
-            text = episode.title,
-            style = MaterialTheme.typography.headlineMedium,
-            color = Color.White
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = episode.description,
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.White
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(16f / 9f)
-        ) {
-            KmpYoutubeVideoPlayer(url = episode.videoUrl)
-        }
-
+    // Right panel is dedicated to the video on large screens.
+    // Episode title / guest info are shown in the left list — no need to repeat them here.
+    Box(modifier = Modifier.fillMaxSize()) {
+        KmpYoutubeVideoPlayer(url = episode.videoUrl)
     }
 }
 
+
 @Composable
 fun KmpYoutubeVideoPlayer(url: String) {
-    val videoId = extractYouTubeVideoId(url)
+    val videoId  = extractYouTubeVideoId(url)
+    val density  = LocalDensity.current.density
+    // Track which videoId the bridge is currently showing so we can
+    // call updatePosition on layout changes instead of recreating the iframe.
+    val shownId  = remember { androidx.compose.runtime.mutableStateOf("") }
+
+    // Always hide when this composable LEAVES the composition entirely
+    // (e.g. navigating away from Podcasts). Without this, the iframe stays
+    // visible at its last position and overlaps other pages (like the footer).
+    DisposableEffect(Unit) {
+        onDispose { hideYouTubePlayer() }
+    }
+
+    // Also hide+reset when the video ID changes (switching episodes)
+    DisposableEffect(videoId) {
+        onDispose {
+            hideYouTubePlayer()
+            shownId.value = ""
+        }
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black),
+            .background(Color.Black)
+            .onGloballyPositioned { coordinates ->
+                if (videoId.isNotEmpty()) {
+                    val loc = coordinates.positionInWindow()
+                    val sz  = coordinates.size
+                    val l = loc.x             / density
+                    val t = loc.y             / density
+                    val w = sz.width.toFloat()  / density
+                    val h = sz.height.toFloat() / density
+                    if (shownId.value != videoId) {
+                        showYouTubePlayer(videoId, l, t, w, h)
+                        shownId.value = videoId
+                    } else {
+                        updateYouTubePlayerPosition(l, t, w, h)
+                    }
+                }
+            },
         contentAlignment = Alignment.Center
     ) {
-        if (videoId.isNotEmpty()) {
-            val embedUrl = "https://www.youtube.com/embed/$videoId"
-            println("Embedding video from: $embedUrl")
-
-            HtmlView(
-                modifier = Modifier.fillMaxSize(),
-                factory = {
-                    val iframe = createElement("iframe")
-                    iframe.setAttribute("src", embedUrl)
-                    iframe.setAttribute("frameborder", "0")
-                    iframe.setAttribute(
-                        "allow",
-                        "accelerometer; autoplay; " +
-                                "clipboard-write; encrypted-media; " +
-                                "gyroscope; picture-in-picture"
-                    )
-                    iframe.setAttribute("allowfullscreen", "true")
-                    iframe
-                },
-                update = {
-                }
-            )
-        } else {
-            Text(
-                text = "Invalid video URL",
-                color = Color.White
-            )
+        if (videoId.isEmpty()) {
+            Text(text = "No video available", color = Color.White)
         }
     }
 }
@@ -486,6 +503,14 @@ fun EpisodeVideoPopup(episode: Episode, onDismissRequest: () -> Unit) {
                 .align(Alignment.Center)
                 .fillMaxWidth(0.9f)
                 .padding(16.dp)
+                // Consume clicks so tapping inside the popup
+                // does not propagate to the scrim and dismiss.
+                .clickable(
+                    indication = null,
+                    interactionSource = remember {
+                        androidx.compose.foundation.interaction.MutableInteractionSource()
+                    }
+                ) { /* intentionally empty — swallows the event */ }
         ) {
             EpisodeVideoContent(episode = episode, onCloseClick = onDismissRequest)
         }
@@ -495,13 +520,12 @@ fun EpisodeVideoPopup(episode: Episode, onDismissRequest: () -> Unit) {
 @Composable
 fun EpisodeVideoContent(episode: Episode, onCloseClick: () -> Unit) {
 
-    CompositionLocalProvider(LocalLayerContainer provides document.body!!) {
-        Column(
-            modifier = Modifier
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.Center
-        ) {
+    Column(
+        modifier = Modifier
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.Center
+    ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -543,5 +567,4 @@ fun EpisodeVideoContent(episode: Episode, onCloseClick: () -> Unit) {
                 style = MaterialTheme.typography.bodyMedium
             )
         }
-    }
 }

@@ -10,8 +10,10 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ScrollbarStyle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
@@ -295,3 +297,13 @@ fun ScrollReveal(content: @Composable () -> Unit) {
         content()
     }
 }
+
+// ── Shared scrollbar style (visible on dark backgrounds) ─────────────────
+fun wdwScrollbarStyle() = ScrollbarStyle(
+    minimalHeight       = 32.dp,
+    thickness           = 6.dp,
+    shape               = RoundedCornerShape(3.dp),
+    hoverDurationMillis = 300,
+    unhoverColor        = Color.White.copy(alpha = 0.25f),
+    hoverColor          = Color(0xFFFF7F33).copy(alpha = 0.7f)
+)

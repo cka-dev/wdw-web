@@ -13,8 +13,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
-import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -120,7 +118,7 @@ fun AppNavigation(
     }
     val backStack = rememberNavBackStack(
         SavedStateConfiguration { serializersModule = navSerializersModule },
-        Route.Home
+        routeFromHash(window.location.hash)
     )
 
     // Convenience navigate helpers
@@ -142,8 +140,7 @@ fun AppNavigation(
     val userProfileData by authViewModel.profileData.collectAsState()
 
     // --- Responsive layout ------------------------------------------------
-    val windowSizeClass = calculateWindowSizeClass()
-    val isCompactScreen = windowSizeClass.widthSizeClass == WindowWidthSizeClass.Compact
+    val sizeInfo = rememberWindowSizeInfo()
 
     val scope = rememberCoroutineScope()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -218,7 +215,7 @@ fun AppNavigation(
                         onNavigate          = { navigateTo(it) },
                         onLogout            = { scope.launch { authViewModel.logout() } },
                         userProfileImageUrl = userProfileData?.profileImageUrl,
-                        isCompactScreen     = isCompactScreen,
+                        isCompactScreen     = sizeInfo.useCompactNav,
                         onHamburgerClick    = { scope.launch { drawerState.open() } }
                     )
 
@@ -226,33 +223,33 @@ fun AppNavigation(
                         NavDisplay(
                             backStack = backStack,
                             entryProvider = entryProvider {
-                                entry<Route.Home>      { FadeInPage { HomePage(isCompactScreen = isCompactScreen) } }
-                                entry<Route.About>     { FadeInPage { AboutPage(isCompactScreen = isCompactScreen) } }
+                                entry<Route.Home>      { FadeInPage { HomePage(sizeInfo = sizeInfo) } }
+                                entry<Route.About>     { FadeInPage { AboutPage(sizeInfo = sizeInfo) } }
                                 entry<Route.Members>   {
                                     FadeInPage {
                                         MembersPage(
-                                            isCompactScreen = isCompactScreen,
+                                            sizeInfo        = sizeInfo,
                                             uiState         = uiState,
                                             userProfileData = userProfileData
                                         )
                                     }
                                 }
-                                entry<Route.Podcasts>  { FadeInPage { PodcastsPage(isCompactScreen = isCompactScreen) } }
+                                entry<Route.Podcasts>  { FadeInPage { PodcastsPage(sizeInfo = sizeInfo) } }
                                 entry<Route.Events>    {
                                     FadeInPage {
                                         EventsPage(
-                                            isCompactScreen   = isCompactScreen,
+                                            sizeInfo          = sizeInfo,
                                             uiState           = uiState,
                                             authPageViewModel = authViewModel
                                         )
                                     }
                                 }
-                                entry<Route.Wines>     { FadeInPage { WinePage(isCompactScreen = isCompactScreen) } }
+                                entry<Route.Wines>     { FadeInPage { WinePage(sizeInfo = sizeInfo) } }
                                 entry<Route.Login>     {
                                     if (!isLoggedIn) {
                                         FadeInPage {
                                             LoginScreen(
-                                                isCompactScreen = isCompactScreen,
+                                                isCompactScreen = sizeInfo.useCompactNav,
                                                 onLoginSuccess  = { },
                                                 viewModel       = authViewModel
                                             )
@@ -264,7 +261,7 @@ fun AppNavigation(
                                 entry<Route.Profile>   {
                                     FadeInPage {
                                         ProfilePage(
-                                            isCompactScreen = isCompactScreen,
+                                            isCompactScreen = sizeInfo.useCompactNav,
                                             onLogout        = { scope.launch { authViewModel.logout() } },
                                             isNewUser       = isNewUser,
                                             viewModel       = authViewModel,
@@ -272,10 +269,10 @@ fun AppNavigation(
                                         )
                                     }
                                 }
-                                entry<Route.Blog>      { FadeInPage { BlogPage(isCompactScreen = isCompactScreen) } }
+                                entry<Route.Blog>      { FadeInPage { BlogPage(sizeInfo = sizeInfo) } }
                                 entry<Route.Messaging> {
                                     if (isLoggedIn) {
-                                        MessagingScreen(isCompactScreen = isCompactScreen)
+                                        MessagingScreen(isCompactScreen = sizeInfo.useCompactNav)
                                     } else {
                                         LaunchedEffect(Unit) { replaceTop(Route.Login) }
                                     }
@@ -284,7 +281,7 @@ fun AppNavigation(
                         )
                     }
 
-                    if (isCompactScreen) {
+                    if (sizeInfo.useCompactNav) {
                         CompactFooter()
                         MobileBottomNavBar(
                             currentRoute = currentRoute,
@@ -301,7 +298,7 @@ fun AppNavigation(
             }
         }
 
-        if (isCompactScreen) {
+        if (sizeInfo.useCompactNav) {
             ModalNavigationDrawer(
                 drawerState   = drawerState,
                 drawerContent = {

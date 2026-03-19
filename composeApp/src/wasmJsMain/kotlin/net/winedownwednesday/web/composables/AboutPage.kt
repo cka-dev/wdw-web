@@ -3,6 +3,7 @@ package net.winedownwednesday.web.composables
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,9 +21,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
@@ -63,18 +66,21 @@ import wdw_web.composeapp.generated.resources.wdw_web_carousel_3
 
 @Composable
 fun AboutPage(
-    isCompactScreen: Boolean
+    sizeInfo: WindowSizeInfo
 ) {
     val viewModel: AboutPageViewModel = koinInject()
     val aboutSections by viewModel.aboutSections.collectAsState()
     var selectedSection by remember { mutableStateOf<AboutSection?>(null) }
 
+    val aboutListState = rememberLazyListState()
     Surface(color = Color(0xFF141414)) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black)
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                state    = aboutListState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+            ) {
             item {
                 Box(
                     modifier = Modifier.fillMaxWidth(),
@@ -87,7 +93,7 @@ fun AboutPage(
                             Res.drawable.wdw_web_carousel_3
                         ),
                         intervalMillis = 4000L,
-                        isCompactScreen = isCompactScreen
+                        sizeInfo = sizeInfo
                     ) {
                         Column(
                             modifier = Modifier
@@ -116,7 +122,8 @@ fun AboutPage(
 
             item { Spacer(modifier = Modifier.height(32.dp)) }
 
-            if (isCompactScreen) {
+            if (sizeInfo.isCompact) {
+                // Compact: single-column stacked cards
                 itemsIndexed(aboutSections) { index, aboutSection ->
                     GridItemReveal(index = index) {
                         CompactScreenAboutCard(
@@ -127,6 +134,7 @@ fun AboutPage(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             } else {
+                // Medium, Expanded, Large, XLarge: 2-column grid
                 val chunkedSections = aboutSections.chunked(2)
 
                 items(chunkedSections.size) { chunkIndex ->
@@ -135,13 +143,11 @@ fun AboutPage(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
+                                .padding(horizontal = sizeInfo.horizontalPadding),
                             horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            chunk.forEachIndexed { indexInChunk, section ->
-                                Box(modifier = Modifier
-                                    .weight(1f)
-                                ) {
+                            chunk.forEach { section ->
+                                Box(modifier = Modifier.weight(1f)) {
                                     LSAboutCard(
                                         section = section,
                                         onClick = { selectedSection = section }
@@ -153,6 +159,15 @@ fun AboutPage(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }
+            }
+            VerticalScrollbar(
+                adapter  = rememberScrollbarAdapter(aboutListState),
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .fillMaxHeight()
+                    .padding(end = 2.dp),
+                style    = wdwScrollbarStyle()
+            )
         }
     }
     selectedSection?.let { section ->
@@ -338,7 +353,7 @@ fun AboutImage(imageRes: DrawableResource?, modifier: Modifier = Modifier) {
 fun AutoScrollingImageCarousel(
     imagePaths: List<DrawableResource>,
     intervalMillis: Long = 3000L,
-    isCompactScreen: Boolean,
+    sizeInfo: WindowSizeInfo,
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit = {}
 ) {
@@ -353,10 +368,17 @@ fun AutoScrollingImageCarousel(
         }
     }
 
+    val carouselHeight = when (sizeInfo.widthClass) {
+        WidthClass.Compact  -> 320.dp
+        WidthClass.Medium   -> 380.dp
+        WidthClass.Expanded -> 450.dp
+        WidthClass.Large    -> 480.dp
+        WidthClass.XLarge   -> 520.dp
+    }
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(if (isCompactScreen) 320.dp else 450.dp),
+            .height(carouselHeight),
         contentAlignment = Alignment.Center
     ) {
         Box(

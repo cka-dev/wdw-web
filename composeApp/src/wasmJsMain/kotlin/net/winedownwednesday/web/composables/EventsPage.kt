@@ -109,7 +109,7 @@ import wdw_web.composeapp.generated.resources.placeholder
 
 @Composable
 fun EventsPage(
-    isCompactScreen: Boolean,
+    sizeInfo: WindowSizeInfo,
     authPageViewModel: AuthPageViewModel,
     uiState: LoginUIState
 ) {
@@ -181,8 +181,16 @@ fun EventsPage(
         }
 
         val eventsToDisplay = if (showUpcoming) upcomingEvents else pastEvents
+        // Adaptive column min size grows with screen width
+        val colMinSize = when (sizeInfo.widthClass) {
+            WidthClass.Compact  -> 280.dp
+            WidthClass.Medium   -> 300.dp
+            WidthClass.Expanded -> 340.dp
+            WidthClass.Large    -> 380.dp
+            WidthClass.XLarge   -> 420.dp
+        }
         LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 300.dp),
+            columns = GridCells.Adaptive(minSize = colMinSize),
             contentPadding = PaddingValues(16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -199,7 +207,7 @@ fun EventsPage(
                             },
                             viewModel = viewModel,
                             showUpcoming = showUpcoming,
-                            isCompactScreen = isCompactScreen,
+                            isCompactScreen = sizeInfo.useCompactNav,
                             uiState = uiState,
                             authPageViewModel = authPageViewModel,
                             onRsvpClick = {
@@ -217,25 +225,17 @@ fun EventsPage(
     }
 
     if (selectedEvent != null) {
-        if (isCompactScreen) {
+        if (sizeInfo.useCompactNav) {
             CompactScreenEventDetailPopup(
                 event = selectedEvent!!,
-                onDismissRequest = {
-                    viewModel.setSelectedEvent(null)
-                },
-                onRsvpClick = {
-                    eventForRsvp = selectedEvent
-                }
+                onDismissRequest = { viewModel.setSelectedEvent(null) },
+                onRsvpClick = { eventForRsvp = selectedEvent }
             )
         } else {
             LargeScreenEventDetailPopup(
                 selectedEvent = selectedEvent!!,
-                onDismissRequest = {
-                    viewModel.setSelectedEvent(null)
-                },
-                onRsvpClick = {
-                    eventForRsvp = selectedEvent
-                }
+                onDismissRequest = { viewModel.setSelectedEvent(null) },
+                onRsvpClick = { eventForRsvp = selectedEvent }
             )
         }
     }
