@@ -3,7 +3,9 @@ package net.winedownwednesday.web.composables
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import net.winedownwednesday.web.getHapticCategoryPref
 import net.winedownwednesday.web.getHapticPreference
+import net.winedownwednesday.web.setHapticCategoryPref
 import net.winedownwednesday.web.setHapticPreference
 import net.winedownwednesday.web.vibrate
 import net.winedownwednesday.web.vibratePatternStr
@@ -44,9 +46,6 @@ object HapticPattern {
 
 /**
  * User-configurable haptic intensity levels.
- *
- * Each level has a [multiplier] that scales the base [HapticDuration] values.
- * "OFF" disables all haptic feedback.
  */
 enum class HapticIntensity(val label: String, val multiplier: Float) {
     OFF("Off", 0f),
@@ -61,29 +60,47 @@ enum class HapticIntensity(val label: String, val multiplier: Float) {
 }
 
 /**
- * Read the user's haptic intensity preference from localStorage.
+ * Per-category haptic feedback toggles.
+ * Each category can be individually enabled/disabled via localStorage.
  */
+enum class HapticCategory(val label: String, val storageKey: String) {
+    NAVIGATION("Navigation", "wdw_haptic_nav"),
+    INTERACTIONS("Interactions", "wdw_haptic_interact"),
+    REACTIONS("Reactions", "wdw_haptic_react"),
+    DIALOGS("Dialogs", "wdw_haptic_dialog"),
+    ALERTS("Alerts", "wdw_haptic_alert");
+
+    fun isEnabled(): Boolean = getHapticCategoryPref(storageKey) == "true"
+
+    fun setEnabled(enabled: Boolean) {
+        setHapticCategoryPref(storageKey, if (enabled) "true" else "false")
+    }
+}
+
+// ── Core functions ───────────────────────────────────────────────────────
+
 fun currentHapticIntensity(): HapticIntensity =
     HapticIntensity.fromString(getHapticPreference())
 
 /**
- * Intensity-aware vibration. Scales [baseDurationMs] by the user's preference.
- * No-ops if intensity is OFF.
+ * Intensity-aware vibration with optional category check.
+ * No-ops if intensity is OFF or the category is disabled.
  */
-fun hapticVibrate(baseDurationMs: Int) {
+fun hapticVibrate(baseDurationMs: Int, category: HapticCategory? = null) {
     val intensity = currentHapticIntensity()
     if (intensity == HapticIntensity.OFF) return
+    if (category != null && !category.isEnabled()) return
     val scaled = (baseDurationMs * intensity.multiplier).toInt().coerceAtLeast(1)
     vibrate(scaled)
 }
 
 /**
- * Intensity-aware pattern vibration. Scales every vibration segment
- * (odd indices are pauses and stay unchanged).
+ * Intensity-aware pattern vibration with optional category check.
  */
-fun hapticVibratePattern(basePattern: IntArray) {
+fun hapticVibratePattern(basePattern: IntArray, category: HapticCategory? = null) {
     val intensity = currentHapticIntensity()
     if (intensity == HapticIntensity.OFF) return
+    if (category != null && !category.isEnabled()) return
     val scaled = basePattern.mapIndexed { index, ms ->
         if (index % 2 == 0) (ms * intensity.multiplier).toInt().coerceAtLeast(1) else ms
     }
@@ -92,21 +109,18 @@ fun hapticVibratePattern(basePattern: IntArray) {
 
 /**
  * Wraps a click callback with haptic feedback.
- *
- * Usage: `.clickable(onClick = hapticClick { doSomething() })`
  */
 fun hapticClick(
     durationMs: Int = HapticDuration.LIGHT,
+    category: HapticCategory? = null,
     onClick: () -> Unit
 ): () -> Unit = {
-    hapticVibrate(durationMs)
+    hapticVibrate(durationMs, category)
     onClick()
 }
 
-/**
- * Composable helper to remember the current haptic intensity and provide
- * a setter that persists to localStorage.
- */
+// ── Composable helpers ───────────────────────────────────────────────────
+
 @Composable
 fun rememberHapticIntensity(): Pair<HapticIntensity, (HapticIntensity) -> Unit> {
     val state = remember {
@@ -115,5 +129,14 @@ fun rememberHapticIntensity(): Pair<HapticIntensity, (HapticIntensity) -> Unit> 
     return state.value to { newIntensity: HapticIntensity ->
         setHapticPreference(newIntensity.name.lowercase())
         state.value = newIntensity
+    }
+}
+
+@Composable
+fun rememberCategoryEnabled(category: HapticCategory): Pair<Boolean, (Boolean) -> Unit> {
+    val state = remember { mutableStateOf(category.isEnabled()) }
+    return state.value to { enabled: Boolean ->
+        category.setEnabled(enabled)
+        state.value = enabled
     }
 }

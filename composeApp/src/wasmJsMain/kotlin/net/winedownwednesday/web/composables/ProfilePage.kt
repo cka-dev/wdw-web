@@ -414,49 +414,6 @@ fun ProfileReadSection(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Haptic Feedback Settings
-            Text(
-                text = "Haptic Feedback",
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            val (hapticIntensity, setHapticIntensity) = rememberHapticIntensity()
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                HapticIntensity.entries.forEach { level ->
-                    val isSelected = hapticIntensity == level
-                    Button(
-                        onClick = {
-                            setHapticIntensity(level)
-                            if (level != HapticIntensity.OFF) {
-                                hapticVibrate(HapticDuration.MEDIUM)
-                            }
-                        },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isSelected)
-                                Color(0xFFFF7F33) else Color(0xFF444444),
-                            contentColor = Color.White
-                        )
-                    ) {
-                        Text(
-                            text = level.label,
-                            fontSize = 11.sp,
-                            maxLines = 1
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
             // Security Settings Section
             Text(
                 text = "Security Settings",

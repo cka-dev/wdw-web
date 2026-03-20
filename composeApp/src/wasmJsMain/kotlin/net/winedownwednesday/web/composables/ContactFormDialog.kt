@@ -117,7 +117,7 @@ fun ContactFormDialog(onDismiss: () -> Unit) {
 
     fun submit() {
         if (!validate()) {
-            hapticVibrate(HapticDuration.HEAVY)
+            hapticVibrate(HapticDuration.HEAVY, HapticCategory.ALERTS)
             return
         }
         loading   = true
@@ -139,9 +139,9 @@ fun ContactFormDialog(onDismiss: () -> Unit) {
                 val json = """{"name":"$nameEsc","email":"$emailEsc","message":"$msgEsc"}"""
                 postContactForm(CONTACT_ENDPOINT, json)
                 success = true
-                hapticVibrate(HapticDuration.MEDIUM)
+                hapticVibrate(HapticDuration.MEDIUM, HapticCategory.ALERTS)
             } catch (e: Exception) {
-                hapticVibrate(HapticDuration.HEAVY)
+                hapticVibrate(HapticDuration.HEAVY, HapticCategory.ALERTS)
                 submitErr = "Failed to send. Please try again."
             } finally {
                 loading = false
@@ -243,7 +243,7 @@ fun ContactFormDialog(onDismiss: () -> Unit) {
                         Spacer(Modifier.width(8.dp))
                         Button(
                             onClick = {
-                                hapticVibrate(HapticDuration.MEDIUM)
+                                hapticVibrate(HapticDuration.MEDIUM, HapticCategory.INTERACTIONS)
                                 submit()
                             },
                             enabled = !loading,

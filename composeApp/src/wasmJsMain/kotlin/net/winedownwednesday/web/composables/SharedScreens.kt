@@ -44,6 +44,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
@@ -62,6 +63,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -334,7 +336,7 @@ fun MobileBottomNavBar(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .clickable {
-                            hapticVibrate(HapticDuration.LIGHT)
+                            hapticVibrate(HapticDuration.LIGHT, HapticCategory.NAVIGATION)
                             if (route == Route.Messaging && uiState !is LoginUIState.Authenticated) {
                                 onNavigate(Route.Login)
                             } else {
@@ -392,7 +394,7 @@ fun NavDrawerContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
-                        hapticVibrate(HapticDuration.LIGHT)
+                        hapticVibrate(HapticDuration.LIGHT, HapticCategory.NAVIGATION)
                         onNavigate(route)
                     }
                     .background(
@@ -416,6 +418,97 @@ fun NavDrawerContent(
             }
             Spacer(modifier = Modifier.height(4.dp))
         }
+
+        // Push haptic settings to the bottom
+        Spacer(modifier = Modifier.weight(1f))
+
+        // ── Haptic Feedback Settings ─────────────────────────────────────
+        HorizontalDivider(
+            color = Color(0xFF444444),
+            modifier = Modifier.padding(vertical = 12.dp)
+        )
+
+        Text(
+            text = "Haptic Feedback",
+            color = Color.White,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        // Intensity row
+        val (hapticIntensity, setHapticIntensity) = rememberHapticIntensity()
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            HapticIntensity.entries.forEach { level ->
+                val isSelected = hapticIntensity == level
+                Surface(
+                    onClick = {
+                        setHapticIntensity(level)
+                        if (level != HapticIntensity.OFF) {
+                            hapticVibrate(HapticDuration.MEDIUM)
+                        }
+                    },
+                    color = if (isSelected) Color(0xFFFF7F33) else Color(0xFF333333),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = level.label,
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp)
+                    )
+                }
+            }
+        }
+
+        // Per-category toggles (only shown when not OFF)
+        if (hapticIntensity != HapticIntensity.OFF) {
+            Spacer(modifier = Modifier.height(8.dp))
+            HapticCategory.entries.forEach { category ->
+                val (enabled, setEnabled) = rememberCategoryEnabled(category)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            val newVal = !enabled
+                            setEnabled(newVal)
+                            if (newVal) hapticVibrate(HapticDuration.TICK)
+                        }
+                        .padding(vertical = 4.dp, horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = category.label,
+                        color = if (enabled) Color.White else Color(0xFF777777),
+                        fontSize = 13.sp
+                    )
+                    Surface(
+                        color = if (enabled) Color(0xFFFF7F33) else Color(0xFF444444),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.size(width = 36.dp, height = 20.dp)
+                    ) {
+                        Box(contentAlignment = if (enabled) Alignment.CenterEnd else Alignment.CenterStart) {
+                            Surface(
+                                color = Color.White,
+                                shape = CircleShape,
+                                modifier = Modifier
+                                    .padding(2.dp)
+                                    .size(16.dp)
+                            ) {}
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 

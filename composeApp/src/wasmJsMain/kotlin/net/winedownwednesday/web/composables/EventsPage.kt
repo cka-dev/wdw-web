@@ -300,7 +300,7 @@ fun EventCard(
             .hoverScale()
             .clip(RoundedCornerShape(12.dp))
             .clickable {
-                hapticVibrate(HapticDuration.TICK)
+                hapticVibrate(HapticDuration.TICK, HapticCategory.DIALOGS)
                 onEventSelectedChange(event)
             },
         colors = CardDefaults.cardColors(
@@ -379,7 +379,7 @@ fun EventCard(
                 Button(
                     enabled = showUpcoming,
                     onClick = {
-                        hapticVibrate(HapticDuration.MEDIUM)
+                        hapticVibrate(HapticDuration.MEDIUM, HapticCategory.ALERTS)
                         if (isUserAuthenticated) {
                             onRsvpClick()
                         } else {
@@ -418,7 +418,7 @@ fun EventCard(
                         viewModel.addRsvpToEvent(rsvpRequest) { eventUpdateSuccess ->
                             showProgressBar.value = false
                             if (eventUpdateSuccess) {
-                                hapticVibrate(HapticDuration.MEDIUM)
+                                hapticVibrate(HapticDuration.MEDIUM, HapticCategory.ALERTS)
                                 showSuccessToast.value = true
                                 coroutineScope.launch {
                                     delay(2000)
@@ -426,7 +426,7 @@ fun EventCard(
                                 }
                                 onDismissRequest()
                             } else {
-                                hapticVibrate(HapticDuration.HEAVY)
+                                hapticVibrate(HapticDuration.HEAVY, HapticCategory.ALERTS)
                                 showErrorToast.value = true
                                 coroutineScope.launch {
                                     delay(2000)
@@ -436,7 +436,7 @@ fun EventCard(
                         }
                     } else {
                         showProgressBar.value = false
-                        hapticVibrate(HapticDuration.HEAVY)
+                        hapticVibrate(HapticDuration.HEAVY, HapticCategory.ALERTS)
                         showErrorToast.value = true
                         coroutineScope.launch {
                             delay(2000)

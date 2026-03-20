@@ -417,7 +417,7 @@ fun CompactScreenWinePage(
                     wine = wine,
                     isFavorite = true,
                     onClick = {
-                        hapticVibrate(HapticDuration.TICK)
+                        hapticVibrate(HapticDuration.TICK, HapticCategory.DIALOGS)
                         onWineClick(wine)
                         showDialog = true
                     }

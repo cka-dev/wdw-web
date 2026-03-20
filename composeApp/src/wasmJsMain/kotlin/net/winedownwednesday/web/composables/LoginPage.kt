@@ -220,7 +220,7 @@ fun LoginScreen(
 
                                 when (uiState) {
                                     is LoginUIState.Error -> {
-                                        hapticVibratePattern(HapticPattern.ERROR)
+                                        hapticVibratePattern(HapticPattern.ERROR, HapticCategory.ALERTS)
                                         Text(
                                             (uiState as LoginUIState.Error).message,
                                             color = Color.Red,
@@ -235,7 +235,7 @@ fun LoginScreen(
                                         )
                                     }
                                     is LoginUIState.Authenticated -> {
-                                        hapticVibrate(HapticDuration.MEDIUM)
+                                        hapticVibrate(HapticDuration.MEDIUM, HapticCategory.ALERTS)
                                         onLoginSuccess()
                                     }
                                     else -> { /* Nothing to do */ }

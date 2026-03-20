@@ -46,3 +46,13 @@ fun getHapticPreference(): String = js("""
 fun setHapticPreference(value: String): Unit = js("""
     { localStorage.setItem('wdw_haptic_intensity', value); }
 """)
+
+/** Read a per-category enabled flag. Returns "true" if not set (enabled by default). */
+fun getHapticCategoryPref(key: String): String = js("""
+    { return localStorage.getItem(key) || 'true'; }
+""")
+
+/** Write a per-category enabled flag. */
+fun setHapticCategoryPref(key: String, enabled: String): Unit = js("""
+    { localStorage.setItem(key, enabled); }
+""")

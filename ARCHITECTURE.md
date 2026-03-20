@@ -140,7 +140,7 @@ Mobile compact layouts use the browser [Vibration API](https://developer.mozilla
   - `hapticVibrate()` / `hapticVibratePattern()` — intensity-aware wrappers that scale durations
   - `rememberHapticIntensity()` composable for settings UI binding
 - **Browser Support**: Android browsers (Chrome, Firefox, Samsung Internet) ✅ — iOS Safari ❌ (progressive enhancement, zero impact on unsupported browsers).
-- **User Preferences**: Intensity toggle (Off / Light / Normal / Strong) in Profile → Security Settings, persisted via localStorage.
+- **User Preferences**: Intensity toggle (Off / Light / Normal / Strong) + per-category on/off switches (Navigation, Interactions, Reactions, Dialogs, Alerts) in the NavDrawer, accessible to all users without login. Persisted via localStorage.
 - **Integration Points**:
   - Navigation: `MobileBottomNavBar` taps, `NavDrawerContent` item taps, hamburger menu button
   - Events: card tap to detail, RSVP button, RSVP success/error

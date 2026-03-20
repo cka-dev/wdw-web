@@ -218,7 +218,7 @@ fun AppNavigation(
                         userProfileImageUrl = userProfileData?.profileImageUrl,
                         isCompactScreen     = sizeInfo.useCompactNav,
                         onHamburgerClick    = {
-                            hapticVibrate(HapticDuration.TICK)
+                            hapticVibrate(HapticDuration.TICK, HapticCategory.NAVIGATION)
                             scope.launch { drawerState.open() }
                         }
                     )

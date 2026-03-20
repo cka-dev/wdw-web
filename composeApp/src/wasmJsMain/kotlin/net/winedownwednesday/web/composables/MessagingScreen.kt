@@ -1778,7 +1778,7 @@ fun MessageBubble(
                                                 Row(
                                                     modifier = Modifier
                                                         .clickable {
-                                                            hapticVibrate(HapticDuration.TICK)
+                                                            hapticVibrate(HapticDuration.TICK, HapticCategory.REACTIONS)
                                                             onReaction(type)
                                                         }
                                                         .padding(
@@ -1966,7 +1966,7 @@ fun MessageBubble(
                             val type = reactionDefs.find { it.emoji == emoji }?.type
                                 ?: ("emoji_" + emoji.map { it.code.toString(16) }
                                     .joinToString("_"))
-                            hapticVibrate(HapticDuration.TICK)
+                            hapticVibrate(HapticDuration.TICK, HapticCategory.REACTIONS)
                             onReaction(type)
                             onToggleEmojiPicker()
                         }
@@ -2104,7 +2104,7 @@ private fun ReactionPicker(onSelect: (String) -> Unit) {
             reactionDefs.forEach { def ->
                 Surface(
                     onClick = {
-                        hapticVibrate(HapticDuration.TICK)
+                        hapticVibrate(HapticDuration.TICK, HapticCategory.REACTIONS)
                         onSelect(def.type)
                     },
                     color = Color(0xFF2C2C2C),
@@ -2405,7 +2405,7 @@ fun MessageInput(
                                         if (isEditing && editingMessage != null) {
                                             onEditMessage(editingMessage.id, textFieldValue.text)
                                         } else {
-                                            hapticVibrate(HapticDuration.LIGHT)
+                                            hapticVibrate(HapticDuration.LIGHT, HapticCategory.INTERACTIONS)
                                             onSendMessage(textFieldValue.text, selectedFile)
                                         }
                                         textFieldValue = TextFieldValue("")
@@ -2450,7 +2450,7 @@ fun MessageInput(
                             if (isEditing && editingMessage != null) {
                                 onEditMessage(editingMessage.id, textFieldValue.text)
                             } else {
-                                hapticVibrate(HapticDuration.LIGHT)
+                                hapticVibrate(HapticDuration.LIGHT, HapticCategory.INTERACTIONS)
                                 onSendMessage(textFieldValue.text, selectedFile)
                             }
                             textFieldValue = TextFieldValue("")
@@ -3279,7 +3279,7 @@ fun ThreadPanel(
                             if (event.key == Key.Enter
                                 && !event.isShiftPressed && replyText.isNotBlank())
                             {
-                                hapticVibrate(HapticDuration.LIGHT)
+                                hapticVibrate(HapticDuration.LIGHT, HapticCategory.INTERACTIONS)
                                 onSendReply(replyText)
                                 replyText = ""
                                 true
@@ -3302,7 +3302,7 @@ fun ThreadPanel(
                 IconButton(
                     onClick = {
                         if (replyText.isNotBlank()) {
-                            hapticVibrate(HapticDuration.LIGHT)
+                            hapticVibrate(HapticDuration.LIGHT, HapticCategory.INTERACTIONS)
                             onSendReply(replyText)
                             replyText = ""
                         }

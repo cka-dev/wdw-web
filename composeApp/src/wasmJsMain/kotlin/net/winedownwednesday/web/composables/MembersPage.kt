@@ -91,7 +91,7 @@ fun MembersPage(
             selectedMember   = selectedMember,
             searchQuery      = searchQuery,
             onMemberClick    = {
-                hapticVibrate(HapticDuration.TICK)
+                hapticVibrate(HapticDuration.TICK, HapticCategory.DIALOGS)
                 viewModel.setSelectedMember(it)
             },
             onDetailClose    = { viewModel.clearSelectedMember() },
@@ -106,7 +106,7 @@ fun MembersPage(
             selectedMember  = selectedMember,
             searchQuery     = searchQuery,
             onMemberClick   = {
-                hapticVibrate(HapticDuration.TICK)
+                hapticVibrate(HapticDuration.TICK, HapticCategory.DIALOGS)
                 viewModel.setSelectedMember(it)
             },
             onDismiss       = { viewModel.clearSelectedMember() },
