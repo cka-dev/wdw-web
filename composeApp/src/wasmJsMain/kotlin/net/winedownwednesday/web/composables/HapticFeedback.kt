@@ -7,6 +7,9 @@ import net.winedownwednesday.web.getHapticCategoryPref
 import net.winedownwednesday.web.getHapticPreference
 import net.winedownwednesday.web.setHapticCategoryPref
 import net.winedownwednesday.web.setHapticPreference
+import net.winedownwednesday.web.iosHapticPattern
+import net.winedownwednesday.web.iosHapticTap
+import net.winedownwednesday.web.isIOS
 import net.winedownwednesday.web.vibrate
 import net.winedownwednesday.web.vibratePatternStr
 
@@ -84,27 +87,39 @@ fun currentHapticIntensity(): HapticIntensity =
 
 /**
  * Intensity-aware vibration with optional category check.
+ * On Android: scales duration by intensity. On iOS 18+: triggers Taptic Engine via hidden switch.
  * No-ops if intensity is OFF or the category is disabled.
  */
 fun hapticVibrate(baseDurationMs: Int, category: HapticCategory? = null) {
     val intensity = currentHapticIntensity()
     if (intensity == HapticIntensity.OFF) return
     if (category != null && !category.isEnabled()) return
-    val scaled = (baseDurationMs * intensity.multiplier).toInt().coerceAtLeast(1)
-    vibrate(scaled)
+    if (isIOS()) {
+        // iOS: single Taptic Engine tap (no intensity/duration control)
+        iosHapticTap()
+    } else {
+        val scaled = (baseDurationMs * intensity.multiplier).toInt().coerceAtLeast(1)
+        vibrate(scaled)
+    }
 }
 
 /**
  * Intensity-aware pattern vibration with optional category check.
+ * On iOS: triggers timed Taptic Engine taps via hidden switch.
  */
 fun hapticVibratePattern(basePattern: IntArray, category: HapticCategory? = null) {
     val intensity = currentHapticIntensity()
     if (intensity == HapticIntensity.OFF) return
     if (category != null && !category.isEnabled()) return
-    val scaled = basePattern.mapIndexed { index, ms ->
-        if (index % 2 == 0) (ms * intensity.multiplier).toInt().coerceAtLeast(1) else ms
+    if (isIOS()) {
+        // iOS: timed switch clicks for pattern
+        iosHapticPattern(basePattern.joinToString(","))
+    } else {
+        val scaled = basePattern.mapIndexed { index, ms ->
+            if (index % 2 == 0) (ms * intensity.multiplier).toInt().coerceAtLeast(1) else ms
+        }
+        vibratePatternStr(scaled.joinToString(","))
     }
-    vibratePatternStr(scaled.joinToString(","))
 }
 
 /**

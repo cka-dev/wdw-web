@@ -1,18 +1,33 @@
 package net.winedownwednesday.web
 
 /**
- * Kotlin/Wasm interop for the browser Vibration API (navigator.vibrate).
+ * Kotlin/Wasm interop for haptic feedback via browser APIs.
  *
- * Progressive enhancement — all calls silently no-op when the API
- * is unavailable (iOS Safari, desktop browsers without vibration hardware).
+ * ■ Android — uses the standard Vibration API (navigator.vibrate).
+ * ■ iOS 18+ — falls back to programmatically clicking a hidden
+ *   <input type="checkbox" switch> element, which triggers WebKit's
+ *   native Taptic Engine feedback.
+ * ■ Other platforms — all calls silently no-op.
  *
  * Requires a user gesture (click / tap) and a secure context (HTTPS).
  */
+
+// ── Platform detection ───────────────────────────────────────────────────
 
 /** Returns true if the browser supports navigator.vibrate(). */
 fun isVibrationSupported(): Boolean = js("""
     { return ('vibrate' in navigator); }
 """)
+
+/** Returns true if we're running on iOS (iPhone/iPad/iPod). */
+fun isIOS(): Boolean = js("""
+    {
+        return /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    }
+""")
+
+// ── Vibration ────────────────────────────────────────────────────────────
 
 /** Single vibration pulse of [durationMs] milliseconds. */
 fun vibrate(durationMs: Int): Unit = js("""
@@ -33,9 +48,42 @@ fun cancelVibration(): Unit = js("""
     { if ('vibrate' in navigator) navigator.vibrate(0); }
 """)
 
-// ── localStorage-backed haptic preference ────────────────────────────────
+// ── iOS haptic fallback (hidden switch click) ────────────────────────────
 
-private const val HAPTIC_KEY = "wdw_haptic_intensity"
+/**
+ * Trigger a single haptic tap on iOS 18+ by clicking the hidden
+ * <input type="checkbox" switch> element in index.html.
+ * No-ops silently if the element doesn't exist.
+ */
+fun iosHapticTap(): Unit = js("""
+    {
+        var sw = document.getElementById('wdw-haptic-switch');
+        if (sw) sw.click();
+    }
+""")
+
+/**
+ * Trigger a pattern of haptic taps on iOS by clicking the hidden switch
+ * at timed intervals. Accepts a comma-separated string of alternating
+ * tap/pause durations in ms.
+ * Only the tap segments trigger a click; pauses are just delays.
+ */
+fun iosHapticPattern(patternCsv: String): Unit = js("""
+    {
+        var sw = document.getElementById('wdw-haptic-switch');
+        if (!sw) return;
+        var parts = patternCsv.split(',').map(Number);
+        var delay = 0;
+        for (var i = 0; i < parts.length; i++) {
+            if (i % 2 === 0) {
+                (function(d) { setTimeout(function() { sw.click(); }, d); })(delay);
+            }
+            delay += parts[i];
+        }
+    }
+""")
+
+// ── localStorage-backed haptic preference ────────────────────────────────
 
 /** Read the stored intensity preference. Returns "off"|"light"|"normal"|"strong". */
 fun getHapticPreference(): String = js("""

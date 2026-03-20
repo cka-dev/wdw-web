@@ -139,7 +139,7 @@ Mobile compact layouts use the browser [Vibration API](https://developer.mozilla
   - `HapticIntensity` enum (OFF, LIGHT, NORMAL, STRONG) with configurable multiplier
   - `hapticVibrate()` / `hapticVibratePattern()` — intensity-aware wrappers that scale durations
   - `rememberHapticIntensity()` composable for settings UI binding
-- **Browser Support**: Android browsers (Chrome, Firefox, Samsung Internet) ✅ — iOS Safari ❌ (progressive enhancement, zero impact on unsupported browsers).
+- **Browser Support**: Android browsers (Chrome, Firefox, Samsung Internet) ✅ via Vibration API — iOS 18+ (Safari, Chrome, all WebKit browsers) ✅ via hidden `<input switch>` Taptic Engine fallback — older iOS ❌ (progressive enhancement, graceful no-op).
 - **User Preferences**: Intensity toggle (Off / Light / Normal / Strong) + per-category on/off switches (Navigation, Interactions, Reactions, Dialogs, Alerts) in the NavDrawer, accessible to all users without login. Persisted via localStorage.
 - **Integration Points**:
   - Navigation: `MobileBottomNavBar` taps, `NavDrawerContent` item taps, hamburger menu button
