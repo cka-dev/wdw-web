@@ -51,32 +51,31 @@ fun cancelVibration(): Unit = js("""
 // ── iOS haptic fallback (hidden switch click) ────────────────────────────
 
 /**
- * Trigger a single haptic tap on iOS 18+ by clicking the hidden
- * <input type="checkbox" switch> element in index.html.
- * No-ops silently if the element doesn't exist.
+ * Trigger a single haptic tap on iOS 17.4+ by clicking the hidden
+ * <label> wrapping <input type="checkbox" switch> in index.html.
+ * Clicking the label triggers the native switch toggle via WebKit.
  */
 fun iosHapticTap(): Unit = js("""
     {
-        var sw = document.getElementById('wdw-haptic-switch');
-        if (sw) sw.click();
+        var lbl = document.getElementById('wdw-haptic-label');
+        if (lbl) lbl.click();
     }
 """)
 
 /**
- * Trigger a pattern of haptic taps on iOS by clicking the hidden switch
- * at timed intervals. Accepts a comma-separated string of alternating
+ * Trigger a pattern of haptic taps on iOS by clicking the hidden label
+ * at timed intervals. Accepts a CSV string of alternating
  * tap/pause durations in ms.
- * Only the tap segments trigger a click; pauses are just delays.
  */
 fun iosHapticPattern(patternCsv: String): Unit = js("""
     {
-        var sw = document.getElementById('wdw-haptic-switch');
-        if (!sw) return;
+        var lbl = document.getElementById('wdw-haptic-label');
+        if (!lbl) return;
         var parts = patternCsv.split(',').map(Number);
         var delay = 0;
         for (var i = 0; i < parts.length; i++) {
             if (i % 2 === 0) {
-                (function(d) { setTimeout(function() { sw.click(); }, d); })(delay);
+                (function(d) { setTimeout(function() { lbl.click(); }, d); })(delay);
             }
             delay += parts[i];
         }

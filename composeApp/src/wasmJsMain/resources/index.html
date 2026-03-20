@@ -12,9 +12,12 @@
     <script type="application/javascript" src="composeApp.js?v=2"></script>
 </head>
 <body>
-<!-- Hidden switch for iOS 18+ haptic feedback (WebKit Taptic Engine trigger) -->
-<input id="wdw-haptic-switch" type="checkbox" switch
-       aria-hidden="true" tabindex="-1"
-       style="position:fixed;top:-9999px;left:-9999px;opacity:0;pointer-events:none;">
+<!-- Hidden label+switch for iOS 17.4+ haptic feedback (WebKit Taptic Engine trigger).
+     Clicking the LABEL triggers the native switch toggle haptic. -->
+<label id="wdw-haptic-label" for="wdw-haptic-switch"
+       style="display:none;" aria-hidden="true">
+    <input id="wdw-haptic-switch" type="checkbox" switch
+           style="all:initial;appearance:auto;display:none;">
+</label>
 </body>
 </html>
