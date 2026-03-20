@@ -139,7 +139,7 @@ Mobile compact layouts use the browser [Vibration API](https://developer.mozilla
   - `HapticIntensity` enum (OFF, LIGHT, NORMAL, STRONG) with configurable multiplier
   - `hapticVibrate()` / `hapticVibratePattern()` — intensity-aware wrappers that scale durations
   - `rememberHapticIntensity()` composable for settings UI binding
-- **Browser Support**: Android browsers (Chrome, Firefox, Samsung Internet) ✅ via Vibration API — iOS 18+ (Safari, Chrome, all WebKit browsers) ✅ via hidden `<input switch>` Taptic Engine fallback — older iOS ❌ (progressive enhancement, graceful no-op).
+- **Browser Support**: Android browsers (Chrome, Firefox, Samsung Internet) ✅ via Vibration API — iOS 17.4+ (Safari, Chrome, all WebKit browsers) ✅ via hidden `<input switch>` Taptic Engine fallback — older iOS ❌ (progressive enhancement, graceful no-op).
 - **User Preferences**: Intensity toggle (Off / Light / Normal / Strong) + per-category on/off switches (Navigation, Interactions, Reactions, Dialogs, Alerts) in the NavDrawer, accessible to all users without login. Persisted via localStorage.
 - **Integration Points**:
   - Navigation: `MobileBottomNavBar` taps, `NavDrawerContent` item taps, hamburger menu button
@@ -149,6 +149,7 @@ Mobile compact layouts use the browser [Vibration API](https://developer.mozilla
   - Login: success (MEDIUM), error (ERROR pattern)
   - Detail dialogs: member, wine, event card opens
 - **Security**: Requires user gesture (tap) and secure context (HTTPS) — both already satisfied.
+- **Native App Guide**: See `~/Documents/wdw-feature-docs/wdw-web/native-haptics-guide/` for detailed iOS and Android native integration recommendations beyond the web implementation.
 
 ### Responsive Design
 Uses `Material3WindowSizeClass` to adapt layouts between mobile (Compact) and desktop screens. The top navigation bar shows the user's profile picture (from `UserProfileData.profileImageUrl`) as a circular avatar instead of the generic account icon when logged in.
