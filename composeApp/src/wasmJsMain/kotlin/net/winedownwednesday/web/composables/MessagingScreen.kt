@@ -288,7 +288,10 @@ fun MessagingScreen(
                             onTyping = { viewModel.notifyTyping() },
                             onNewChatClick = { showNewChatDialog = true },
                             notificationsEnabled = notificationsEnabled,
-                            onEnableNotifications = { viewModel.toggleNotifications() },
+                            onEnableNotifications = {
+                                hapticVibrate(HapticDuration.LIGHT, HapticCategory.INTERACTIONS)
+                                viewModel.toggleNotifications()
+                            },
                             channelSearchQuery = channelSearchQuery,
                             onChannelSearchQueryChange = { viewModel.setChannelSearchQuery(it) },
                             messageSearchQuery = messageSearchQuery,
