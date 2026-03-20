@@ -58,6 +58,7 @@ import coil3.compose.rememberAsyncImagePainter
 import net.winedownwednesday.web.data.Wine
 import net.winedownwednesday.web.viewmodels.WinePageViewModel
 import net.winedownwednesday.web.viewmodels.matchesQuery
+import net.winedownwednesday.web.vibrate
 import org.koin.compose.koinInject
 
 
@@ -416,6 +417,7 @@ fun CompactScreenWinePage(
                     wine = wine,
                     isFavorite = true,
                     onClick = {
+                        hapticVibrate(HapticDuration.TICK)
                         onWineClick(wine)
                         showDialog = true
                     }

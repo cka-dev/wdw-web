@@ -95,6 +95,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.dom.appendElement
 import net.winedownwednesday.web.HtmlView
+import net.winedownwednesday.web.vibrate
 import net.winedownwednesday.web.LocalLayerContainer
 import net.winedownwednesday.web.NanpVisualTransformation
 import net.winedownwednesday.web.data.Event
@@ -299,6 +300,7 @@ fun EventCard(
             .hoverScale()
             .clip(RoundedCornerShape(12.dp))
             .clickable {
+                hapticVibrate(HapticDuration.TICK)
                 onEventSelectedChange(event)
             },
         colors = CardDefaults.cardColors(
@@ -377,6 +379,7 @@ fun EventCard(
                 Button(
                     enabled = showUpcoming,
                     onClick = {
+                        hapticVibrate(HapticDuration.MEDIUM)
                         if (isUserAuthenticated) {
                             onRsvpClick()
                         } else {
@@ -415,6 +418,7 @@ fun EventCard(
                         viewModel.addRsvpToEvent(rsvpRequest) { eventUpdateSuccess ->
                             showProgressBar.value = false
                             if (eventUpdateSuccess) {
+                                hapticVibrate(HapticDuration.MEDIUM)
                                 showSuccessToast.value = true
                                 coroutineScope.launch {
                                     delay(2000)
@@ -422,6 +426,7 @@ fun EventCard(
                                 }
                                 onDismissRequest()
                             } else {
+                                hapticVibrate(HapticDuration.HEAVY)
                                 showErrorToast.value = true
                                 coroutineScope.launch {
                                     delay(2000)
@@ -431,6 +436,7 @@ fun EventCard(
                         }
                     } else {
                         showProgressBar.value = false
+                        hapticVibrate(HapticDuration.HEAVY)
                         showErrorToast.value = true
                         coroutineScope.launch {
                             delay(2000)

@@ -121,6 +121,7 @@ import net.winedownwednesday.web.data.Member
 import net.winedownwednesday.web.getDroppedFile
 import net.winedownwednesday.web.isDraggingOver
 import net.winedownwednesday.web.setupDragDrop
+import net.winedownwednesday.web.vibrate
 import net.winedownwednesday.web.viewmodels.MessagingViewModel
 import org.kodein.emoji.compose.EmojiService
 import org.kodein.emoji.compose.m3.TextWithNotoImageEmoji
@@ -1776,7 +1777,10 @@ fun MessageBubble(
                                                 }
                                                 Row(
                                                     modifier = Modifier
-                                                        .clickable { onReaction(type) }
+                                                        .clickable {
+                                                            hapticVibrate(HapticDuration.TICK)
+                                                            onReaction(type)
+                                                        }
                                                         .padding(
                                                             horizontal = 2.dp,
                                                             vertical = 2.dp
@@ -1962,6 +1966,7 @@ fun MessageBubble(
                             val type = reactionDefs.find { it.emoji == emoji }?.type
                                 ?: ("emoji_" + emoji.map { it.code.toString(16) }
                                     .joinToString("_"))
+                            hapticVibrate(HapticDuration.TICK)
                             onReaction(type)
                             onToggleEmojiPicker()
                         }
@@ -2098,7 +2103,10 @@ private fun ReactionPicker(onSelect: (String) -> Unit) {
         ) {
             reactionDefs.forEach { def ->
                 Surface(
-                    onClick = { onSelect(def.type) },
+                    onClick = {
+                        hapticVibrate(HapticDuration.TICK)
+                        onSelect(def.type)
+                    },
                     color = Color(0xFF2C2C2C),
                     shape = RoundedCornerShape(8.dp)
                 ) {
@@ -2397,6 +2405,7 @@ fun MessageInput(
                                         if (isEditing && editingMessage != null) {
                                             onEditMessage(editingMessage.id, textFieldValue.text)
                                         } else {
+                                            hapticVibrate(HapticDuration.LIGHT)
                                             onSendMessage(textFieldValue.text, selectedFile)
                                         }
                                         textFieldValue = TextFieldValue("")
@@ -2441,6 +2450,7 @@ fun MessageInput(
                             if (isEditing && editingMessage != null) {
                                 onEditMessage(editingMessage.id, textFieldValue.text)
                             } else {
+                                hapticVibrate(HapticDuration.LIGHT)
                                 onSendMessage(textFieldValue.text, selectedFile)
                             }
                             textFieldValue = TextFieldValue("")
@@ -3269,6 +3279,7 @@ fun ThreadPanel(
                             if (event.key == Key.Enter
                                 && !event.isShiftPressed && replyText.isNotBlank())
                             {
+                                hapticVibrate(HapticDuration.LIGHT)
                                 onSendReply(replyText)
                                 replyText = ""
                                 true
@@ -3291,6 +3302,7 @@ fun ThreadPanel(
                 IconButton(
                     onClick = {
                         if (replyText.isNotBlank()) {
+                            hapticVibrate(HapticDuration.LIGHT)
                             onSendReply(replyText)
                             replyText = ""
                         }

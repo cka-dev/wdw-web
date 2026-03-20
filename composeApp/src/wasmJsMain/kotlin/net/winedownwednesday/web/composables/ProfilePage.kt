@@ -79,6 +79,7 @@ import org.jetbrains.skia.Image
 import org.jetbrains.skia.ImageInfo
 import wdw_web.composeapp.generated.resources.Res
 import wdw_web.composeapp.generated.resources.placeholder
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun ProfilePage(
@@ -410,6 +411,49 @@ fun ProfileReadSection(
                 color = Color.LightGray,
                 textAlign = TextAlign.Center
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Haptic Feedback Settings
+            Text(
+                text = "Haptic Feedback",
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            val (hapticIntensity, setHapticIntensity) = rememberHapticIntensity()
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                HapticIntensity.entries.forEach { level ->
+                    val isSelected = hapticIntensity == level
+                    Button(
+                        onClick = {
+                            setHapticIntensity(level)
+                            if (level != HapticIntensity.OFF) {
+                                hapticVibrate(HapticDuration.MEDIUM)
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isSelected)
+                                Color(0xFFFF7F33) else Color(0xFF444444),
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Text(
+                            text = level.label,
+                            fontSize = 11.sp,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 

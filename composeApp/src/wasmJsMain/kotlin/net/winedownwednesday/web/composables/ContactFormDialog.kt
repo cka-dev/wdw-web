@@ -42,6 +42,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import net.winedownwednesday.web.vibrate
 
 private const val CONTACT_ENDPOINT =
     "https://sendcontactemail-iktff5ztia-uc.a.run.app"
@@ -115,7 +116,10 @@ fun ContactFormDialog(onDismiss: () -> Unit) {
     }
 
     fun submit() {
-        if (!validate()) return
+        if (!validate()) {
+            hapticVibrate(HapticDuration.HEAVY)
+            return
+        }
         loading   = true
         submitErr = ""
         scope.launch {
@@ -135,7 +139,9 @@ fun ContactFormDialog(onDismiss: () -> Unit) {
                 val json = """{"name":"$nameEsc","email":"$emailEsc","message":"$msgEsc"}"""
                 postContactForm(CONTACT_ENDPOINT, json)
                 success = true
+                hapticVibrate(HapticDuration.MEDIUM)
             } catch (e: Exception) {
+                hapticVibrate(HapticDuration.HEAVY)
                 submitErr = "Failed to send. Please try again."
             } finally {
                 loading = false
@@ -236,7 +242,10 @@ fun ContactFormDialog(onDismiss: () -> Unit) {
                         ) { Text("Cancel", color = TextGray) }
                         Spacer(Modifier.width(8.dp))
                         Button(
-                            onClick = { submit() },
+                            onClick = {
+                                hapticVibrate(HapticDuration.MEDIUM)
+                                submit()
+                            },
                             enabled = !loading,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = AccentOrange

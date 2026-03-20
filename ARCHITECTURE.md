@@ -129,6 +129,27 @@ To ensure compatibility with various backend configurations, sensitive identifie
 ### Cloud Functions v2 Routing
 For Firebase Functions v2 (e.g., Passkey Auth, Messaging), the application uses explicit Cloud Run URLs (e.g., `https://function-name-iktff5ztia-uc.a.run.app`) instead of the legacy `cloudfunctions.net` proxy. This ensures consistent routing for functions with project secrets and mitigates 404 errors during proxy propagation.
 
+### Haptic Feedback (Vibration API)
+Mobile compact layouts use the browser [Vibration API](https://developer.mozilla.org/en-US/docs/Web/API/Vibration_API) (`navigator.vibrate()`) for subtle haptic feedback on interactive elements.
+
+- **Bridge**: `VibrationBridge.kt` uses inline `js()` calls with built-in feature detection — all calls no-op silently when unsupported. Supports single-pulse and pattern vibrations, plus localStorage-backed preference storage.
+- **Utilities**: `HapticFeedback.kt` provides:
+  - `HapticDuration` constants (`TICK` 10ms, `LIGHT` 25ms, `MEDIUM` 50ms, `HEAVY` 100ms)
+  - `HapticPattern` for multi-pulse patterns (ERROR: buzz-pause-buzz, WARNING, SUCCESS)
+  - `HapticIntensity` enum (OFF, LIGHT, NORMAL, STRONG) with configurable multiplier
+  - `hapticVibrate()` / `hapticVibratePattern()` — intensity-aware wrappers that scale durations
+  - `rememberHapticIntensity()` composable for settings UI binding
+- **Browser Support**: Android browsers (Chrome, Firefox, Samsung Internet) ✅ — iOS Safari ❌ (progressive enhancement, zero impact on unsupported browsers).
+- **User Preferences**: Intensity toggle (Off / Light / Normal / Strong) in Profile → Security Settings, persisted via localStorage.
+- **Integration Points**:
+  - Navigation: `MobileBottomNavBar` taps, `NavDrawerContent` item taps, hamburger menu button
+  - Events: card tap to detail, RSVP button, RSVP success/error
+  - Messaging: send button + Enter key, reaction chips, reaction picker, emoji reactions, thread replies
+  - Contact: form submit, validation error, network error, success
+  - Login: success (MEDIUM), error (ERROR pattern)
+  - Detail dialogs: member, wine, event card opens
+- **Security**: Requires user gesture (tap) and secure context (HTTPS) — both already satisfied.
+
 ### Responsive Design
 Uses `Material3WindowSizeClass` to adapt layouts between mobile (Compact) and desktop screens. The top navigation bar shows the user's profile picture (from `UserProfileData.profileImageUrl`) as a circular avatar instead of the generic account icon when logged in.
 

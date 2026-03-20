@@ -42,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import net.winedownwednesday.web.vibrate
 import net.winedownwednesday.web.viewmodels.AuthPageViewModel
 import net.winedownwednesday.web.viewmodels.LoginUIState
 
@@ -219,6 +220,7 @@ fun LoginScreen(
 
                                 when (uiState) {
                                     is LoginUIState.Error -> {
+                                        hapticVibratePattern(HapticPattern.ERROR)
                                         Text(
                                             (uiState as LoginUIState.Error).message,
                                             color = Color.Red,
@@ -233,6 +235,7 @@ fun LoginScreen(
                                         )
                                     }
                                     is LoginUIState.Authenticated -> {
+                                        hapticVibrate(HapticDuration.MEDIUM)
                                         onLoginSuccess()
                                     }
                                     else -> { /* Nothing to do */ }

@@ -67,6 +67,7 @@ import net.winedownwednesday.web.data.models.UserProfileData
 import net.winedownwednesday.web.viewmodels.LoginUIState
 import net.winedownwednesday.web.viewmodels.MembersPageViewModel
 import net.winedownwednesday.web.viewmodels.matchesQuery
+import net.winedownwednesday.web.vibrate
 import org.koin.compose.koinInject
 
 // ---------------------------------------------------------------------------
@@ -89,7 +90,10 @@ fun MembersPage(
             memberSections   = memberSections,
             selectedMember   = selectedMember,
             searchQuery      = searchQuery,
-            onMemberClick    = { viewModel.setSelectedMember(it) },
+            onMemberClick    = {
+                hapticVibrate(HapticDuration.TICK)
+                viewModel.setSelectedMember(it)
+            },
             onDetailClose    = { viewModel.clearSelectedMember() },
             onSearchChange   = { viewModel.setSearchQuery(it) },
             uiState          = uiState,
@@ -101,7 +105,10 @@ fun MembersPage(
             memberSections  = memberSections,
             selectedMember  = selectedMember,
             searchQuery     = searchQuery,
-            onMemberClick   = { viewModel.setSelectedMember(it) },
+            onMemberClick   = {
+                hapticVibrate(HapticDuration.TICK)
+                viewModel.setSelectedMember(it)
+            },
             onDismiss       = { viewModel.clearSelectedMember() },
             onSearchChange  = { viewModel.setSearchQuery(it) },
             uiState         = uiState,

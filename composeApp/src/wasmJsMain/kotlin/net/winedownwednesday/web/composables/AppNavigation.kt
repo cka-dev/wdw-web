@@ -34,6 +34,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
+import net.winedownwednesday.web.vibrate
+import net.winedownwednesday.web.composables.HapticDuration
 import net.winedownwednesday.web.viewmodels.AuthPageViewModel
 import net.winedownwednesday.web.viewmodels.LoginUIState
 import org.koin.compose.koinInject
@@ -215,7 +217,10 @@ fun AppNavigation(
                         onLogout            = { scope.launch { authViewModel.logout() } },
                         userProfileImageUrl = userProfileData?.profileImageUrl,
                         isCompactScreen     = sizeInfo.useCompactNav,
-                        onHamburgerClick    = { scope.launch { drawerState.open() } }
+                        onHamburgerClick    = {
+                            hapticVibrate(HapticDuration.TICK)
+                            scope.launch { drawerState.open() }
+                        }
                     )
 
                     Box(modifier = Modifier.weight(1f)) {
