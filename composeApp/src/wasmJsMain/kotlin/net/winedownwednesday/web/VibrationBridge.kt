@@ -103,3 +103,21 @@ fun getHapticCategoryPref(key: String): String = js("""
 fun setHapticCategoryPref(key: String, enabled: String): Unit = js("""
     { localStorage.setItem(key, enabled); }
 """)
+
+// ── Safe area inset ──────────────────────────────────────────────────────
+
+/**
+ * Read the browser's safe-area-inset-bottom value in pixels.
+ * Returns 0 on browsers/devices that don't have safe areas.
+ * Requires viewport-fit=cover in the viewport meta tag.
+ */
+fun getSafeAreaInsetBottom(): Int = js("""
+    {
+        var div = document.createElement('div');
+        div.style.paddingBottom = 'env(safe-area-inset-bottom, 0px)';
+        document.body.appendChild(div);
+        var val_ = parseInt(getComputedStyle(div).paddingBottom, 10) || 0;
+        document.body.removeChild(div);
+        return val_;
+    }
+""")

@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
+import net.winedownwednesday.web.getSafeAreaInsetBottom
 import net.winedownwednesday.web.vibrate
 import net.winedownwednesday.web.viewmodels.LoginUIState
 import org.jetbrains.compose.resources.painterResource
@@ -319,10 +320,14 @@ fun MobileBottomNavBar(
         color = Color(0xFF1E1E1E),
         modifier = Modifier.fillMaxWidth()
     ) {
+        val safeAreaBottom = remember { getSafeAreaInsetBottom() }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp),
+                .padding(
+                    top = 8.dp,
+                    bottom = 8.dp + safeAreaBottom.dp
+                ),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
