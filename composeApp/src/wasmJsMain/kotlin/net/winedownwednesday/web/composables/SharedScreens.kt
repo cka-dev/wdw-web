@@ -446,9 +446,15 @@ fun NavDrawerContent(
                 val isSelected = hapticIntensity == level
                 Surface(
                     onClick = {
-                        setHapticIntensity(level)
-                        if (level != HapticIntensity.OFF) {
+                        if (level == HapticIntensity.OFF && hapticIntensity == HapticIntensity.OFF) {
+                            // Currently off → restore to Normal
+                            setHapticIntensity(HapticIntensity.NORMAL)
                             hapticVibrate(HapticDuration.MEDIUM)
+                        } else {
+                            setHapticIntensity(level)
+                            if (level != HapticIntensity.OFF) {
+                                hapticVibrate(HapticDuration.MEDIUM)
+                            }
                         }
                     },
                     color = if (isSelected) Color(0xFFFF7F33) else Color(0xFF333333),
@@ -456,7 +462,8 @@ fun NavDrawerContent(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = level.label,
+                        text = if (level == HapticIntensity.OFF && hapticIntensity == HapticIntensity.OFF)
+                            "On" else level.label,
                         color = Color.White,
                         fontSize = 11.sp,
                         maxLines = 1,
