@@ -53,7 +53,7 @@ private val TextMuted     = Color(0xFF666666)
 
 // ── External links ────────────────────────────────────────
 private const val INSTAGRAM_URL    = "https://www.instagram.com/uncorked.conversations/"
-private const val YOUTUBE_URL      = "https://www.youtube.com/@WineDownWednesdayAtl"
+private const val YOUTUBE_URL      = "https://www.youtube.com/@uncorked.conversations"
 private const val PLAY_STORE_URL   =
     "https://play.google.com/store/apps/details?id=net.winedownwednesday.android"
 private const val APP_STORE_URL    = "https://winedownwednesday.net/"   // placeholder until live

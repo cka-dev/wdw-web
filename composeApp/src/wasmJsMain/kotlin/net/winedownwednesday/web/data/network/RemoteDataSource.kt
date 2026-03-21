@@ -305,20 +305,16 @@ class RemoteDataSource (
             }
             if (response.status.isSuccess()) {
                 val jsonString = response.bodyAsText()
-                println("$TAG: fetchUserProfile raw response: $jsonString")
                 try {
                     val profile = JsonInstanceProvider.json.decodeFromString<UserProfileData>(jsonString)
                     profile
                 } catch (parseError: Exception) {
-                    println("$TAG: fetchUserProfile PARSE ERROR: ${parseError.message}")
                     null
                 }
             } else {
-                println("$TAG: fetchUserProfile FAILED with status: ${response.status}")
                 null
             }
         } catch (e: Exception) {
-            println("$TAG: fetchUserProfile EXCEPTION: ${e.message}")
             null
         }
     }

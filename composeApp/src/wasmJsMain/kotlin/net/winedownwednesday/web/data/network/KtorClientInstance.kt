@@ -24,7 +24,7 @@ object KtorClientInstance {
         }
         install(Logging) {
             logger = Logger.DEFAULT
-            level = LogLevel.INFO // Changed from ALL to avoid logging sensitive request/response bodies
+            level = LogLevel.NONE // Disabled API request/response logging
         }
     }
 }
