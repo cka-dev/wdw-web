@@ -44,7 +44,7 @@ class AboutPageViewModel(
                 _aboutSections.value = mappedSections
             }
         } catch (e: Exception) {
-            println("Error loading about items: ${e.message}")
+            // println("Error loading about items: ${e.message}")
         }
     }
 

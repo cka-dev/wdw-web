@@ -3007,7 +3007,7 @@ private fun parseAttachments(jsonString: String): List<ChatAttachment> {
             }
         }
     } catch (e: Exception) {
-        println("Error parsing attachments JSON: ${e.message}")
+        // println("Error parsing attachments JSON: ${e.message}")
     }
 
     return attachments

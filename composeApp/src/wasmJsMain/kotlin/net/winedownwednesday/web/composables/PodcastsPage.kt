@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -215,7 +214,7 @@ fun LargeScreenPodcastPage(
                     }
                 } else {
                     EpisodeVideoDetail(
-                        episode = selectedEpisode!!
+                        episode = selectedEpisode
                     )
                 }
             }
@@ -230,7 +229,8 @@ fun EpisodeListItem(
     onClick: () -> Unit
 ) {
     val bgColor by animateColorAsState(
-        targetValue  = if (isSelected) Color(0xFFFF7F33).copy(alpha = 0.25f) else Color(0xFF1E1E1E),
+        targetValue  = if (isSelected) Color(0xFFFF7F33)
+            .copy(alpha = 0.25f) else Color(0xFF1E1E1E),
         animationSpec = tween(durationMillis = 250),
         label        = "episodeSelection"
     )

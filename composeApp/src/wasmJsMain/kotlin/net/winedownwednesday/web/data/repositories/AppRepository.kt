@@ -85,7 +85,7 @@ class AppRepository (
                 _members.value = remoteMemberList
             }
         } catch (e: Exception) {
-            println("$TAG: Error fetching members.")
+            // println("$TAG: Error fetching members.")
         }
     }
 
@@ -98,7 +98,7 @@ class AppRepository (
                 _events.value = emptyList()
             }
         } catch (e: Exception) {
-            println("$TAG: Error fetching events.")
+            // println("$TAG: Error fetching events.")
             _events.value = emptyList()
         }
     }
@@ -110,7 +110,7 @@ class AppRepository (
                 _blogPosts.value = remoteBlogPostsResponse.posts
             }
         } catch (e: Exception) {
-            println("$TAG: Error fetching blog posts: ${e.message}")
+            // println("$TAG: Error fetching blog posts: ${e.message}")
         }
     }
 
@@ -121,7 +121,7 @@ class AppRepository (
                 _episodes.value = remoteEpisodeList
             }
         } catch (e: Exception) {
-            println("$TAG: Error fetching episodes.")
+            // println("$TAG: Error fetching episodes.")
         }
     }
 
@@ -132,7 +132,7 @@ class AppRepository (
                 _aboutItems.value = remoteAboutItemList
             }
         } catch (e: Exception) {
-            println("$TAG: Error fetching about items.")
+            // println("$TAG: Error fetching about items.")
         }
     }
 
@@ -143,7 +143,7 @@ class AppRepository (
                 _wineList.value = remoteWineList
             }
         } catch (e: Exception) {
-            println("$TAG: Error fetching wine list with message: ${e.message}")
+            // println("$TAG: Error fetching wine list with message: ${e.message}")
         }
     }
 
@@ -152,7 +152,7 @@ class AppRepository (
             val member = remoteDataSource.fetchMemberSpotlight()
             _memberSpotlight.value = member
         } catch (e: Exception) {
-            println("$TAG: Error fetching member spotlight.")
+            // println("$TAG: Error fetching member spotlight.")
         }
     }
 
@@ -161,7 +161,7 @@ class AppRepository (
             val featuredWines = remoteDataSource.fetchFeaturedWines()
             _featuredWinesResponse.value = featuredWines
         } catch (e: Exception) {
-            println("$TAG: Error fetching featured wines.")
+            // println("$TAG: Error fetching featured wines.")
         }
     }
 

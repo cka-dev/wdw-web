@@ -112,7 +112,7 @@ class AuthPageViewModel(
                 val profile = repository.fetchProfileFromServer(userEmail)
                 _profileData.value = profile
             } catch (e: Exception) {
-                println("$TAG: fetchProfile EXCEPTION: ${e.message}")
+                // println("$TAG: fetchProfile EXCEPTION: ${e.message}")
             } finally {
                 _isFetchingProfile.value = false
             }
@@ -493,7 +493,7 @@ class AuthPageViewModel(
             )
             val request= repository.registerFcmInstanceId(requestBody)
             if (!request) {
-                println("$TAG: Error registering FCM instance ID")
+                // println("$TAG: Error registering FCM instance ID")
             }
         }
     }
@@ -506,7 +506,7 @@ class AuthPageViewModel(
         )
         val request = repository.unRegisterFcmInstanceId(requestBody)
         if (!request) {
-            println("$TAG: Error unregistering FCM instance ID")
+            // println("$TAG: Error unregistering FCM instance ID")
         }
     }
 

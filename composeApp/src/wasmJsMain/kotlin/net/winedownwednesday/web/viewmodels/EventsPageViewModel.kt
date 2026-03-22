@@ -47,7 +47,7 @@ class EventsPageViewModel(
                     fetchedEvents?.let { updateUpcomingPastEvents(it) }
                 }
             } catch (e: Exception) {
-                println("$TAG: Error loading events: ${e.message}")
+                // println("$TAG: Error loading events: ${e.message}")
             }
         }
     }
@@ -116,7 +116,7 @@ class EventsPageViewModel(
                 val success = repository.addRsvpToEvent(rsvp)
                 onResult(success)
             } catch (e: Exception) {
-                println("$TAG: Error adding RSVP to event: ${e.message}")
+                // println("$TAG: Error adding RSVP to event: ${e.message}")
                 onResult(false)
             }
         }

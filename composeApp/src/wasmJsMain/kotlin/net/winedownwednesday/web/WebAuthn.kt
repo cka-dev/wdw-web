@@ -63,7 +63,7 @@ fun ArrayBuffer.toBase64Url(): String {
     try {
         return myWebAuthnBridge.arrayBufferToBase64Url(this)
     } catch (e: Throwable) {
-        println("Error converting ArrayBuffer to base64url: ${e.message}")
+        // println("Error converting ArrayBuffer to base64url: ${e.message}")
         throw e
     }
 }

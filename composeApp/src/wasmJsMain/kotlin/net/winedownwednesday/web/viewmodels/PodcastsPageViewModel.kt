@@ -34,7 +34,7 @@ class PodcastsPageViewModel(
                 _episodes.value = fetchedEpisodes
             }
         } catch (e: Exception) {
-            println("Error loading episodes: ${e.message}")
+            // println("Error loading episodes: ${e.message}")
         }
     }
 

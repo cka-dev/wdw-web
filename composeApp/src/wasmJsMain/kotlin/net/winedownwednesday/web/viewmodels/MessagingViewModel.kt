@@ -169,7 +169,7 @@ class MessagingViewModel(
                 }
                 _channels.value = list
             } catch (e: Exception) {
-                println("MessagingViewModel: Error loading channels: ${e.message}")
+                // println("MessagingViewModel: Error loading channels: ${e.message}")
             }
         }
     }
@@ -200,13 +200,13 @@ class MessagingViewModel(
                         .await<JsBoolean>()
                     _fcmToken = fcmToken
                     _notificationsEnabled.value = true
-                    println("MessagingViewModel: Auto-registered device with Stream push")
+                    // println("MessagingViewModel: Auto-registered device with Stream push")
                 }
             } catch (e: Exception) {
                 // Permission not granted yet or token unavailable — that's OK.
                 // User can enable via the bell icon.
-                println("MessagingViewModel: Could not auto-register push " +
-                        "(permission may not be granted): ${e.message}")
+                // println("MessagingViewModel: Could not auto-register push " +
+                        //"(permission may not be granted): ${e.message}")
             }
         }
     }
@@ -229,14 +229,14 @@ class MessagingViewModel(
                             .await<JsBoolean>()
                         _fcmToken = fcmToken
                         _notificationsEnabled.value = true
-                        println("MessagingViewModel: Enabled push notifications")
+                        // println("MessagingViewModel: Enabled push notifications")
                     }
                 } else {
-                    println("MessagingViewModel: Notification permission not granted" +
-                            "($permission)")
+                    // println("MessagingViewModel: Notification permission not granted" +
+                            //"($permission)")
                 }
             } catch (e: Exception) {
-                println("MessagingViewModel: Error enabling notifications: ${e.message}")
+                // println("MessagingViewModel: Error enabling notifications: ${e.message}")
             }
         }
     }
@@ -249,10 +249,10 @@ class MessagingViewModel(
                     StreamBridge.removeDevice(token).await<JsBoolean>()
                     _notificationsEnabled.value = false
                     _fcmToken = null
-                    println("MessagingViewModel: Disabled push notifications")
+                    // println("MessagingViewModel: Disabled push notifications")
                 }
             } catch (e: Exception) {
-                println("MessagingViewModel: Error disabling notifications: ${e.message}")
+                // println("MessagingViewModel: Error disabling notifications: ${e.message}")
             }
         }
     }
@@ -279,7 +279,7 @@ class MessagingViewModel(
                 }
                 _searchResults.value = list
             } catch (e: Exception) {
-                println("MessagingViewModel: Error searching users: ${e.message}")
+                // println("MessagingViewModel: Error searching users: ${e.message}")
             }
         }
     }
@@ -329,7 +329,7 @@ class MessagingViewModel(
                     selectChannel(channel.id)
                 }
             } catch (e: Exception) {
-                println("MessagingViewModel: Error starting direct message: ${e.message}")
+                // println("MessagingViewModel: Error starting direct message: ${e.message}")
             }
         }
     }
@@ -359,7 +359,7 @@ class MessagingViewModel(
                     // Ignore silent read receipt errors
                 }
             } catch (e: Exception) {
-                println("MessagingViewModel: Error loading messages: ${e.message}")
+                // println("MessagingViewModel: Error loading messages: ${e.message}")
             }
         }
     }
@@ -394,7 +394,7 @@ class MessagingViewModel(
                     _messages.value = _messages.value + newMessage
                 }
             } catch (e: Exception) {
-                println("MessagingViewModel: Error sending message: ${e.message}")
+                // println("MessagingViewModel: Error sending message: ${e.message}")
             }
         }
     }
@@ -406,14 +406,14 @@ class MessagingViewModel(
     fun addReaction(messageId: String, reactionType: String) {
         viewModelScope.launch {
             try {
-                println("MessagingViewModel: Adding reaction '$reactionType' to message '$messageId'")
+                // println("MessagingViewModel: Adding reaction '$reactionType' to message '$messageId'")
                 StreamBridge.addReaction(messageId, reactionType).await<JsBoolean>()
-                println("MessagingViewModel: Reaction sent, waiting for consistency...")
+                // println("MessagingViewModel: Reaction sent, waiting for consistency...")
                 // Small delay to let Stream's backend process the reaction
                 kotlinx.coroutines.delay(500)
                 _selectedChannelId.value?.let { loadMessages(it) }
             } catch (e: Exception) {
-                println("MessagingViewModel: Error adding reaction: ${e.message}")
+                // println("MessagingViewModel: Error adding reaction: ${e.message}")
             }
         }
     }
@@ -421,12 +421,12 @@ class MessagingViewModel(
     fun removeReaction(messageId: String, reactionType: String) {
         viewModelScope.launch {
             try {
-                println("MessagingViewModel: Removing reaction '$reactionType' from message '$messageId'")
+                // println("MessagingViewModel: Removing reaction '$reactionType' from message '$messageId'")
                 StreamBridge.removeReaction(messageId, reactionType).await<JsBoolean>()
                 kotlinx.coroutines.delay(500)
                 _selectedChannelId.value?.let { loadMessages(it) }
             } catch (e: Exception) {
-                println("MessagingViewModel: Error removing reaction: ${e.message}")
+                // println("MessagingViewModel: Error removing reaction: ${e.message}")
             }
         }
     }
@@ -437,7 +437,7 @@ class MessagingViewModel(
                 StreamBridge.deleteMessage(messageId).await<JsBoolean>()
                 _selectedChannelId.value?.let { loadMessages(it) }
             } catch (e: Exception) {
-                println("MessagingViewModel: Error deleting message: ${e.message}")
+                // println("MessagingViewModel: Error deleting message: ${e.message}")
             }
         }
     }
@@ -448,7 +448,7 @@ class MessagingViewModel(
                 StreamBridge.pinMessage(messageId).await<JsBoolean>()
                 _selectedChannelId.value?.let { loadMessages(it) }
             } catch (e: Exception) {
-                println("MessagingViewModel: Error pinning message: ${e.message}")
+                // println("MessagingViewModel: Error pinning message: ${e.message}")
             }
         }
     }
@@ -459,7 +459,7 @@ class MessagingViewModel(
                 StreamBridge.unpinMessage(messageId).await<JsBoolean>()
                 _selectedChannelId.value?.let { loadMessages(it) }
             } catch (e: Exception) {
-                println("MessagingViewModel: Error unpinning message: ${e.message}")
+                // println("MessagingViewModel: Error unpinning message: ${e.message}")
             }
         }
     }
@@ -481,7 +481,7 @@ class MessagingViewModel(
                 _editingMessage.value = null
                 _selectedChannelId.value?.let { loadMessages(it) }
             } catch (e: Exception) {
-                println("MessagingViewModel: Error editing message: ${e.message}")
+                // println("MessagingViewModel: Error editing message: ${e.message}")
             }
         }
     }
@@ -496,7 +496,7 @@ class MessagingViewModel(
                     _messages.value = _messages.value + newMessage
                 }
             } catch (e: Exception) {
-                println("MessagingViewModel: Error sending GIF: ${e.message}")
+                // println("MessagingViewModel: Error sending GIF: ${e.message}")
             }
         }
     }
@@ -507,7 +507,7 @@ class MessagingViewModel(
                 val forwardedText = "↪️ Forwarded:\n$messageText"
                 StreamBridge.sendMessage(targetChannelId, forwardedText).await<JsChatMessage?>()
             } catch (e: Exception) {
-                println("MessagingViewModel: Error forwarding message: ${e.message}")
+                // println("MessagingViewModel: Error forwarding message: ${e.message}")
             }
         }
     }
@@ -556,7 +556,7 @@ class MessagingViewModel(
                     .await<JsArray<JsChatMessage>>()
                 _threadReplies.value = (0 until replies.length).map { replies[it]!! }
             } catch (e: Exception) {
-                println("Error loading thread replies: ${e.message}")
+                // println("Error loading thread replies: ${e.message}")
             }
         }
     }
@@ -579,7 +579,7 @@ class MessagingViewModel(
                 // Also reload main messages to update reply count
                 loadMessages(channelId)
             } catch (e: Exception) {
-                println("Error sending thread reply: ${e.message}")
+                // println("Error sending thread reply: ${e.message}")
             }
         }
     }

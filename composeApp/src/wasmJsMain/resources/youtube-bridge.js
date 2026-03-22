@@ -80,9 +80,9 @@ window.wdwYoutubeBridge = {
         }
 
         this.player = iframe;
-        console.log("YoutubeBridge: player shown for", videoId,
-                    "at", left, top, width, height,
-                    "(shadowRoot:", !!shadow, "canvasDiv:", !!canvasDiv, ")");
+        // console.log("YoutubeBridge: player shown for", videoId,
+                   // "at", left, top, width, height,
+                   // "(shadowRoot:", !!shadow, "canvasDiv:", !!canvasDiv, ")");
     },
 
     /** Removes the YouTube iframe. */
@@ -117,4 +117,4 @@ window.wdwYoutubeBridge = {
     }
 };
 
-console.log("YoutubeBridge: wdwYoutubeBridge defined on window");
+// console.log("YoutubeBridge: wdwYoutubeBridge defined on window");
