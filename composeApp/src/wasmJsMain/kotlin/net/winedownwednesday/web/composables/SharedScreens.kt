@@ -236,14 +236,14 @@ fun TopNavBar(
                         derivedStateOf {
                             buildList {
                                 add("Home"                    to Route.Home)
-                                add("About"                   to Route.About)
-                                add("Blog"                    to Route.Blog)
+                                add("Our Story"               to Route.About)
+                                add("Tasting Notes"            to Route.Blog)
                                 add("Members"                 to Route.Members)
                                 add("Uncorked Conversations"  to Route.Podcasts)
-                                add("Events"                  to Route.Events)
-                                add("Our Wine"                to Route.Wines)
+                                add("Gatherings"              to Route.Events)
+                                add("The Cellar"              to Route.Wines)
                                 if (uiState is LoginUIState.Authenticated) {
-                                    add("Messages" to Route.Messaging)
+                                    add("Bubbly Chat" to Route.Messaging)
                                 }
                             }
                         }
@@ -309,11 +309,11 @@ fun MobileBottomNavBar(
     onNavigate: (Route) -> Unit
 ) {
     val bottomTabs = listOf(
-        Triple("About",    Icons.Default.Home,                  Route.Home),
-        Triple("Podcasts", Icons.Default.Podcasts,              Route.Podcasts),
-        Triple("Events",   Icons.Default.Event,                 Route.Events),
-        Triple("Our Wine", Icons.Default.WineBar,               Route.Wines),
-        Triple("Chat",     Icons.AutoMirrored.Filled.Chat,      Route.Messaging)
+        Triple("Home",         Icons.Default.Home,                  Route.Home),
+        Triple("Podcasts",     Icons.Default.Podcasts,              Route.Podcasts),
+        Triple("Gatherings",   Icons.Default.Event,                 Route.Events),
+        Triple("The Cellar",   Icons.Default.WineBar,               Route.Wines),
+        Triple("Bubbly Chat",  Icons.AutoMirrored.Filled.Chat,      Route.Messaging)
     )
 
     Surface(
@@ -374,8 +374,8 @@ fun NavDrawerContent(
     onNavigate: (Route) -> Unit
 ) {
     val drawerItems = listOf(
-        Triple("Members", Icons.Default.People,                  Route.Members),
-        Triple("Blog",    Icons.AutoMirrored.Filled.Article,     Route.Blog)
+        Triple("Members",       Icons.Default.People,                  Route.Members),
+        Triple("Tasting Notes", Icons.AutoMirrored.Filled.Article,     Route.Blog)
     )
 
     Column(

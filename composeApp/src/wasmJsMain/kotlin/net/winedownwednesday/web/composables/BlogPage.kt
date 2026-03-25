@@ -129,14 +129,14 @@ fun BlogPage(
                         item {
                             Column(modifier = Modifier.widthIn(max = 800.dp).fillMaxWidth()) {
                                 Text(
-                                    text = "Latest from the Vine",
+                                    text = "Tasting Notes",
                                     style = MaterialTheme.typography.displaySmall,
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.padding(bottom = 8.dp),
                                     color = Color.White
                                 )
                                 Text(
-                                    text = "Stories, news, and insights.",
+                                    text = "Stories, news, and insights from the club.",
                                     style = MaterialTheme.typography.titleMedium,
                                     color = Color.LightGray,
                                     modifier = Modifier.padding(bottom = 16.dp)

@@ -28,6 +28,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CardDefaults.cardElevation
@@ -72,6 +73,8 @@ import kotlin.math.abs
 @Composable
 fun HomePage(
     sizeInfo: WindowSizeInfo,
+    isLoggedIn: Boolean = false,
+    onJoinClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val viewModel: HomePageViewModel = koinInject()
@@ -131,13 +134,15 @@ fun HomePage(
                     }
                     subtitleVisible = true
                 }
+                val playfair = displayFontFamily()
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = displayedTitle,
-                        fontSize = 24.sp,
+                        fontSize = 30.sp,
                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        fontFamily = playfair,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onBackground
                     )
@@ -149,6 +154,35 @@ fun HomePage(
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                         modifier = Modifier.graphicsLayer { alpha = subtitleAlpha }
                     )
+                    if (!isLoggedIn) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = onJoinClick,
+                            shape = RoundedCornerShape(50),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFFF7F33)
+                            ),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                horizontal = 20.dp, vertical = 8.dp
+                            )
+                        ) {
+                            Text(
+                                text = "Become a Member  >>",
+                                fontSize = 13.sp,
+                                color = Color.White,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Already a member? Sign in",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                            modifier = Modifier
+                                .graphicsLayer { alpha = subtitleAlpha }
+                                .clickable { onJoinClick() }
+                        )
+                    }
                 }
             }
             item {
@@ -208,7 +242,7 @@ fun HomePage(
 
 @Composable
 fun AutoScrollingEventDisplay(
-    title: String = "Upcoming Events",
+    title: String = "Upcoming Gatherings",
     events: List<Event>,
     onEventDetailsClick: (Event) -> Unit = {},
     currentIndex: Int,
@@ -293,7 +327,7 @@ fun AutoScrollingEventDisplay(
 
 @Composable
 fun AutoScrollingWineListHorizontal(
-    title: String = "Featured Wines",
+    title: String = "From The Cellar",
     description: String = "",
     wines: List<Wine>,
     onWineDetailsClick: (Wine) -> Unit = {},
@@ -432,7 +466,7 @@ private fun SingleEventOrEmptyHorizontal(
                             verticalArrangement = Arrangement.Center
                         ) {
                             Text(
-                                text = "No Upcoming Events",
+                                text = "No Upcoming Gatherings",
                                 style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.onSurface
                             )

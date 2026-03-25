@@ -227,7 +227,11 @@ fun AppNavigation(
                         NavDisplay(
                             backStack = backStack,
                             entryProvider = entryProvider {
-                                entry<Route.Home>      { FadeInPage { HomePage(sizeInfo = sizeInfo) } }
+                                entry<Route.Home>      { FadeInPage { HomePage(
+                                    sizeInfo = sizeInfo,
+                                    isLoggedIn = isLoggedIn,
+                                    onJoinClick = { navigateTo(Route.Login) }
+                                ) } }
                                 entry<Route.About>     { FadeInPage { AboutPage(sizeInfo = sizeInfo) } }
                                 entry<Route.Members>   {
                                     FadeInPage {
