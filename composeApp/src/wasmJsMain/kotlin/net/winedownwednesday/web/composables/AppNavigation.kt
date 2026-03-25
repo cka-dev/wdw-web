@@ -294,8 +294,7 @@ fun AppNavigation(
                         )
                     } else {
                         Footer(
-                            onNavClick = { navigateTo(it) },
-                            modifier   = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
