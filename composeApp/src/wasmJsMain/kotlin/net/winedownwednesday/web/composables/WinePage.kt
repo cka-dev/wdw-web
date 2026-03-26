@@ -109,7 +109,7 @@ fun WineListItem(
     onClick: () -> Unit
 ) {
     val bgColor by animateColorAsState(
-        targetValue  = if (isSelected) Color(0xFFFF7F33).copy(alpha = 0.4f) else Color(0xFF2A2A2A),
+        targetValue  = if (isSelected) Color(0xFFFF7F33).copy(alpha = 0.4f) else MaterialTheme.colorScheme.surface,
         animationSpec = tween(durationMillis = 300),
         label        = "wineSelection"
     )
@@ -128,7 +128,7 @@ fun WineListItem(
             Box(
                 modifier = Modifier
                     .size(80.dp)
-                    .background(Color.LightGray)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 AsyncImage(
                     model = wine.imageUrl,
@@ -144,12 +144,12 @@ fun WineListItem(
                 Text(
                     text = "${wine.name} (${wine.year})",
                     style = MaterialTheme.typography.titleMedium,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "${wine.type} - ${wine.country}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.LightGray
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
             }
         }
@@ -169,7 +169,7 @@ fun WineDetail(
         Text(
             text = wine.name,
             style = MaterialTheme.typography.headlineMedium,
-            color = Color.White
+            color = MaterialTheme.colorScheme.onSurface
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -189,25 +189,25 @@ fun WineDetail(
         Text(
             text = "${wine.type} - ${wine.year} (${wine.country}, ${wine.region})",
             style = MaterialTheme.typography.bodyMedium,
-            color = Color.White
+            color = MaterialTheme.colorScheme.onSurface
         )
         Text(
             text = wine.technicalDetails,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.LightGray
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
         )
         if (!wine.whyWeLovedIt.isNullOrEmpty()) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Why We Loved It:",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold
             )
             Text(
                 text = wine.whyWeLovedIt,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -267,7 +267,7 @@ fun WineCard(
             Text(
                 text = wine.name,
                 style = MaterialTheme.typography.titleMedium,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Text(
@@ -278,7 +278,7 @@ fun WineCard(
             Text(
                 text = wine.technicalDetails,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
             )
 
             if (isFavorite && wine.whyWeLovedIt != null) {
@@ -329,7 +329,7 @@ fun WineDetailContent(wine: Wine, onCloseClick: () -> Unit) {
             Text(
                 text = wine.name,
                 style = MaterialTheme.typography.headlineSmall,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onSurface
             )
             IconButton(onClick = onCloseClick) {
                 Icon(
@@ -393,7 +393,7 @@ fun CompactScreenWinePage(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0D0D0D))
+            .background(MaterialTheme.colorScheme.background)
     ) {
         item {
             SearchBar(
@@ -451,7 +451,7 @@ fun LargeScreenWinePage(
             modifier = Modifier
                 .fillMaxWidth(listFraction)
                 .fillMaxHeight()
-                .background(Color.Black)
+                .background(MaterialTheme.colorScheme.background)
         ) {
             SearchBar(
                 label = "Search our wine list",
@@ -463,7 +463,7 @@ fun LargeScreenWinePage(
                 Text(
                     text = "No wines found.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(16.dp)
                 )
             } else {
@@ -476,7 +476,7 @@ fun LargeScreenWinePage(
                     Text(
                         text = "Our Favorite Wine List",
                         style = MaterialTheme.typography.headlineMedium,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(16.dp)
                     )
                     val wineListState = rememberLazyListState()
@@ -513,7 +513,7 @@ fun LargeScreenWinePage(
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight()
-                .background(Color.Black),
+                .background(MaterialTheme.colorScheme.background),
         ) {
             Card(
                 modifier = Modifier.padding(16.dp),
@@ -531,7 +531,7 @@ fun LargeScreenWinePage(
                         ) {
                             Text(
                                 text = "Select a wine to see details",
-                                color = Color.LightGray,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                                 style = MaterialTheme.typography.titleMedium
                             )
                         }

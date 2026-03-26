@@ -42,7 +42,7 @@ fun UnderConstruction(
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close",
-                            tint = Color.White
+                            tint = Color.Unspecified
                         )
                     }
 

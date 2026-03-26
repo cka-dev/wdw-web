@@ -73,13 +73,13 @@ fun AboutPage(
     var selectedSection by remember { mutableStateOf<AboutSection?>(null) }
 
     val aboutListState = rememberLazyListState()
-    Surface(color = Color(0xFF141414)) {
+    Surface(color = MaterialTheme.colorScheme.background) {
         Box(modifier = Modifier.fillMaxSize()) {
             LazyColumn(
                 state    = aboutListState,
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black)
+                    .background(MaterialTheme.colorScheme.background)
             ) {
             item {
                 Box(
@@ -186,7 +186,7 @@ fun AboutSectionDialog(
     Dialog(onDismissRequest = onDismiss) {
         Card(
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(24.dp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -211,13 +211,13 @@ fun AboutSectionDialog(
                         Text(
                             text = section.title,
                             style = MaterialTheme.typography.headlineSmall,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = section.body,
                             style = MaterialTheme.typography.bodyLarge,
-                            color = Color.LightGray.copy(alpha = 0.9f)
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         )
                         Spacer(modifier = Modifier.height(24.dp))
                         Row(
@@ -225,7 +225,7 @@ fun AboutSectionDialog(
                             horizontalArrangement = Arrangement.End
                         ) {
                             TextButton(onClick = onDismiss) {
-                                Text("Close", color = Color.White)
+                                Text("Close", color = MaterialTheme.colorScheme.onSurface)
                             }
                         }
                     }
@@ -248,7 +248,7 @@ fun LSAboutCard(
             .clickable { onClick() },
         elevation = CardDefaults.cardElevation(8.dp),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
             modifier = Modifier
@@ -288,7 +288,7 @@ fun CompactScreenAboutCard(
             .clickable { onClick() },
         elevation = CardDefaults.cardElevation(6.dp),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
             modifier = Modifier
@@ -317,13 +317,13 @@ fun AboutText(title: String, body: String, maxLines: Int = Int.MAX_VALUE) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge,
-            color = Color.White
+            color = MaterialTheme.colorScheme.onSurface
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = body,
             style = MaterialTheme.typography.bodyMedium,
-            color = Color.LightGray.copy(alpha = 0.9f),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
             maxLines = maxLines,
             overflow = TextOverflow.Ellipsis
         )

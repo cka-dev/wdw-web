@@ -136,7 +136,7 @@ fun EventsPage(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(color = Color.Black)
+            .background(color = MaterialTheme.colorScheme.background)
     ) {
         Row(
             modifier = Modifier
@@ -148,16 +148,16 @@ fun EventsPage(
             Text(
                 text = "",
                 style = MaterialTheme.typography.headlineMedium,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onBackground
             )
 
         val upcomingColor by animateColorAsState(
-            targetValue  = if (showUpcoming) Color(0xFFFF7F33) else Color(0xFF2A2A2A),
+            targetValue  = if (showUpcoming) Color(0xFFFF7F33) else MaterialTheme.colorScheme.surfaceVariant,
             animationSpec = tween(durationMillis = 300),
             label        = "upcomingToggle"
         )
         val pastColor by animateColorAsState(
-            targetValue  = if (!showUpcoming) Color(0xFFFF7F33) else Color(0xFF2A2A2A),
+            targetValue  = if (!showUpcoming) Color(0xFFFF7F33) else MaterialTheme.colorScheme.surfaceVariant,
             animationSpec = tween(durationMillis = 300),
             label        = "pastToggle"
         )
@@ -167,7 +167,8 @@ fun EventsPage(
                     onClick = { showUpcoming = true },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = upcomingColor,
-                        contentColor   = Color.White
+                        contentColor   = if (LocalIsDarkTheme.current) Color.White
+                                         else MaterialTheme.colorScheme.onSurface
                     ),
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.padding(end = 8.dp)
@@ -179,7 +180,8 @@ fun EventsPage(
                     onClick = { showUpcoming = false },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = pastColor,
-                        contentColor   = Color.White
+                        contentColor   = if (LocalIsDarkTheme.current) Color.White
+                                         else MaterialTheme.colorScheme.onSurface
                     ),
                     shape = RoundedCornerShape(8.dp)
                 ) {
@@ -304,7 +306,7 @@ fun EventCard(
                 onEventSelectedChange(event)
             },
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF2D2D2D)
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(8.dp)
     ) {
@@ -316,7 +318,7 @@ fun EventCard(
                 Text(
                     text = event.name,
                     style = MaterialTheme.typography.titleLarge,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     minLines = 1,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -344,7 +346,7 @@ fun EventCard(
             Text(
                 text = event.description,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 minLines = 3,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
@@ -355,7 +357,7 @@ fun EventCard(
             Text(
                 text = "Location: ${event.location}",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.LightGray,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                 minLines = 1,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -363,7 +365,7 @@ fun EventCard(
             Text(
                 text = "Date: ${event.date.toEventDisplayDate()}",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.LightGray,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                 minLines = 1,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -557,7 +559,7 @@ fun EventDetailContent(
                 Text(
                     text = event.name,
                     style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 IconButton(onClick = onCloseClick) {
                     Icon(
@@ -631,7 +633,7 @@ fun EventDetailContent(
                 Text(
                     text = "Gallery",
                     style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 MediaGallery(mediaItems = event.gallery)
@@ -658,7 +660,7 @@ fun EventDetailRow(
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
         )
         Text(
             text = value,
@@ -754,7 +756,7 @@ fun GalleryViewer(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black)
+                        .background(MaterialTheme.colorScheme.background)
                 ) {
                     // Main pager
                     HorizontalPager(
@@ -959,7 +961,7 @@ fun KmpVideoPlayer(url: String) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black),
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
         HtmlView(
@@ -1283,7 +1285,7 @@ fun CompactScreenReservationFields(
                 onValueChange = {
                     onFirstNameChange(it)
                 },
-                label = { Text("First Name", color = Color.White) },
+                label = { Text("First Name", color = MaterialTheme.colorScheme.onSurface) },
                 isError = firstNameError.isNotEmpty(),
                 supportingText = {
                     if (firstNameError.isNotEmpty()) {
@@ -1300,7 +1302,7 @@ fun CompactScreenReservationFields(
                 onValueChange = {
                     onLastNameChange(it)
                 },
-                label = { Text("Last Name", color = Color.White) },
+                label = { Text("Last Name", color = MaterialTheme.colorScheme.onSurface) },
                 isError = lastNameError.isNotEmpty(),
                 supportingText = {
                     if (lastNameError.isNotEmpty()) {
@@ -1317,7 +1319,7 @@ fun CompactScreenReservationFields(
                 onValueChange = {
                     onEmailChange(it)
                 },
-                label = { Text("Email", color = Color.White) },
+                label = { Text("Email", color = MaterialTheme.colorScheme.onSurface) },
                 isError = emailError.isNotEmpty(),
                 supportingText = {
                     if (emailError.isNotEmpty()) {
@@ -1334,7 +1336,7 @@ fun CompactScreenReservationFields(
                 onValueChange = {
                     onPhoneNumberChange(it)
                 },
-                label = { Text("Phone number", color = Color.White) },
+                label = { Text("Phone number", color = MaterialTheme.colorScheme.onSurface) },
                 isError = phoneError.isNotEmpty(),
                 supportingText = {
                     if (phoneError.isNotEmpty()) {
@@ -1357,7 +1359,7 @@ fun CompactScreenReservationFields(
                 ) {
                     Card(
                         colors = CardDefaults.cardColors(
-                            containerColor = Color.LightGray,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
                         ),
                         elevation = CardDefaults.cardElevation(4.dp),
                         modifier = Modifier.clickable {
@@ -1369,7 +1371,7 @@ fun CompactScreenReservationFields(
                         Icon(
                             imageVector = Icons.Default.Remove,
                             contentDescription = "Decrease guests count",
-                            tint = Color.Black
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Spacer(modifier = Modifier.width(8.dp))
@@ -1390,7 +1392,7 @@ fun CompactScreenReservationFields(
                     Spacer(modifier = Modifier.width(8.dp))
                     Card(
                         colors = CardDefaults.cardColors(
-                            containerColor = Color.LightGray,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
                         ),
                         elevation = CardDefaults.elevatedCardElevation(4.dp),
                         modifier = Modifier.clickable {
@@ -1402,7 +1404,7 @@ fun CompactScreenReservationFields(
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = "Increase guests count",
-                            tint = Color.Black
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -1525,7 +1527,7 @@ fun NonCompactReservationFields(
                 OutlinedTextField(
                     value = firstName ?: "",
                     onValueChange = { onFirstNameChange(it) },
-                    label = { Text("First Name", color = Color.White) },
+                    label = { Text("First Name", color = MaterialTheme.colorScheme.onSurface) },
                     isError = firstNameError.isNotEmpty(),
                     supportingText = {
                         if (firstNameError.isNotEmpty()) {
@@ -1537,7 +1539,7 @@ fun NonCompactReservationFields(
                 OutlinedTextField(
                     value = lastName ?: "",
                     onValueChange = { onLastNameChange(it) },
-                    label = { Text("Last Name", color = Color.White) },
+                    label = { Text("Last Name", color = MaterialTheme.colorScheme.onSurface) },
                     isError = lastNameError.isNotEmpty(),
                     supportingText = {
                         if (lastNameError.isNotEmpty()) {
@@ -1557,7 +1559,7 @@ fun NonCompactReservationFields(
                 OutlinedTextField(
                     value = email ?: "",
                     onValueChange = { onEmailChange(it) },
-                    label = { Text("Email", color = Color.White) },
+                    label = { Text("Email", color = MaterialTheme.colorScheme.onSurface) },
                     isError = emailError.isNotEmpty(),
                     supportingText = {
                         if (emailError.isNotEmpty()) {
@@ -1569,7 +1571,7 @@ fun NonCompactReservationFields(
                 OutlinedTextField(
                     value = phoneNumber ?: "",
                     onValueChange = { onPhoneNumberChange(it) },
-                    label = { Text("Phone Number", color = Color.White) },
+                    label = { Text("Phone Number", color = MaterialTheme.colorScheme.onSurface) },
                     isError = phoneError.isNotEmpty(),
                     supportingText = {
                         if (phoneError.isNotEmpty()) {
@@ -1589,7 +1591,7 @@ fun NonCompactReservationFields(
                 Spacer(modifier = Modifier.width(8.dp))
                 Card(
                     colors = CardDefaults.cardColors(
-                        containerColor = Color.LightGray,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
                     ),
                     elevation = CardDefaults.cardElevation(4.dp),
                     modifier = Modifier.clickable {
@@ -1601,7 +1603,7 @@ fun NonCompactReservationFields(
                     Icon(
                         imageVector = Icons.Default.Remove,
                         contentDescription = "Decrease guests count",
-                        tint = Color.Black
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
@@ -1621,7 +1623,7 @@ fun NonCompactReservationFields(
                 Spacer(modifier = Modifier.width(8.dp))
                 Card(
                     colors = CardDefaults.cardColors(
-                        containerColor = Color.LightGray,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
                     ),
                     elevation = CardDefaults.elevatedCardElevation(4.dp),
                     modifier = Modifier.clickable {
@@ -1633,7 +1635,7 @@ fun NonCompactReservationFields(
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = "Increase guests count",
-                        tint = Color.Black
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

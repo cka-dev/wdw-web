@@ -100,18 +100,22 @@ fun ProfilePage(
     var showVerificationEmailToast by remember { mutableStateOf(false) }
     var showVerificationEmailFailureToast by remember { mutableStateOf(false) }
 
-    val backgroundBrush = Brush.verticalGradient(
+    val isDark = LocalIsDarkTheme.current
+    val backgroundBrush = if (!isDark) Brush.verticalGradient(
         colors = listOf(
             Color(0xFFFFE08A),
             Color(0xFFD4AF37)
         )
-    )
+    ) else null
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(brush = backgroundBrush)
+                .let { m ->
+                    if (backgroundBrush != null) m.background(brush = backgroundBrush)
+                    else m.background(MaterialTheme.colorScheme.background)
+                }
         ) {
             Column(
                 modifier = Modifier
@@ -122,7 +126,7 @@ fun ProfilePage(
                 Text(
                     text = "Your Profile",
                     style = MaterialTheme.typography.headlineMedium,
-                    color = Color.White,
+                    color = if (isDark) MaterialTheme.colorScheme.onBackground else LightOnPrimaryContainer,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
@@ -132,7 +136,7 @@ fun ProfilePage(
                         "Update your personal information"
                     else
                         "View and edit your personal details",
-                    color = Color.White,
+                    color = if (isDark) MaterialTheme.colorScheme.onBackground else LightOnPrimaryContainer,
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )

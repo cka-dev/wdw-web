@@ -124,13 +124,13 @@ fun LargeScreenPodcastPage(
     Row(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
             modifier = Modifier
                 .weight(listWeight)
                 .fillMaxHeight()
-                .background(Color.Black)
+                .background(MaterialTheme.colorScheme.background)
         ) {
             SearchBar(
                 label = "Search Uncorked Conversations episodes",
@@ -147,7 +147,7 @@ fun LargeScreenPodcastPage(
                 Text(
                     text = "Episodes",
                     style = MaterialTheme.typography.headlineMedium,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(16.dp)
                 )
                 val episodeListState = rememberLazyListState()
@@ -193,7 +193,7 @@ fun LargeScreenPodcastPage(
             modifier = Modifier
                 .weight(detailWeight)
                 .fillMaxHeight()
-                .background(Color.Black)
+                .background(MaterialTheme.colorScheme.background)
         ) {
             Card(
                 modifier = Modifier
@@ -209,7 +209,7 @@ fun LargeScreenPodcastPage(
                         Text(
                             text = "Select an episode to see the details and watch",
                             style = MaterialTheme.typography.titleMedium,
-                            color = Color.LightGray
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
                     }
                 } else {
@@ -230,7 +230,7 @@ fun EpisodeListItem(
 ) {
     val bgColor by animateColorAsState(
         targetValue  = if (isSelected) Color(0xFFFF7F33)
-            .copy(alpha = 0.25f) else Color(0xFF1E1E1E),
+            .copy(alpha = 0.25f) else MaterialTheme.colorScheme.surface,
         animationSpec = tween(durationMillis = 250),
         label        = "episodeSelection"
     )
@@ -264,7 +264,7 @@ fun EpisodeListItem(
                 Text(
                     text = episode.title,
                     style = MaterialTheme.typography.titleMedium,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -272,13 +272,13 @@ fun EpisodeListItem(
                 Text(
                     text = "Guest: ${episode.guestName}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.LightGray
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = episode.date,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                 )
             }
         }
@@ -392,7 +392,7 @@ fun CompactPodcastsScreen(
 ) {
 
     Column(
-        modifier = Modifier.fillMaxSize().background(Color(0xFF0D0D0D))
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
     ) {
 
         SearchBar(
@@ -464,7 +464,7 @@ fun EpisodeCard(episode: Episode, onClick: () -> Unit) {
                 Text(
                     text = episode.title,
                     style = MaterialTheme.typography.titleMedium,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -481,7 +481,7 @@ fun EpisodeCard(episode: Episode, onClick: () -> Unit) {
                 Text(
                     text = episode.date,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
             }
         }
@@ -534,7 +534,7 @@ fun EpisodeVideoContent(episode: Episode, onCloseClick: () -> Unit) {
                 Text(
                     text = episode.title,
                     style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 IconButton(onClick = onCloseClick) {
                     Icon(

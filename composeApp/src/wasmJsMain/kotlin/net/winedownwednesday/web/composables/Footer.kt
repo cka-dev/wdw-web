@@ -36,11 +36,8 @@ import wdw_web.composeapp.generated.resources.Res
 import wdw_web.composeapp.generated.resources.ig_logo_96
 import wdw_web.composeapp.generated.resources.yt_logo_96
 
-// ── Brand colours ─────────────────────────────────────────
-private val FooterBg      = Color(0xFF141414)
+// ── Accent colour (unchanged across themes) ──────────────
 private val AccentOrange  = Color(0xFFFF7F33)
-private val TextSecondary = Color(0xFFAAAAAA)
-private val TextMuted     = Color(0xFF666666)
 
 // ── External links ────────────────────────────────────────
 private const val INSTAGRAM_URL    = "https://www.instagram.com/uncorked.conversations/"
@@ -70,7 +67,7 @@ fun Footer(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(FooterBg)
+            .background(androidx.compose.material3.MaterialTheme.colorScheme.primary)
     ) {
         // Orange accent divider
         Box(
@@ -96,7 +93,7 @@ fun Footer(modifier: Modifier = Modifier) {
                         Icon(
                             painter = painterResource(Res.drawable.ig_logo_96),
                             contentDescription = "Instagram",
-                            tint = Color.White,
+                            tint = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier
                                 .size(24.dp)
                                 .clickable { window.open(INSTAGRAM_URL) }
@@ -104,7 +101,7 @@ fun Footer(modifier: Modifier = Modifier) {
                         Icon(
                             painter = painterResource(Res.drawable.yt_logo_96),
                             contentDescription = "YouTube",
-                            tint = Color.White,
+                            tint = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier
                                 .size(24.dp)
                                 .clickable { window.open(YOUTUBE_URL) }
@@ -119,13 +116,13 @@ fun Footer(modifier: Modifier = Modifier) {
                 Text(
                     text = "info@winedownwednesday.net",
                     fontSize = 12.sp,
-                    color = TextSecondary,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.75f),
                     modifier = Modifier.clickable { showContactForm = true }
                 )
                 Text(
                     text = "+1 (404) 939-3370",
                     fontSize = 12.sp,
-                    color = TextSecondary,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.75f),
                     modifier = Modifier.clickable { window.open("tel:+14049393370") }
                 )
             }
@@ -167,12 +164,12 @@ fun Footer(modifier: Modifier = Modifier) {
                 Text(
                     text = "© 2025 Wine Down Wednesday",
                     fontSize = 11.sp,
-                    color = TextMuted
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f),
                 )
                 Text(
                     text = "Privacy Policy",
                     fontSize = 11.sp,
-                    color = TextMuted,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f),
                     modifier = Modifier.clickable { window.open(PRIVACY_POLICY_URL) }
                 )
             }
@@ -207,7 +204,7 @@ fun CompactFooter(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Color(0xFF1A1A1A))
+            .background(androidx.compose.material3.MaterialTheme.colorScheme.primary)
     ) {
         Box(
             modifier = Modifier
@@ -229,7 +226,7 @@ fun CompactFooter(modifier: Modifier = Modifier) {
                     Icon(
                         painter = painterResource(Res.drawable.ig_logo_96),
                         contentDescription = "Instagram",
-                        tint = Color.White,
+                        tint = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier
                             .size(22.dp)
                             .clickable { window.open(INSTAGRAM_URL) }
@@ -237,7 +234,7 @@ fun CompactFooter(modifier: Modifier = Modifier) {
                     Icon(
                         painter = painterResource(Res.drawable.yt_logo_96),
                         contentDescription = "YouTube",
-                        tint = Color.White,
+                        tint = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier
                             .size(22.dp)
                             .clickable { window.open(YOUTUBE_URL) }

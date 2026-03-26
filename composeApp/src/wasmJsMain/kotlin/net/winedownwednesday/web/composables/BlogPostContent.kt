@@ -35,7 +35,7 @@ fun BlogPostContent(
 ) {
     Column(
         modifier = modifier.fillMaxWidth()
-            .background(Color.Black),
+            .background(MaterialTheme.colorScheme.background),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         blocks.forEach { block ->
@@ -57,7 +57,7 @@ fun BlogPostContent(
                         text = block.text,
                         style = style,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(top = 32.dp, bottom = 8.dp)
                     )
                 }
@@ -101,7 +101,7 @@ fun BlogPostContent(
                             contentAlignment = Alignment.Center
                         ) {
                             Surface(
-                                color = Color(0xFFFF7F33),
+                                color = WdwOrange,
                                 modifier = Modifier.fillMaxWidth().fillMaxHeight()
                             ) {}
                         }
@@ -112,7 +112,7 @@ fun BlogPostContent(
                             fontWeight = FontWeight.Medium,
                             lineHeight = 36.sp,
                             modifier = Modifier.padding(start = 24.dp, end = 16.dp),
-                            color = Color.LightGray
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                         )
                     }
                 }
@@ -128,7 +128,7 @@ fun BlogPostContent(
                                     text = "$prefix ",
                                     style = MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFFFF7F33)
+                                    color = WdwOrange
                                 )
                                 // Use Markdown here in case list items contain inner formatting (bold/links)
                                 Markdown(

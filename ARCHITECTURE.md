@@ -165,19 +165,30 @@ Top-level navigation uses **Jetpack Navigation 3** (`NavDisplay` + `rememberNavB
 > **Note**: Full browser address-bar integration (path-based URLs rather than hash fragments) is postponed to a future CMP release per JetBrains roadmap.
 
 On desktop, a horizontal `TopNavBar` shows all tabs. On compact/mobile screens, a hybrid pattern (matching the Android app) is used:
-- **Bottom bar** (`MobileBottomNavBar`): 5 primary tabs — About, Podcasts, Events, Our Wine, Chat
-- **Hamburger drawer** (`NavDrawerContent`): secondary tabs — Members, Blog (labeled "More")
+- **Bottom bar** (`MobileBottomNavBar`): 5 primary tabs — Home, Podcasts, Gatherings, The Cellar, Bubbly Chat
+- **Hamburger drawer** (`NavDrawerContent`): secondary tabs — Members, Tasting Notes (labeled "More")
 - **Top bar**: ☰ hamburger + logo (40dp height) + profile avatar/login icon
 - Footer is hidden on compact screens (bottom bar replaces it)
 
+**Wine-Themed Nav Labels** (desktop top nav):
+- About → **Our Story** | Blog → **Tasting Notes** | Events → **Gatherings**
+- Our Wine → **The Cellar** | Messages → **Bubbly Chat** | Podcasts → **Uncorked Conversations**
+- Mobile uses shorter labels where space is constrained (e.g. "Podcasts" instead of "Uncorked Conversations")
+
+**Become a Member CTA** (`HomePage`): When the user is not authenticated, a pill-shaped orange "Become a Member >>" button and an "Already a member? Sign in" text link are shown below the welcome headline. Both navigate to `Route.Login`. The CTA is hidden once the user is logged in.
+
 ### Footer (`Footer.kt`)
-A full-width 4-column dark-themed footer rendered below all desktop page content:
-- **Brand**: Logo (`wdw_new_logo`), tagline
-- **Navigate**: 7-link site map split into 2 sub-columns; links use `onPointerEvent(Enter/Exit)` for true hover detection (required in Kotlin/WASM — `clickable` alone causes hover state to stick)
-- **Connect**: IG/YT icons (white-tinted), clickable email (opens `ContactFormDialog`), clickable phone number (`tel:` deep link — opens dialer on mobile, FaceTime/Skype on desktop)
-- **Get our Apps**: Google Play badge + Apple App Store badge (official SVGs/PNGs from `/drawable`), linking to store listings; deep-linked to app stores on mobile
+A slim single-row 4-column dark-themed footer rendered below all desktop page content:
+- **Connect**: IG/YT social icons
+- **Contact**: clickable email (opens `ContactFormDialog`), phone number (`tel:` deep link)
+- **Get our Apps**: Google Play + Apple App Store badges side by side, linking to store listings
+- **Legal**: copyright notice + Privacy Policy link
 
 A `CompactFooter` strip is shown on mobile above the `MobileBottomNavBar`.
+
+### Typography
+- **Welcome Headline** (`HomePage`): Rendered in **Cormorant Garamond** (Bold, 30sp) via `displayFontFamily()` in `Typography.kt`. Font files (`CormorantGaramond_Regular.ttf`, `CormorantGaramond_Bold.ttf`) are bundled in `commonMain/composeResources/font/`. Playfair Display files are also present as an alternative.
+- **Subtitle + body**: System default sans-serif (intentional serif/sans pairing for premium feel).
 
 ### Contact Form (`ContactFormDialog.kt`)
 A `BasicAlertDialog` modal triggered by clicking the email address in the footer.
@@ -266,3 +277,33 @@ Top-level `@Composable` that uses `LocalWindowInfo.containerSize` + `LocalDensit
 - **Build Command**: `./gradlew :composeApp:wasmJsBrowserDistribution`
 - **Memory**: Production WASM compilation requires at least 6 GB heap. Set in `gradle.properties`: `kotlin.daemon.jvmargs=-Xmx6G` and `org.gradle.jvmargs=-Xmx6G`.
 - **Headers**: `firebase.json` is configured to serve `.wasm` files with `application/wasm` MIME type and specific caching headers for performance.
+
+---
+
+## 8. Adaptive Theming System
+
+The app supports **light and dark modes**, persisted via `localStorage` and toggled by the user.
+
+### `WdwTheme.kt`
+A custom Material 3 theme wrapper in `composables/WdwTheme.kt` defines two complete color palettes:
+
+| Token | Dark | Light |
+|---|---|---|
+| `background` | `#000000` | `#FEFDF9` (warm white) |
+| `surface` | `#1A1A1A` | `#EFEFEF` |
+| `surfaceVariant` | `#333333` | `#D9D9D9` |
+| `primary` | `#1E1E1E` | `#F5EDD8` (champagne) |
+| Brand accent | `WdwOrange = #FF7F33` | same |
+
+The `WdwTheme` composable wraps the entire app via `AppNavigation.kt` and provides both a `MaterialTheme` color scheme and a `LocalIsDarkTheme: CompositionLocal<Boolean>` for imperative per-composable theme checks.
+
+### Theme Toggle
+- **Wide screens (non-compact)**: A `ThemeTogglePill` `FloatingActionButton` is overlaid at `Alignment.BottomEnd` on all pages **except** the Messaging screen (where it would overlap the send button).
+- **Compact/mobile**: A `DarkMode`/`LightMode` icon row in the `NavDrawerContent` drawer.
+- Preference saved to `localStorage` via `saveThemePreference()` / `loadThemePreference()` in `ThemePreference.kt`.
+
+### Design Rules
+- **Semantic tokens first**: All surfaces, text, and icons use `MaterialTheme.colorScheme.*` tokens.
+- **`LocalIsDarkTheme` for exceptions**: Used sparingly when a color must diverge from its semantic token (e.g., birthday badge text: gold in dark, `WdwOrange` in light for contrast).
+- **Brand colors are always WdwOrange** regardless of mode (message bubbles, avatars, CTA buttons).
+- **Non-negotiable dark elements** (video player backgrounds, image overlay gradients) intentionally use hardcoded `Color.Black` — they are not mode-dependent.
