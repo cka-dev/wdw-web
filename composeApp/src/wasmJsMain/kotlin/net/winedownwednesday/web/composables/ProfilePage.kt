@@ -29,6 +29,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -464,9 +465,10 @@ fun ProfileReadSection(
     if (showLinkPasswordDialog) {
         var password by remember { mutableStateOf("") }
         var confirmPassword by remember { mutableStateOf("") }
+        var isLinking by remember { mutableStateOf(false) }
 
         AlertDialog(
-            onDismissRequest = { showLinkPasswordDialog = false },
+            onDismissRequest = { if (!isLinking) showLinkPasswordDialog = false },
             title = { Text("Link Password") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -476,6 +478,7 @@ fun ProfileReadSection(
                         onValueChange = { password = it },
                         label = { Text("Password") },
                         visualTransformation = PasswordVisualTransformation(),
+                        enabled = !isLinking,
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
@@ -483,6 +486,7 @@ fun ProfileReadSection(
                         onValueChange = { confirmPassword = it },
                         label = { Text("Confirm Password") },
                         visualTransformation = PasswordVisualTransformation(),
+                        enabled = !isLinking,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -491,18 +495,32 @@ fun ProfileReadSection(
                 Button(
                     onClick = {
                         if (password == confirmPassword && password.isNotEmpty()) {
+                            isLinking = true
                             viewModel.linkPasswordToAccount(password) { success ->
+                                isLinking = false
                                 if (success) showLinkPasswordDialog = false
                             }
                         }
                     },
+                    enabled = !isLinking && password.isNotEmpty() && password == confirmPassword,
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF800020))
                 ) {
-                    Text("Link")
+                    if (isLinking) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = Color.White
+                        )
+                    } else {
+                        Text("Link")
+                    }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showLinkPasswordDialog = false }) {
+                TextButton(
+                    onClick = { showLinkPasswordDialog = false },
+                    enabled = !isLinking
+                ) {
                     Text("Cancel")
                 }
             }
@@ -513,9 +531,10 @@ fun ProfileReadSection(
         var currentPassword by remember { mutableStateOf("") }
         var newPassword by remember { mutableStateOf("") }
         var confirmNewPassword by remember { mutableStateOf("") }
+        var isChanging by remember { mutableStateOf(false) }
 
         AlertDialog(
-            onDismissRequest = { showChangePasswordDialog = false },
+            onDismissRequest = { if (!isChanging) showChangePasswordDialog = false },
             title = { Text("Change Password") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -524,6 +543,7 @@ fun ProfileReadSection(
                         onValueChange = { currentPassword = it },
                         label = { Text("Current Password") },
                         visualTransformation = PasswordVisualTransformation(),
+                        enabled = !isChanging,
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
@@ -531,6 +551,7 @@ fun ProfileReadSection(
                         onValueChange = { newPassword = it },
                         label = { Text("New Password") },
                         visualTransformation = PasswordVisualTransformation(),
+                        enabled = !isChanging,
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
@@ -538,6 +559,7 @@ fun ProfileReadSection(
                         onValueChange = { confirmNewPassword = it },
                         label = { Text("Confirm New Password") },
                         visualTransformation = PasswordVisualTransformation(),
+                        enabled = !isChanging,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -546,18 +568,32 @@ fun ProfileReadSection(
                 Button(
                     onClick = {
                         if (newPassword == confirmNewPassword && newPassword.isNotEmpty()) {
+                            isChanging = true
                             viewModel.changePassword(currentPassword, newPassword) { success ->
+                                isChanging = false
                                 if (success) showChangePasswordDialog = false
                             }
                         }
                     },
+                    enabled = !isChanging && newPassword.isNotEmpty() && newPassword == confirmNewPassword,
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF800020))
                 ) {
-                    Text("Update")
+                    if (isChanging) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = Color.White
+                        )
+                    } else {
+                        Text("Update")
+                    }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showChangePasswordDialog = false }) {
+                TextButton(
+                    onClick = { showChangePasswordDialog = false },
+                    enabled = !isChanging
+                ) {
                     Text("Cancel")
                 }
             }

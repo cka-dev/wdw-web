@@ -1111,7 +1111,8 @@ fun RSVPComponent(
                                 )
                                 onSubmit(rsvp)
                             },
-                            uiState = uiState
+                            uiState = uiState,
+                            showProgressBar = showProgressBar
                         )
 
                     } else {
@@ -1172,7 +1173,8 @@ fun RSVPComponent(
                                     guestsCount = guestsCount
                                 )
                                 onSubmit(rsvp)
-                            }
+                            },
+                            showProgressBar = showProgressBar
                         )
                     }
                     AnimatedVisibility(showProgressBar) {
@@ -1207,6 +1209,7 @@ fun CompactScreenReservationFields(
     phoneError: String,
     guestCount: Int,
     guestsError: String,
+    showProgressBar: Boolean = false,
     onSubmit: () -> Unit
 ) {
     LazyColumn(
@@ -1415,13 +1418,22 @@ fun CompactScreenReservationFields(
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = onSubmit,
+                enabled = !showProgressBar,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFFFF7F33),
                     contentColor = Color.White
                 )
             ) {
-                Text("Submit")
+                if (showProgressBar) {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = Color.White
+                    )
+                } else {
+                    Text("Submit")
+                }
             }
         }
     }
@@ -1448,6 +1460,7 @@ fun NonCompactReservationFields(
     emailError: String,
     phoneError: String,
     guestsError: String,
+    showProgressBar: Boolean = false,
     onSubmit: () -> Unit,
     uiState: LoginUIState,
     modifier: Modifier = Modifier
@@ -1648,7 +1661,7 @@ fun NonCompactReservationFields(
         item {
             Button(
                 onClick = onSubmit,
-                enabled = uiState is LoginUIState.Authenticated,
+                enabled = !showProgressBar && uiState is LoginUIState.Authenticated,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFFFF7F33),
                     contentColor = Color.White

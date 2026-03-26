@@ -149,6 +149,7 @@ data class ModerationCallbacks(
     val currentUserId: String? = null,
     val blockedUserIds: List<String> = emptyList(),
     val blockedUserProfiles: List<JsStreamUser> = emptyList(),
+    val isModerationLoading: Boolean = false,
     val onBlock: (targetUserId: String) -> Unit = {},
     val onUnblock: (targetUserId: String) -> Unit = {},
     val onReport: (targetUserId: String, reason: String?, category: String) -> Unit = { _, _, _ -> },
@@ -182,6 +183,7 @@ fun MessagingScreen(
     val membersList by viewModel.members.collectAsState()
     val blockedEmails by viewModel.blockedEmails.collectAsState()
     val blockedUserProfiles by viewModel.blockedUserProfiles.collectAsState()
+    val moderationLoading by viewModel.moderationLoading.collectAsState()
     var showNewChatDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
 
@@ -205,10 +207,13 @@ fun MessagingScreen(
     reportTarget?.let { target ->
         ReportUserDialog(
             userName = target.userName,
+            isLoading = moderationLoading,
             onDismiss = { viewModel.dismissReportDialog() },
             onSubmit = { reason, category ->
-                viewModel.dismissReportDialog()
-                viewModel.flagUser(target.userId, reason, category)
+                // Keep the dialog open — flagUser will dismiss via moderationMessage
+                viewModel.flagUser(target.userId, reason, category) { _ ->
+                    viewModel.dismissReportDialog()
+                }
             }
         )
     }
@@ -224,13 +229,15 @@ fun MessagingScreen(
     val moderationCallbacks = remember(
         streamToken?.userId,
         blockedEmails,
-        blockedUserProfiles
+        blockedUserProfiles,
+        moderationLoading
     )
     {
         ModerationCallbacks(
             currentUserId = streamToken?.userId,
             blockedUserIds = blockedEmails,
             blockedUserProfiles = blockedUserProfiles,
+            isModerationLoading = moderationLoading,
             onBlock = { userId -> viewModel.blockUser(userId) },
             onUnblock = { userId -> viewModel.unblockUser(userId) },
             onReport = { userId, reason, category ->
@@ -1456,9 +1463,16 @@ fun MessageBubble(
                         userId = message.userId,
                         isSelf = message.userId == currentUserId,
                         isBlocked = message.userId in moderation.blockedUserIds,
+                        isModerationLoading = moderation.isModerationLoading,
                         onDismiss = { showProfilePopover = false },
-                        onBlock = { moderation.onBlock(message.userId) },
-                        onUnblock = { moderation.onUnblock(message.userId) },
+                        onBlock = {
+                            moderation.onBlock(message.userId)
+                            showProfilePopover = false
+                        },
+                        onUnblock = {
+                            moderation.onUnblock(message.userId)
+                            showProfilePopover = false
+                        },
                         onReportClick = {
                             showProfilePopover = false
                             messagingViewModel.openReportDialog(
@@ -3491,6 +3505,7 @@ fun UserProfilePopover(
     userId: String,
     isSelf: Boolean = false,
     isBlocked: Boolean = false,
+    isModerationLoading: Boolean = false,
     onDismiss: () -> Unit,
     onBlock: () -> Unit = {},
     onUnblock: () -> Unit = {},
@@ -3751,36 +3766,51 @@ fun UserProfilePopover(
                     ) {
                         // Block / Unblock
                         Surface(
-                            color = if (isBlocked) Color(0xFF3a3a3a) else Color(0xFFe54545).copy(
+                            color = if (isModerationLoading) MaterialTheme.colorScheme.surfaceVariant
+                                else if (isBlocked) Color(0xFF3a3a3a) else Color(0xFFe54545).copy(
                                 alpha = 0.15f
                             ),
                             shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f).clickable { showConfirmBlock = true }
+                            modifier = Modifier.weight(1f).clickable(
+                                enabled = !isModerationLoading
+                            ) { showConfirmBlock = true }
                         ) {
                             Row(
                                 modifier = Modifier.padding(vertical = 8.dp).fillMaxWidth(),
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    Icons.Default.Block,
-                                    contentDescription = if (isBlocked) "Unblock" else "Block",
-                                    tint = if (isBlocked) MaterialTheme.colorScheme.onSurface else Color(0xFFe54545),
-                                    modifier = Modifier.size(14.dp)
-                                )
+                                if (isModerationLoading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(14.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Default.Block,
+                                        contentDescription = if (isBlocked) "Unblock" else "Block",
+                                        tint = if (isBlocked) MaterialTheme.colorScheme.onSurface else Color(0xFFe54545),
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
                                 Spacer(Modifier.width(4.dp))
                                 Text(
                                     text = if (isBlocked) "Unblock" else "Block",
-                                    color = if (isBlocked) MaterialTheme.colorScheme.onSurface else Color(0xFFe54545),
+                                    color = if (isModerationLoading) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                        else if (isBlocked) MaterialTheme.colorScheme.onSurface else Color(0xFFe54545),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium
                                 )
                             }
                         }
                         Surface(
-                            color = Color(0xFFFF7F33).copy(alpha = 0.15f),
+                            color = if (isModerationLoading) MaterialTheme.colorScheme.surfaceVariant
+                                else Color(0xFFFF7F33).copy(alpha = 0.15f),
                             shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f).clickable { onReportClick() }
+                            modifier = Modifier.weight(1f).clickable(
+                                enabled = !isModerationLoading
+                            ) { onReportClick() }
                         ) {
                             Row(
                                 modifier = Modifier.padding(vertical = 8.dp).fillMaxWidth(),
@@ -3831,6 +3861,7 @@ fun UserProfilePopover(
 @Composable
 fun ReportUserDialog(
     userName: String,
+    isLoading: Boolean = false,
     onDismiss: () -> Unit,
     onSubmit: (reason: String?, category: String) -> Unit
 ) {
@@ -3940,22 +3971,36 @@ fun ReportUserDialog(
                     }
                     Spacer(Modifier.width(8.dp))
                     Surface(
-                        color = Color(0xFFFF7F33),
+                        color = if (isLoading) Color(0xFFFF7F33).copy(alpha = 0.5f) else Color(0xFFFF7F33),
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.clickable {
+                        modifier = Modifier.clickable(
+                            enabled = !isLoading
+                        ) {
                             onSubmit(
                                 reason.takeIf { it.isNotBlank() },
                                 selectedCategory
                             )
                         }
                     ) {
-                        Text(
-                            "Submit Report",
-                            color = Color.White,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            if (isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(14.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color.White
+                                )
+                            }
+                            Text(
+                                if (isLoading) "Submitting..." else "Submit Report",
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
