@@ -387,7 +387,10 @@ fun MobileBottomNavBar(
                 else m.background(MaterialTheme.colorScheme.primary)
             }
     ) {
-        val safeAreaBottom = remember { getSafeAreaInsetBottom() }
+        var safeAreaBottom by remember { mutableStateOf(0) }
+        LaunchedEffect(Unit) {
+            safeAreaBottom = getSafeAreaInsetBottom()
+        }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
