@@ -381,6 +381,29 @@ fun MessagingScreen(
                 }
             }
         }
+
+        // Moderation loading overlay — shown while block/unblock/flag is in-flight
+        if (moderationLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.35f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                    shape = RoundedCornerShape(16.dp),
+                    shadowElevation = 8.dp
+                ) {
+                    CircularProgressIndicator(
+                        color = Color(0xFFFF7F33),
+                        modifier = Modifier
+                            .padding(20.dp)
+                            .size(36.dp)
+                    )
+                }
+            }
+        }
     }
 
     if (showNewChatDialog) {
