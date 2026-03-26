@@ -148,7 +148,7 @@ private fun MembersListDetailLayout(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF0D0D0D)),
+                .background(MaterialTheme.colorScheme.background),
             horizontalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             // ── Left: scrollable member grid ─────────────────────────────────
@@ -266,7 +266,7 @@ private fun MembersGridLayout(
     userProfileData: UserProfileData?,
 ) {
     val gridState = rememberLazyGridState()
-    Column(modifier = Modifier.fillMaxSize().background(Color(0xFF0D0D0D))) {
+    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         SearchBar(
             label         = "Search our members directory",
             query         = searchQuery,
@@ -320,7 +320,7 @@ private fun MembersGridLayout(
                     .fillMaxWidth()
                     .padding(16.dp),
                 shape     = RoundedCornerShape(16.dp),
-                color     = Color(0xFF1C1C1E),
+                color     = MaterialTheme.colorScheme.surface,
             ) {
                 MemberDetailPane(
                     member          = selectedMember,
@@ -351,7 +351,7 @@ fun MemberCard(
             .clickable(onClick = onClick),
         shape     = RoundedCornerShape(12.dp),
         colors    = CardDefaults.cardColors(
-            containerColor = if (isSelected) Color(0xFF3A2020) else Color(0xFF282828)
+            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 12.dp else 4.dp),
         border    = if (isSelected)
@@ -379,7 +379,7 @@ fun MemberCard(
                 textAlign = TextAlign.Center,
                 maxLines  = 2,
                 overflow  = TextOverflow.Ellipsis,
-                color     = Color.White,
+                color     = MaterialTheme.colorScheme.onSurface,
             )
             Text(
                 text      = member.role,
@@ -387,7 +387,7 @@ fun MemberCard(
                 textAlign = TextAlign.Center,
                 maxLines  = 1,
                 overflow  = TextOverflow.Ellipsis,
-                color     = Color(0xFFAAAAAA),
+                color     = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
             )
         }
     }
@@ -410,7 +410,7 @@ private fun MemberDetailPane(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF1C1C1E))
+                .background(MaterialTheme.colorScheme.surface)
                 .verticalScroll(scrollState)
                 .padding(20.dp),
         ) {
@@ -424,7 +424,7 @@ private fun MemberDetailPane(
                 text      = member.name,
                 style     = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color     = Color.White,
+                color     = MaterialTheme.colorScheme.onSurface,
                 maxLines  = 2,
                 overflow  = TextOverflow.Ellipsis,
                 modifier  = Modifier.weight(1f),
@@ -433,7 +433,7 @@ private fun MemberDetailPane(
                 Icon(
                     imageVector        = Icons.Default.Close,
                     contentDescription = "Close",
-                    tint               = Color(0xFFAAAAAA),
+                    tint               = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                 )
             }
         }
@@ -474,7 +474,7 @@ private fun MemberDetailPane(
         }
 
         Spacer(Modifier.height(24.dp))
-        HorizontalDivider(color = Color(0xFF333333))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         Spacer(Modifier.height(20.dp))
 
         // Extended fields
@@ -536,7 +536,7 @@ private fun MemberSectionHeader(title: String) {
         text     = title,
         style    = MaterialTheme.typography.titleLarge,
         fontWeight = FontWeight.Bold,
-        color    = Color.White,
+        color    = MaterialTheme.colorScheme.onSurface,
         modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
     )
 }
@@ -548,13 +548,13 @@ fun MemberDetailField(label: String, value: String) {
         Text(
             text       = label,
             fontSize   = 11.sp,
-            color      = Color(0xFF888888),
+            color      = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
             fontWeight = FontWeight.Medium,
         )
         Text(
             text     = value,
             fontSize = 14.sp,
-            color    = Color.White,
+            color    = MaterialTheme.colorScheme.onSurface,
             maxLines = 6,
             overflow = TextOverflow.Ellipsis,
         )

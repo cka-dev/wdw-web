@@ -31,22 +31,30 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Podcasts
 import androidx.compose.material.icons.filled.WineBar
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.PlainTooltip
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -64,12 +72,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
 import net.winedownwednesday.web.getSafeAreaInsetBottom
-import net.winedownwednesday.web.vibrate
 import net.winedownwednesday.web.viewmodels.LoginUIState
 import org.jetbrains.compose.resources.painterResource
 import wdw_web.composeapp.generated.resources.Res
@@ -156,10 +164,26 @@ fun TopNavBar(
     onLogout: () -> Unit,
     userProfileImageUrl: String? = null,
     isCompactScreen: Boolean = false,
+    isDarkTheme: Boolean = true,
+    onThemeToggle: () -> Unit = {},
     onHamburgerClick: () -> Unit = {}
 ) {
-    Surface {
+    val navBgBrush = if (!isDarkTheme)
+        Brush.horizontalGradient(listOf(ChampagneLight, ChampagneDark))
+    else null
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .let { m ->
+                if (navBgBrush != null) m.background(navBgBrush)
+                else m.background(MaterialTheme.colorScheme.primary)
+            }
+    ) {
         TopAppBar(
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent
+            ),
             navigationIcon = {
                 if (isCompactScreen) {
                     IconButton(onClick = onHamburgerClick) {
@@ -191,7 +215,9 @@ fun TopNavBar(
                     }
                     Text(
                         text = "Wine Down Wednesday",
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             },
@@ -261,6 +287,7 @@ fun TopNavBar(
                                 onClick      = { onNavigate(route) }
                             )
                         }
+                        // Theme toggle removed from here — placed after login below
                         if (uiState is LoginUIState.Authenticated) {
                             Spacer(modifier = Modifier.width(16.dp))
                             IconButton(
@@ -294,11 +321,42 @@ fun TopNavBar(
                         }
                     }
                 }
-            },
-            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                containerColor = MaterialTheme.colorScheme.primary
+            })
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ThemeTogglePill(
+    isDarkTheme: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        tooltip = {
+            PlainTooltip {
+                Text(if (isDarkTheme) "Switch to light mode" else "Switch to dark mode")
+            }
+        },
+        state = rememberTooltipState(),
+        modifier = modifier
+    ) {
+        FloatingActionButton(
+            onClick = onClick,
+            shape = CircleShape,
+            containerColor = WdwOrange,
+            contentColor = if (isDarkTheme) Color.White else Color(0xFF1A1A1A),
+            elevation = FloatingActionButtonDefaults.elevation(
+                defaultElevation = 6.dp,
+                pressedElevation = 10.dp
             )
-        )
+        ) {
+            androidx.compose.material3.Icon(
+                imageVector = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                contentDescription = if (isDarkTheme) "Switch to light mode" else "Switch to dark mode"
+            )
+        }
     }
 }
 
@@ -316,9 +374,18 @@ fun MobileBottomNavBar(
         Triple("Bubbly Chat",  Icons.AutoMirrored.Filled.Chat,      Route.Messaging)
     )
 
-    Surface(
-        color = Color(0xFF1E1E1E),
-        modifier = Modifier.fillMaxWidth()
+    val isDark = LocalIsDarkTheme.current
+    val navBgBrush = if (!isDark)
+        Brush.horizontalGradient(listOf(ChampagneLight, ChampagneDark))
+    else null
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .let { m ->
+                if (navBgBrush != null) m.background(navBgBrush)
+                else m.background(MaterialTheme.colorScheme.primary)
+            }
     ) {
         val safeAreaBottom = remember { getSafeAreaInsetBottom() }
         Row(
@@ -334,7 +401,7 @@ fun MobileBottomNavBar(
             bottomTabs.forEach { (label, icon, route) ->
                 val isSelected = currentRoute == route
                 val color by animateColorAsState(
-                    targetValue = if (isSelected) Color(0xFFFF7F33) else Color.Gray,
+                    targetValue = if (isSelected) Color(0xFFFF7F33) else MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.55f),
                     animationSpec = tween(200)
                 )
                 Column(
@@ -371,6 +438,8 @@ fun MobileBottomNavBar(
 @Composable
 fun NavDrawerContent(
     currentRoute: Route,
+    isDarkTheme: Boolean = true,
+    onThemeToggle: () -> Unit = {},
     onNavigate: (Route) -> Unit
 ) {
     val drawerItems = listOf(
@@ -381,12 +450,12 @@ fun NavDrawerContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1E1E1E))
+            .background(MaterialTheme.colorScheme.surface)
             .padding(top = 48.dp, start = 16.dp, end = 16.dp)
     ) {
         Text(
             text = "More",
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onSurface,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 24.dp)
@@ -411,13 +480,13 @@ fun NavDrawerContent(
                 Icon(
                     imageVector = icon,
                     contentDescription = label,
-                    tint = if (isSelected) Color(0xFFFF7F33) else Color.White,
+                    tint = if (isSelected) Color(0xFFFF7F33) else MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Text(
                     text = label,
-                    color = if (isSelected) Color(0xFFFF7F33) else Color.White,
+                    color = if (isSelected) Color(0xFFFF7F33) else MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
@@ -427,15 +496,40 @@ fun NavDrawerContent(
         // Push haptic settings to the bottom
         Spacer(modifier = Modifier.weight(1f))
 
-        // ── Haptic Feedback Settings ─────────────────────────────────────
+        // ── Theme Toggle ──────────────────────────────────────────────────
         HorizontalDivider(
-            color = Color(0xFF444444),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f),
             modifier = Modifier.padding(vertical = 12.dp)
         )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onThemeToggle() }
+                .padding(vertical = 10.dp, horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = if (isDarkTheme) "Dark Mode" else "Light Mode",
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyLarge
+            )
+            androidx.compose.material3.Icon(
+                imageVector = if (isDarkTheme) Icons.Default.DarkMode else Icons.Default.LightMode,
+                contentDescription = null,
+                tint = WdwOrange,
+                modifier = Modifier.size(22.dp)
+            )
+        }
 
+        // ── Haptic Feedback Settings ─────────────────────────────────────
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f),
+            modifier = Modifier.padding(vertical = 12.dp)
+        )
         Text(
             text = "Haptic Feedback",
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onSurface,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 8.dp)
@@ -537,7 +631,7 @@ fun SearchBar(
         onValueChange = { onQueryChange(it) },
         label = { Text(
             text = label,
-            color = Color.White
+            color = MaterialTheme.colorScheme.onSurface
         ) },
         colors = TextFieldDefaults.colors(
             cursorColor = Color(0xFFFF7F33)

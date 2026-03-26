@@ -50,7 +50,7 @@ fun BlogPage(
         WidthClass.XLarge   -> 120.dp
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.TopCenter) {
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.TopCenter) {
         if (isLoading && blogPosts.isNullOrEmpty()) {
             LinearProgressBar()
         } else {
@@ -72,12 +72,12 @@ fun BlogPage(
                                 androidx.compose.material3.Icon(
                                     imageVector = Icons.Default.ArrowBack, 
                                     contentDescription = "Back",
-                                    tint = Color(0xFFFF7F33),
+                                    tint = WdwOrange,
                                     modifier = Modifier.padding(end = 8.dp)
                                 )
                                 Text(
                                     text = "Back to Posts",
-                                    color = Color(0xFFFF7F33),
+                                    color = WdwOrange,
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
@@ -100,14 +100,14 @@ fun BlogPage(
                                 text = selectedPost!!.title,
                                 style = MaterialTheme.typography.displayMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onBackground,
                                 lineHeight = 48.sp
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 text = "By ${selectedPost!!.author} • ${(selectedPost!!.publishedAt ?: selectedPost!!.createdAt).take(10)}",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = Color.LightGray
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                             )
                             Spacer(modifier = Modifier.height(32.dp))
                             
@@ -133,12 +133,12 @@ fun BlogPage(
                                     style = MaterialTheme.typography.displaySmall,
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.padding(bottom = 8.dp),
-                                    color = Color.White
+                                    color = MaterialTheme.colorScheme.onBackground
                                 )
                                 Text(
                                     text = "Stories, news, and insights from the club.",
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = Color.LightGray,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                                     modifier = Modifier.padding(bottom = 16.dp)
                                 )
                             }
@@ -206,13 +206,13 @@ fun BlogSummaryCard(post: BlogPost, onClick: () -> Unit) {
                     text = post.title,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = post.summary.replace(Regex("""[*#_~`]"""), ""),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = Color.LightGray,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                     lineHeight = 24.sp,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis
@@ -226,7 +226,7 @@ fun BlogSummaryCard(post: BlogPost, onClick: () -> Unit) {
                     Text(
                         text = "Read Article",
                         style = MaterialTheme.typography.labelLarge,
-                        color = Color(0xFFFF7F33),
+                        color = WdwOrange,
                         fontWeight = FontWeight.Bold
                     )
                     Text(

@@ -53,6 +53,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import org.kodein.emoji.compose.m3.TextWithNotoImageEmoji
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import coil3.compose.AsyncImage
@@ -108,7 +109,7 @@ fun HomePage(
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color.Black
+        color = MaterialTheme.colorScheme.background
     ) {
         LazyColumn(
             modifier = Modifier
@@ -272,7 +273,7 @@ fun AutoScrollingEventDisplay(
             .then(cardHeightMod)
             .hoverScale(),
         elevation = cardElevation(defaultElevation = 16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
             modifier = Modifier
@@ -357,7 +358,7 @@ fun AutoScrollingWineListHorizontal(
             .then(wineCardHeightMod)
             .hoverScale(),
         elevation = cardElevation(defaultElevation = 16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
             modifier = Modifier
@@ -444,7 +445,7 @@ private fun SingleEventOrEmptyHorizontal(
             .then(seWidthMod)
             .then(seHeightMod),
         elevation = cardElevation(defaultElevation = 16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -521,7 +522,7 @@ private fun SingleWineOrEmptyHorizontal(
             .then(swWidthMod)
             .then(swHeightMod),
         elevation = cardElevation(defaultElevation = 16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -566,8 +567,8 @@ fun HomePageEventCard(
             .heightIn(min = 250.dp)
             .clip(RoundedCornerShape(12.dp))
             .clickable { onDetailsClick() },
-        colors = CardDefaults.cardColors(containerColor = Color.DarkGray),
-        elevation = cardElevation(defaultElevation = 8.dp)
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -632,7 +633,7 @@ fun WineCard(
             .heightIn(min = 350.dp)
             .clip(RoundedCornerShape(12.dp))
             .clickable { onDetailsClick() },
-        colors = CardDefaults.cardColors(containerColor = Color.DarkGray),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = cardElevation(defaultElevation = 8.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -862,7 +863,7 @@ fun MemberSpotlightCard(
                 else Modifier
             ),
         elevation = cardElevation(defaultElevation = 16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
             modifier = Modifier
@@ -897,7 +898,7 @@ fun MemberSpotlightCard(
                             color = if (isBirthdayMonth) Color(0xFF4A3000) else Color(0xFF1A3A1A),
                             modifier = Modifier.padding(bottom = 8.dp)
                         ) {
-                            Text(
+                            TextWithNotoImageEmoji(
                                 text = if (isBirthdayMonth) "🎂 Birthday Spotlight" else "⭐ Featured Member",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = if (isBirthdayMonth) Color(0xFFFFD54F) else Color(0xFF81C784),
@@ -930,10 +931,10 @@ fun MemberSpotlightCard(
                         )
                         if (isBirthdayMonth) {
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text(
+                            TextWithNotoImageEmoji(
                                 text = "🎉 Birthday: ${featuredMember.birthday}",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFFFFD54F)
+                                color = if (LocalIsDarkTheme.current) Color(0xFFFFD54F) else WdwOrange
                             )
                         }
                         Spacer(modifier = Modifier.height(8.dp))

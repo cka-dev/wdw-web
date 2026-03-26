@@ -4,13 +4,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Surface
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -18,10 +17,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
@@ -34,6 +35,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
+import net.winedownwednesday.web.loadThemePreference
+import net.winedownwednesday.web.saveThemePreference
 import net.winedownwednesday.web.vibrate
 import net.winedownwednesday.web.composables.HapticDuration
 import net.winedownwednesday.web.viewmodels.AuthPageViewModel
@@ -146,6 +149,13 @@ fun AppNavigation(
     val scope = rememberCoroutineScope()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
 
+    // --- Theme state (persisted in localStorage) --------------------------
+    var isDarkTheme by remember { mutableStateOf(loadThemePreference()) }
+    fun toggleTheme() {
+        isDarkTheme = !isDarkTheme
+        saveThemePreference(isDarkTheme)
+    }
+
     // Current top-of-stack route (drives nav bar highlighting)
     val currentRoute by remember {
         derivedStateOf { backStack.lastOrNull() as? Route ?: Route.Home }
@@ -198,15 +208,7 @@ fun AppNavigation(
     }
 
     // --- Theme & layout --------------------------------------------------
-    MaterialTheme(
-        colorScheme = darkColorScheme(
-            primary   = Color(0xFF1E1E1E),
-            secondary = Color(0xFF333333),
-            surface   = Color(0xFF2A2A2A),
-            onSurface = Color.White,
-            onPrimary = Color.White
-        )
-    ) {
+    WdwTheme(isDark = isDarkTheme) {
         val mainContent: @Composable () -> Unit = {
             Surface(modifier = Modifier.fillMaxSize()) {
                 Column(modifier = Modifier.fillMaxSize()) {
@@ -217,6 +219,8 @@ fun AppNavigation(
                         onLogout            = { scope.launch { authViewModel.logout() } },
                         userProfileImageUrl = userProfileData?.profileImageUrl,
                         isCompactScreen     = sizeInfo.useCompactNav,
+                        isDarkTheme         = isDarkTheme,
+                        onThemeToggle       = ::toggleTheme,
                         onHamburgerClick    = {
                             hapticVibrate(HapticDuration.TICK, HapticCategory.NAVIGATION)
                             scope.launch { drawerState.open() }
@@ -287,6 +291,20 @@ fun AppNavigation(
                                 }
                             }
                         )
+                    // Floating theme toggle — only on wide screens
+                    if (!sizeInfo.useCompactNav && currentRoute !is Route.Messaging) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize(),
+                            contentAlignment = Alignment.BottomEnd
+                        ) {
+                            ThemeTogglePill(
+                                isDarkTheme = isDarkTheme,
+                                onClick     = ::toggleTheme,
+                                modifier    = Modifier.padding(end = 24.dp, bottom = 24.dp)
+                            )
+                        }
+                    }
                     }
 
                     if (sizeInfo.useCompactNav) {
@@ -311,11 +329,13 @@ fun AppNavigation(
                 drawerContent = {
                     ModalDrawerSheet(
                         modifier             = Modifier.width(240.dp),
-                        drawerContainerColor = Color(0xFF1E1E1E)
+                        drawerContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface
                     ) {
                         NavDrawerContent(
-                            currentRoute = currentRoute,
-                            onNavigate   = { route ->
+                            currentRoute  = currentRoute,
+                            isDarkTheme   = isDarkTheme,
+                            onThemeToggle = ::toggleTheme,
+                            onNavigate    = { route ->
                                 navigateTo(route)
                                 scope.launch { drawerState.close() }
                             }

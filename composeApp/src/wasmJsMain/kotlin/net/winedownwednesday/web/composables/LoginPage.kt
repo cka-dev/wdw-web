@@ -58,10 +58,10 @@ fun LoginScreen(
     val uiState by viewModel.uiState.collectAsState()
     val coroutineScope = rememberCoroutineScope()
 
-    // Champagne gradient — reserved for light mode
-    // val backgroundBrush = Brush.verticalGradient(
-    //     colors = listOf(Color(0xFFFFE08A), Color(0xFFD4AF37))
-    // )
+    val isDark = LocalIsDarkTheme.current
+    val backgroundBrush = if (!isDark) Brush.verticalGradient(
+        colors = listOf(ChampagneLight, ChampagneDark)
+    ) else null
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -69,7 +69,10 @@ fun LoginScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black)
+                .background(
+                    if (isDark) Color.Black
+                    else MaterialTheme.colorScheme.background
+                )
         ) {
             Column(
                 modifier = Modifier

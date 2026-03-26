@@ -75,9 +75,16 @@ fun Modifier.hoverScale(scale: Float = 1.04f): Modifier = composed {
  */
 @Composable
 fun shimmerBrush(
-    baseColor: Color      = Color(0xFF2A2A2A),
-    highlightColor: Color = Color(0xFF404040)
+    baseColor: Color      = Color.Unspecified,
+    highlightColor: Color = Color.Unspecified
 ): Brush {
+    val isDark = LocalIsDarkTheme.current
+    val base      = if (baseColor      == Color.Unspecified) {
+        if (isDark) Color(0xFF2A2A2A) else Color(0xFFE0E0E0)
+    } else baseColor
+    val highlight = if (highlightColor == Color.Unspecified) {
+        if (isDark) Color(0xFF404040) else Color(0xFFC8C8C8)
+    } else highlightColor
     val transition = rememberInfiniteTransition(label = "shimmer")
     val translateX by transition.animateFloat(
         initialValue = -600f,
@@ -89,7 +96,7 @@ fun shimmerBrush(
         label = "shimmerX"
     )
     return Brush.linearGradient(
-        colors = listOf(baseColor, highlightColor, baseColor),
+        colors = listOf(base, highlight, base),
         start  = Offset(translateX, 0f),
         end    = Offset(translateX + 400f, 200f)
     )

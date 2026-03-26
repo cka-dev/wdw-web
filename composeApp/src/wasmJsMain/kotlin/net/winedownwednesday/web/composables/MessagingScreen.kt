@@ -93,9 +93,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextRange
@@ -240,7 +243,7 @@ fun MessagingScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         CompositionLocalProvider(
             LocalMembers provides membersList,
@@ -319,7 +322,7 @@ fun MessagingScreen(
                                 modifier = Modifier
                                     .width(2.dp)
                                     .fillMaxHeight()
-                                    .background(Color(0xFF333333))
+                                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
                             )
                             ThreadPanel(
                                 parentMessage = threadParentMessage!!,
@@ -337,7 +340,7 @@ fun MessagingScreen(
 
                 else -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(text = "Initializing chat...", color = Color.White)
+                        Text(text = "Initializing chat...", color = MaterialTheme.colorScheme.onBackground)
                     }
                 }
             }
@@ -470,7 +473,7 @@ fun ChatLayout(
                                 .width(2.dp)
                                 .fillMaxHeight()
                                 .align(Alignment.Center)
-                                .background(Color(0xFF333333))
+                                .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
                         )
                     }
                 }
@@ -485,7 +488,7 @@ fun ChatLayout(
                         .weight(if (isCompactScreen) 1f else (1f - splitRatio))
                         .fillMaxHeight()
                         .padding(if (isCompactScreen) 4.dp else 16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF141414)),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     elevation = CardDefaults
                         .cardElevation(if (isCompactScreen) 0.dp else 4.dp)
                 ) {
@@ -543,7 +546,7 @@ fun ChannelSidebar(
 ) {
     Card(
         modifier = modifier.padding(if (isCompactScreen) 4.dp else 16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF141414)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults
             .cardElevation(if (isCompactScreen) 0.dp else 4.dp)
     ) {
@@ -555,7 +558,7 @@ fun ChannelSidebar(
                 Text(
                     "Conversations",
                     style = MaterialTheme.typography.titleLarge,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
@@ -566,7 +569,7 @@ fun ChannelSidebar(
                         if (notificationsEnabled) Icons.Default.Notifications
                         else Icons.Default.Notifications,
                         contentDescription = if (notificationsEnabled) "Mute Notifications" else "Enable Notifications",
-                        tint = if (notificationsEnabled) Color.Gray else Color(0xFFFF7F33)
+                        tint = if (notificationsEnabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else WdwOrange
                     )
                 }
 
@@ -574,7 +577,7 @@ fun ChannelSidebar(
                     Icon(
                         Icons.Default.Add,
                         contentDescription = "New Chat",
-                        tint = Color.White
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -582,7 +585,7 @@ fun ChannelSidebar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(1.dp)
-                    .background(Color(0xFF2A2A2A))
+                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -602,7 +605,7 @@ fun ChannelSidebar(
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
                         if (channels.isEmpty()) "No conversations yet" else "No matching conversations",
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
                 }
             } else {
@@ -619,18 +622,18 @@ fun ChannelSidebar(
                 unblockTarget?.let { ch ->
                     AlertDialog(
                         onDismissRequest = { unblockTarget = null },
-                        containerColor = Color(0xFF1E1E1E),
+                        containerColor = MaterialTheme.colorScheme.surface,
                         title = {
                             Text(
                                 "Unblock ${ch.name}?",
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontWeight = FontWeight.Bold
                             )
                         },
                         text = {
                             Text(
                                 "You will be able to see their messages again.",
-                                color = Color.Gray
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             )
                         },
                         confirmButton = {
@@ -643,7 +646,7 @@ fun ChannelSidebar(
                         },
                         dismissButton = {
                             TextButton(onClick = { unblockTarget = null }) {
-                                Text("Cancel", color = Color.Gray)
+                                Text("Cancel", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                             }
                         }
                     )
@@ -654,7 +657,7 @@ fun ChannelSidebar(
                         item {
                             Text(
                                 "COMMUNITIES",
-                                color = Color.Gray,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(
@@ -677,7 +680,7 @@ fun ChannelSidebar(
                         item {
                             Text(
                                 "DIRECT MESSAGES",
-                                color = Color.Gray,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(
@@ -707,7 +710,7 @@ fun ChannelSidebar(
                             ) {
                                 Text(
                                     "BLOCKED (${blockedDMs.size})",
-                                    color = Color.Gray.copy(alpha = 0.6f),
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.weight(1f)
@@ -717,7 +720,7 @@ fun ChannelSidebar(
                                         Icons.Default.KeyboardArrowDown
                                     else Icons.Default.KeyboardArrowRight,
                                     contentDescription = "Toggle",
-                                    tint = Color.Gray,
+                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
@@ -731,7 +734,7 @@ fun ChannelSidebar(
                                         .padding(vertical = 2.dp)
                                         .clickable { unblockTarget = channel },
                                     colors = CardDefaults.cardColors(
-                                        containerColor = Color(0xFF1A1A1A)
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant
                                     ),
                                     elevation = CardDefaults.cardElevation(0.dp)
                                 ) {
@@ -744,12 +747,12 @@ fun ChannelSidebar(
                                             modifier = Modifier
                                                 .size(40.dp)
                                                 .clip(CircleShape)
-                                                .background(Color(0xFF333333)),
+                                                .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Text(
                                                 channel.name.take(1).uppercase(),
-                                                color = Color.Gray,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                                                 fontWeight = FontWeight.Bold
                                             )
                                         }
@@ -757,19 +760,19 @@ fun ChannelSidebar(
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(
                                                 channel.name,
-                                                color = Color.Gray,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                                                 maxLines = 1
                                             )
                                             Text(
                                                 "Blocked",
-                                                color = Color.Gray.copy(alpha = 0.5f),
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
                                                 fontSize = 11.sp
                                             )
                                         }
                                         Icon(
                                             Icons.Default.Block,
                                             contentDescription = "Blocked",
-                                            tint = Color.Gray.copy(alpha = 0.5f),
+                                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
                                             modifier = Modifier.size(16.dp)
                                         )
                                     }
@@ -796,7 +799,7 @@ fun ChannelItem(
         else -> null
     }
 
-    val bgColor = if (isSelected) Color(0xFFFF7F33) else Color(0xFF2A2A2A)
+    val bgColor = if (isSelected) WdwOrange else MaterialTheme.colorScheme.surfaceVariant
 
     Card(
         modifier = Modifier
@@ -853,7 +856,7 @@ fun ChannelItem(
                         modifier = Modifier
                             .size(12.dp)
                             .align(Alignment.BottomEnd)
-                            .background(Color(0xFF121212), CircleShape)
+                            .background(MaterialTheme.colorScheme.surface, CircleShape)
                             .padding(2.dp)
                             .background(Color(0xFF44b700), CircleShape)
                     )
@@ -861,7 +864,7 @@ fun ChannelItem(
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(channel.name, color = Color.White, fontWeight = FontWeight.SemiBold)
+                Text(channel.name, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
                 if (channelSubtitle != null) {
                     Text(
                         channelSubtitle,
@@ -875,7 +878,7 @@ fun ChannelItem(
                 if (channel.lastMessage.isNotEmpty() && !isLastMsgBlocked) {
                     Text(
                         channel.lastMessage,
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         maxLines = 1,
                         fontSize = 12.sp
                     )
@@ -938,7 +941,7 @@ fun ChatArea(
 
     if (selectedChannelId == null) {
         Box(modifier = modifier, contentAlignment = Alignment.Center) {
-            Text("Select a conversation to start chatting", color = Color.Gray)
+            Text("Select a conversation to start chatting", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
         }
         return
     }
@@ -968,8 +971,8 @@ fun ChatArea(
 
             // Chat Header
             TopAppBar(
-                title = { Text(channelName, color = Color.White) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black),
+                title = { Text(channelName, color = MaterialTheme.colorScheme.onSurface) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
                 navigationIcon = {
                     if (onBack != null) {
                         Text(
@@ -987,7 +990,7 @@ fun ChatArea(
                         Icon(
                             Icons.Default.Search,
                             contentDescription = "Search messages",
-                            tint = if (isSearchVisible) Color(0xFFFF7F33) else Color.White
+                            tint = if (isSearchVisible) WdwOrange else MaterialTheme.colorScheme.onSurface
                         )
                     }
                     IconButton(onClick = {
@@ -1003,7 +1006,7 @@ fun ChatArea(
                         TextWithNotoImageEmoji(
                             "\u2139\uFE0F",
                             fontSize = 18.sp,
-                            color = if (isChannelInfoOpen) Color(0xFFFF7F33) else Color.White
+                            color = if (isChannelInfoOpen) WdwOrange else MaterialTheme.colorScheme.onSurface
                         )
                     }
                     // Settings
@@ -1011,7 +1014,7 @@ fun ChatArea(
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = "Settings",
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -1093,11 +1096,11 @@ fun ChatArea(
                             ) {
                                 Text(
                                     text = formatDateLabel(currentDate),
-                                    color = Color.Gray,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                     fontSize = 11.sp,
                                     modifier = Modifier
                                         .background(
-                                            Color(0xFF1E1E1E),
+                                            MaterialTheme.colorScheme.surfaceVariant,
                                             RoundedCornerShape(12.dp)
                                         )
                                         .padding(horizontal = 12.dp, vertical = 4.dp)
@@ -1156,7 +1159,7 @@ fun ChatArea(
                                     unreadCount = 0
                                 }
                             },
-                            color = Color(0xFF2C2C2C),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
                             shape = CircleShape,
                             modifier = Modifier.size(40.dp),
                             shadowElevation = 4.dp
@@ -1203,7 +1206,7 @@ fun ChatArea(
                 }
                 Text(
                     text = typingText,
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     fontSize = 12.sp,
                     fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
@@ -1354,14 +1357,14 @@ fun MessageBubble(
             ) {
                 Surface(
                     shape = CircleShape,
-                    color = Color(0xFF2C2C2C).copy(alpha = progress),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = progress),
                     modifier = Modifier.size(32.dp * progress)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             Icons.AutoMirrored.Filled.Reply,
                             contentDescription = "Reply",
-                            tint = Color.White.copy(alpha = progress),
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = progress),
                             modifier = Modifier.size(16.dp * progress)
                         )
                     }
@@ -1408,7 +1411,7 @@ fun MessageBubble(
                         modifier = Modifier
                             .fillMaxSize()
                             .clip(CircleShape)
-                            .background(Color(0xFF555555)),
+                            .background(WdwOrange),
                         contentAlignment = Alignment.Center
                     ) {
                         val userImg = message.userImage
@@ -1434,7 +1437,7 @@ fun MessageBubble(
                             modifier = Modifier
                                 .size(10.dp)
                                 .align(Alignment.BottomEnd)
-                                .background(Color(0xFF121212), CircleShape)
+                                .background(MaterialTheme.colorScheme.surface, CircleShape)
                                 .padding(1.5.dp)
                                 .background(Color(0xFF44b700), CircleShape)
                         )
@@ -1474,7 +1477,7 @@ fun MessageBubble(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             message.userName,
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             fontSize = 10.sp,
                             modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
                         )
@@ -1551,7 +1554,9 @@ fun MessageBubble(
 
                     Surface(
                         color = if (isMediaOnlyMessage) Color.Transparent
-                        else if (isMe) Color(0xFFFF7F33) else Color(0xFF2C2C2C),
+                        else if (isMe) WdwOrange
+                        else MaterialTheme.colorScheme.surfaceVariant,
+                        shadowElevation = 0.dp,
                         shape = RoundedCornerShape(
                             topStart = 16.dp,
                             topEnd = 16.dp,
@@ -1622,7 +1627,8 @@ fun MessageBubble(
                                             Text(
                                                 message.quotedText.take(50) +
                                                         if (message.quotedText.length > 50) "\u2026" else "",
-                                                color = Color.White.copy(alpha = 0.6f),
+                                                color = if (isMe) Color.White.copy(alpha = 0.6f)
+                                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                                 fontSize = 10.sp,
                                                 maxLines = 1
                                             )
@@ -1734,7 +1740,8 @@ fun MessageBubble(
                                     if (message.isDeleted) {
                                         Text(
                                             text = message.text,
-                                            color = Color.White.copy(alpha = 0.6f),
+                                            color = if (isMe) Color.White.copy(alpha = 0.6f)
+                                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                             fontStyle = Italic,
                                             modifier = Modifier.weight(1f, fill = false),
                                             fontSize = 14.sp
@@ -1742,7 +1749,7 @@ fun MessageBubble(
                                     } else if (message.text.isNotEmpty() && !isMediaOnlyMessage) {
                                         TextWithNotoImageEmoji(
                                             text = message.text,
-                                            color = Color.White,
+                                            color = if (isMe) Color.White else MaterialTheme.colorScheme.onSurface,
                                             modifier = Modifier.weight(1f, fill = false)
                                         )
                                     } else {
@@ -1799,7 +1806,8 @@ fun MessageBubble(
                                                     Text(
                                                         "${data.first}",
                                                         fontSize = 11.sp,
-                                                        color = Color.White.copy(alpha = 0.7f)
+                                                        color = if (isMe) Color.White.copy(alpha = 0.7f)
+                                                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                                     )
                                                 }
                                             }
@@ -1834,7 +1842,7 @@ fun MessageBubble(
                 ) {
                     Text(
                         text = formatMessageTime(message.createdAt),
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                         fontSize = 9.sp
                     )
                     if (isMe) {
@@ -1848,7 +1856,7 @@ fun MessageBubble(
                         }
                         val receiptColor = if (message
                                 .readStatus == "read"
-                        ) Color(0xFF4ea4e8) else Color.Gray
+                        ) Color(0xFF4ea4e8) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
 
                         Icon(
                             receiptIcon,
@@ -1861,7 +1869,7 @@ fun MessageBubble(
                         Spacer(Modifier.width(8.dp))
                         Text(
                             "Reply",
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             fontSize = 10.sp,
                             modifier = Modifier
                                 .clickable { onReply() }
@@ -1909,7 +1917,7 @@ fun MessageBubble(
                         Spacer(Modifier.width(8.dp))
                         TextWithNotoImageEmoji(
                             "🚩",
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             fontSize = 14.sp,
                             modifier = Modifier
                                 .clickable { onFlag() }
@@ -1921,7 +1929,7 @@ fun MessageBubble(
                         Spacer(Modifier.width(8.dp))
                         TextWithNotoImageEmoji(
                             "\uD83D\uDCCC",
-                            color = if (message.pinned) Color(0xFFFF7F33) else Color.Gray,
+                            color = if (message.pinned) WdwOrange else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             fontSize = 14.sp,
                             modifier = Modifier
                                 .clickable {
@@ -1935,7 +1943,7 @@ fun MessageBubble(
                         Spacer(Modifier.width(8.dp))
                         TextWithNotoImageEmoji(
                             "\u21AA\uFE0F",
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             fontSize = 14.sp,
                             modifier = Modifier
                                 .clickable { onForward() }
@@ -2095,7 +2103,7 @@ private val reactionDefs = listOf(
 @Composable
 private fun ReactionPicker(onSelect: (String) -> Unit) {
     Surface(
-        color = Color(0xFF1E1E1E),
+        color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier.padding(top = 4.dp)
     ) {
@@ -2110,7 +2118,7 @@ private fun ReactionPicker(onSelect: (String) -> Unit) {
                         hapticVibrate(HapticDuration.TICK, HapticCategory.REACTIONS)
                         onSelect(def.type)
                     },
-                    color = Color(0xFF2C2C2C),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     TextWithNotoImageEmoji(
@@ -2135,11 +2143,7 @@ fun ReplyBanner(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
     ) {
         Box(
-            modifier = Modifier.background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(Color(0xFF222222), Color(0xFF1A1A1A))
-                )
-            )
+            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -2171,7 +2175,7 @@ fun ReplyBanner(
                     Text(
                         replyingTo.text.take(60) +
                                 if (replyingTo.text.length > 60) "\u2026" else "",
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         fontSize = 12.sp,
                         maxLines = 1
                     )
@@ -2183,7 +2187,7 @@ fun ReplyBanner(
                     Icon(
                         Icons.Default.Close,
                         contentDescription = "Cancel reply",
-                        tint = Color.Gray,
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -2227,7 +2231,7 @@ fun MessageInput(
     }
 
     Surface(
-        color = Color(0xFF121212),
+        color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = Modifier.fillMaxWidth().padding(16.dp),
         shape = RoundedCornerShape(24.dp)
     ) {
@@ -2237,7 +2241,7 @@ fun MessageInput(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color(0xFF1A1A2E))
+                        .background(MaterialTheme.colorScheme.surface)
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -2265,7 +2269,7 @@ fun MessageInput(
                         Text(
                             editingMessage.text.take(60) +
                                     if (editingMessage.text.length > 60) "\u2026" else "",
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             fontSize = 12.sp,
                             maxLines = 1
                         )
@@ -2280,7 +2284,7 @@ fun MessageInput(
                         Icon(
                             Icons.Default.Close,
                             contentDescription = "Cancel editing",
-                            tint = Color.Gray,
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -2292,20 +2296,20 @@ fun MessageInput(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .background(Color(0xFF2C2C2C), RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
                         .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         androidx.compose.material.icons.Icons.Default.Add,
                         contentDescription = "Image",
-                        tint = Color.Gray,
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = selectedFile?.name ?: "Attached image",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 12.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -2318,7 +2322,7 @@ fun MessageInput(
                         Icon(
                             Icons.Default.Close,
                             contentDescription = "Remove",
-                            tint = Color.Gray,
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -2356,7 +2360,7 @@ fun MessageInput(
                     Icon(
                         androidx.compose.material.icons.Icons.Default.Add,
                         contentDescription = "Attach file",
-                        tint = if (selectedFile != null) Color(0xFFFF7F33) else Color.Gray
+                        tint = if (selectedFile != null) WdwOrange else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
                 }
                 // GIF button
@@ -2369,7 +2373,7 @@ fun MessageInput(
                 ) {
                     Text(
                         "GIF",
-                        color = if (isGifPanelOpen) Color.White else Color.Gray,
+                        color = if (isGifPanelOpen) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
@@ -2384,16 +2388,16 @@ fun MessageInput(
                             onTyping()
                         }
                     },
-                    placeholder = { Text(placeholderText, color = Color.Gray) },
+                    placeholder = { Text(placeholderText, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)) },
                     textStyle = TextStyle(
                         fontFamily = FontFamily.SansSerif,
                         fontSize = 14.sp,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface,
                     ),
                     modifier = Modifier
                         .weight(1f)
-                        .onKeyEvent { event ->
-                            if (event.key.keyCode == Key.Enter.keyCode) {
+                        .onPreviewKeyEvent { event ->
+                            if (event.key == Key.Enter) {
                                 if (event.isShiftPressed) {
                                     val cursorPos = textFieldValue.selection.start
                                     val before = textFieldValue.text.substring(0, cursorPos)
@@ -2426,8 +2430,8 @@ fun MessageInput(
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         cursorColor = Color(0xFFFF7F33),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                         selectionColors = TextSelectionColors(
                             handleColor = Color(0xFFFF7F33),
                             backgroundColor = Color(0xFF5599DD).copy(alpha = 0.4f)
@@ -2468,7 +2472,7 @@ fun MessageInput(
                         contentDescription = if (isEditing) "Save" else "Send",
                         tint = if (textFieldValue.text.isNotBlank() || selectedFile != null) {
                             if (isEditing) Color(0xFF4ea4e8) else Color(0xFFFF7F33)
-                        } else Color.Gray
+                        } else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                     )
                 }
             }
@@ -2483,10 +2487,10 @@ fun MessageInput(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Preview: ", color = Color.Gray, fontSize = 11.sp)
+                    Text("Preview: ", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), fontSize = 11.sp)
                     TextWithNotoImageEmoji(
                         textFieldValue.text,
-                        color = Color.White.copy(alpha = 0.7f),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         fontSize = 13.sp,
                         modifier = Modifier.weight(1f, fill = false)
                     )
@@ -2582,7 +2586,7 @@ private fun EmojiPickerPanel(onEmojiSelect: (String) -> Unit) {
     )
 
     Surface(
-        color = Color(0xFF1A1A1A),
+        color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier
             .fillMaxWidth()
@@ -2596,7 +2600,7 @@ private fun EmojiPickerPanel(onEmojiSelect: (String) -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Skin:", color = Color.Gray, fontSize = 10.sp)
+                Text("Skin:", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), fontSize = 10.sp)
                 skinTones.forEach { (modifier, color) ->
                     Box(
                         modifier = Modifier
@@ -2632,13 +2636,13 @@ private fun EmojiPickerPanel(onEmojiSelect: (String) -> Unit) {
             TextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Search category...", color = Color.Gray, fontSize = 12.sp) },
+                placeholder = { Text("Search category...", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f), fontSize = 12.sp) },
                 modifier = Modifier.fillMaxWidth().height(40.dp),
-                textStyle = TextStyle(fontSize = 12.sp, color = Color.White),
+                textStyle = TextStyle(fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface),
                 singleLine = true,
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFF2C2C2C),
-                    unfocusedContainerColor = Color(0xFF2C2C2C),
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent
                 ),
@@ -2647,7 +2651,7 @@ private fun EmojiPickerPanel(onEmojiSelect: (String) -> Unit) {
                     Icon(
                         Icons.Default.Search,
                         contentDescription = null,
-                        tint = Color.Gray,
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -2659,7 +2663,7 @@ private fun EmojiPickerPanel(onEmojiSelect: (String) -> Unit) {
                     item {
                         Text(
                             category,
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.padding(vertical = 4.dp)
@@ -2723,7 +2727,7 @@ fun FileAttachmentCard(attachment: ChatAttachment, modifier: Modifier = Modifier
     }
 
     Surface(
-        color = Color(0xFF1E1E30),
+        color = MaterialTheme.colorScheme.surfaceVariant,
         shape = RoundedCornerShape(10.dp),
         modifier = modifier
             .widthIn(max = 280.dp)
@@ -2768,7 +2772,7 @@ fun FileAttachmentCard(attachment: ChatAttachment, modifier: Modifier = Modifier
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = attachment.title.ifEmpty { "File" },
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                         maxLines = 1,
@@ -2781,13 +2785,13 @@ fun FileAttachmentCard(attachment: ChatAttachment, modifier: Modifier = Modifier
                         if (attachment.fileSize > 0) {
                             Text(
                                 text = formatFileSize(attachment.fileSize),
-                                color = Color.Gray,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                 fontSize = 10.sp
                             )
                         }
                         Text(
                             text = if (ext.isNotEmpty()) "• $ext file" else "• File",
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             fontSize = 10.sp
                         )
                     }
@@ -2871,7 +2875,7 @@ fun LinkPreviewCard(attachment: ChatAttachment, modifier: Modifier = Modifier) {
     }
 
     Surface(
-        color = Color(0xFF1E1E30),
+        color = MaterialTheme.colorScheme.surfaceVariant,
         shape = RoundedCornerShape(10.dp),
         modifier = modifier
             .widthIn(max = 300.dp)
@@ -2930,7 +2934,7 @@ fun LinkPreviewCard(attachment: ChatAttachment, modifier: Modifier = Modifier) {
                     if (attachment.title.isNotEmpty()) {
                         Text(
                             text = attachment.title,
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 13.sp,
                             maxLines = 2,
@@ -2942,7 +2946,7 @@ fun LinkPreviewCard(attachment: ChatAttachment, modifier: Modifier = Modifier) {
                         Spacer(Modifier.height(3.dp))
                         Text(
                             text = attachment.text,
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             fontSize = 11.sp,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
@@ -3029,13 +3033,13 @@ fun NewChatDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = Color(0xFF1E1E1E),
+            color = MaterialTheme.colorScheme.surface,
             modifier = Modifier.fillMaxWidth().height(400.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     "New Chat",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 16.dp)
@@ -3047,15 +3051,15 @@ fun NewChatDialog(
                         query = it
                         onSearch(it)
                     },
-                    placeholder = { Text("Search users...", color = Color.Gray) },
+                    placeholder = { Text("Search users...", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFF2C2C2C),
-                        unfocusedContainerColor = Color(0xFF2C2C2C),
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                     ),
                     shape = RoundedCornerShape(8.dp),
                     singleLine = true
@@ -3068,7 +3072,7 @@ fun NewChatDialog(
                         if (query.isBlank()) {
                             CircularProgressIndicator(color = Color(0xFFFF7F33))
                         } else {
-                            Text("No users found", color = Color.Gray)
+                            Text("No users found", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                         }
                     }
                 } else {
@@ -3107,7 +3111,7 @@ fun NewChatDialog(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text(
                                     user.name,
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     fontSize = 16.sp
                                 )
                             }
@@ -3133,20 +3137,20 @@ fun ThreadPanel(
 
     Card(
         modifier = modifier.padding(8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF141414)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Header
             TopAppBar(
-                title = { Text("Thread", color = Color.White, fontSize = 16.sp) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black),
+                title = { Text("Thread", color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
                 actions = {
                     IconButton(onClick = onClose) {
                         Icon(
                             Icons.Default.Close,
                             contentDescription = "Close thread",
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -3154,7 +3158,7 @@ fun ThreadPanel(
 
             // Parent message preview
             Surface(
-                color = Color(0xFF1E1E1E),
+                color = MaterialTheme.colorScheme.surfaceVariant,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
                 shape = RoundedCornerShape(8.dp)
             ) {
@@ -3168,14 +3172,14 @@ fun ThreadPanel(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         parentMessage.text,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 13.sp,
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         formatMessageTime(parentMessage.createdAt),
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                         fontSize = 10.sp,
                         modifier = Modifier.padding(top = 4.dp)
                     )
@@ -3185,7 +3189,7 @@ fun ThreadPanel(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 "${replies.size} ${if (replies.size == 1) "reply" else "replies"}",
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                 fontSize = 11.sp,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
             )
@@ -3208,7 +3212,7 @@ fun ThreadPanel(
                                 modifier = Modifier
                                     .size(24.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFF555555)),
+                                    .background(WdwOrange),
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (reply.userImage.isNotEmpty()) {
@@ -3234,22 +3238,22 @@ fun ThreadPanel(
                             modifier = Modifier.widthIn(max = 280.dp)
                         ) {
                             if (!isMe) {
-                                Text(reply.userName, color = Color.Gray, fontSize = 10.sp)
+                                Text(reply.userName, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), fontSize = 10.sp)
                             }
                             Surface(
-                                color = if (isMe) Color(0xFF1A3A5C) else Color(0xFF2C2C2C),
+                                color = if (isMe) WdwOrange else MaterialTheme.colorScheme.surfaceVariant,
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Text(
                                     reply.text,
-                                    color = Color.White,
+                                    color = if (isMe) Color.White else MaterialTheme.colorScheme.onSurface,
                                     fontSize = 13.sp,
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                                 )
                             }
                             Text(
                                 formatMessageTime(reply.createdAt),
-                                color = Color.Gray,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                                 fontSize = 9.sp,
                                 modifier = Modifier.padding(top = 2.dp, start = 4.dp, end = 4.dp)
                             )
@@ -3271,7 +3275,7 @@ fun ThreadPanel(
                     placeholder = {
                         Text(
                             "Reply in thread...",
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                             fontSize = 13.sp
                         )
                     },
@@ -3289,10 +3293,10 @@ fun ThreadPanel(
                             } else false
                         },
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFF2C2C2C),
-                        unfocusedContainerColor = Color(0xFF2C2C2C),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                         cursorColor = Color(0xFFFF7F33),
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent
@@ -3315,7 +3319,7 @@ fun ThreadPanel(
                     Icon(
                         Icons.Default.Send,
                         contentDescription = "Send reply",
-                        tint = if (replyText.isNotBlank()) Color(0xFFFF7F33) else Color.Gray
+                        tint = if (replyText.isNotBlank()) WdwOrange else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                     )
                 }
             }
@@ -3338,7 +3342,7 @@ fun GifSearchPanel(
     var isLoading by remember { mutableStateOf(false) }
 
     Surface(
-        color = Color(0xFF1A1A2E),
+        color = MaterialTheme.colorScheme.surfaceVariant,
         shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
         modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp)
     ) {
@@ -3349,7 +3353,7 @@ fun GifSearchPanel(
             ) {
                 Text(
                     "GIF Search",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp
                 )
@@ -3357,7 +3361,7 @@ fun GifSearchPanel(
                 Icon(
                     Icons.Default.Close,
                     contentDescription = "Close",
-                    tint = Color.Gray,
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     modifier = Modifier.size(18.dp)
                         .clickable { onDismiss() }
                 )
@@ -3375,11 +3379,11 @@ fun GifSearchPanel(
                         }
                     }
                 },
-                placeholder = { Text("Search GIFs...", color = Color.Gray) },
-                textStyle = TextStyle(color = Color.White, fontSize = 13.sp),
+                placeholder = { Text("Search GIFs...", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)) },
+                textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp),
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFF2C2C2C),
-                    unfocusedContainerColor = Color(0xFF2C2C2C),
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                     cursorColor = Color(0xFFFF7F33),
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent
@@ -3404,7 +3408,7 @@ fun GifSearchPanel(
                     modifier = Modifier.fillMaxWidth().weight(1f),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("No GIFs found", color = Color.Gray, fontSize = 13.sp)
+                    Text("No GIFs found", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), fontSize = 13.sp)
                 }
             } else {
                 // 3-column compact grid
@@ -3426,7 +3430,7 @@ fun GifSearchPanel(
                                             .weight(1f)
                                             .height(80.dp)
                                             .clip(RoundedCornerShape(6.dp))
-                                            .background(Color(0xFF2A2A3A))
+                                            .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                                             .clickable {
                                                 val (_, fullUrl, title) = gifResults[idx]
                                                 onGifSelected(fullUrl, title)
@@ -3507,14 +3511,14 @@ fun UserProfilePopover(
     if (showConfirmBlock) {
         Dialog(onDismissRequest = { showConfirmBlock = false }) {
             Surface(
-                color = Color(0xFF1E1E30),
+                color = MaterialTheme.colorScheme.surface,
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.widthIn(max = 280.dp)
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
                         if (isBlocked) "Unblock $userName?" else "Block $userName?",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 16.sp
                     )
@@ -3526,7 +3530,7 @@ fun UserProfilePopover(
                         else
                             "Their messages will be hidden and they won't appear in your member" +
                                     "directory.",
-                        color = Color.White.copy(alpha = 0.7f),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         fontSize = 13.sp
                     )
                     Spacer(Modifier.height(16.dp))
@@ -3535,13 +3539,13 @@ fun UserProfilePopover(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Surface(
-                            color = Color(0xFF2C2C2C),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.clickable { showConfirmBlock = false }
                         ) {
                             Text(
                                 "Cancel",
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontSize = 13.sp,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             )
@@ -3574,7 +3578,7 @@ fun UserProfilePopover(
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            color = Color(0xFF1E1E30),
+            color = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier.widthIn(max = 280.dp)
         ) {
@@ -3588,7 +3592,7 @@ fun UserProfilePopover(
                         modifier = Modifier
                             .fillMaxSize()
                             .clip(CircleShape)
-                            .background(Color(0xFF555555)),
+                            .background(WdwOrange),
                         contentAlignment = Alignment.Center
                     ) {
                         if (profileImage.isNotEmpty()) {
@@ -3612,10 +3616,10 @@ fun UserProfilePopover(
                         modifier = Modifier
                             .size(16.dp)
                             .align(Alignment.BottomEnd)
-                            .background(Color(0xFF1E1E30), CircleShape)
+                            .background(MaterialTheme.colorScheme.surface, CircleShape)
                             .padding(2.dp)
                             .background(
-                                if (isOnline) Color(0xFF44b700) else Color.Gray,
+                                if (isOnline) Color(0xFF44b700) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                                 CircleShape
                             )
                     )
@@ -3624,7 +3628,7 @@ fun UserProfilePopover(
                 // Username
                 Text(
                     text = member?.name ?: userName,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -3658,13 +3662,13 @@ fun UserProfilePopover(
                         modifier = Modifier
                             .size(8.dp)
                             .background(
-                                if (isOnline) Color(0xFF44b700) else Color.Gray,
+                                if (isOnline) Color(0xFF44b700) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                                 CircleShape
                             )
                     )
                     Text(
                         text = if (isOnline) "Online" else "Offline",
-                        color = if (isOnline) Color(0xFF44b700) else Color.Gray,
+                        color = if (isOnline) Color(0xFF44b700) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                         fontSize = 12.sp
                     )
                 }
@@ -3673,7 +3677,7 @@ fun UserProfilePopover(
                     Spacer(Modifier.height(12.dp))
                     Box(
                         modifier = Modifier.fillMaxWidth().height(1.dp)
-                            .background(Color(0xFF333333))
+                            .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
                     )
                     Spacer(Modifier.height(8.dp))
                     // Profession & Company
@@ -3688,7 +3692,7 @@ fun UserProfilePopover(
                                 text = if (member.company.isNotEmpty())
                                     "${member.profession} at ${member.company}"
                                 else member.profession,
-                                color = Color.White.copy(alpha = 0.8f),
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                                 fontSize = 12.sp,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
@@ -3706,7 +3710,7 @@ fun UserProfilePopover(
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 text = member.interests.take(3).joinToString(", "),
-                                color = Color.White.copy(alpha = 0.7f),
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                                 fontSize = 11.sp,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
@@ -3724,7 +3728,7 @@ fun UserProfilePopover(
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 text = member.favoriteWines.take(3).joinToString(", "),
-                                color = Color.White.copy(alpha = 0.7f),
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                                 fontSize = 11.sp,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
@@ -3738,7 +3742,7 @@ fun UserProfilePopover(
                     Spacer(Modifier.height(12.dp))
                     Box(
                         modifier = Modifier.fillMaxWidth().height(1.dp)
-                            .background(Color(0xFF333333))
+                            .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
                     )
                     Spacer(Modifier.height(8.dp))
                     Row(
@@ -3761,13 +3765,13 @@ fun UserProfilePopover(
                                 Icon(
                                     Icons.Default.Block,
                                     contentDescription = if (isBlocked) "Unblock" else "Block",
-                                    tint = if (isBlocked) Color.White else Color(0xFFe54545),
+                                    tint = if (isBlocked) MaterialTheme.colorScheme.onSurface else Color(0xFFe54545),
                                     modifier = Modifier.size(14.dp)
                                 )
                                 Spacer(Modifier.width(4.dp))
                                 Text(
                                     text = if (isBlocked) "Unblock" else "Block",
-                                    color = if (isBlocked) Color.White else Color(0xFFe54545),
+                                    color = if (isBlocked) MaterialTheme.colorScheme.onSurface else Color(0xFFe54545),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium
                                 )
@@ -3804,7 +3808,7 @@ fun UserProfilePopover(
                 Spacer(Modifier.height(16.dp))
                 // Close button
                 Surface(
-                    color = Color(0xFF2C2C2C),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -3812,7 +3816,7 @@ fun UserProfilePopover(
                 ) {
                     Text(
                         "Close",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.padding(vertical = 10.dp).fillMaxWidth(),
@@ -3837,21 +3841,21 @@ fun ReportUserDialog(
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            color = Color(0xFF1E1E30),
+            color = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier.widthIn(max = 320.dp)
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
                     "Report $userName",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 16.sp
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     "Select a reason for reporting this user.",
-                    color = Color.White.copy(alpha = 0.6f),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     fontSize = 12.sp
                 )
                 Spacer(Modifier.height(16.dp))
@@ -3860,8 +3864,8 @@ fun ReportUserDialog(
                 categories.forEachIndexed { index, cat ->
                     val isSelected = selectedCategory == cat
                     Surface(
-                        color = if (isSelected) Color(0xFFFF7F33).copy(alpha = 0.2f) else
-                            Color(0xFF2C2C2C),
+                        color = if (isSelected) WdwOrange.copy(alpha = 0.2f) else
+                            MaterialTheme.colorScheme.surfaceVariant,
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -3879,8 +3883,8 @@ fun ReportUserDialog(
                     ) {
                         Text(
                             text = categoryLabels[index],
-                            color = if (isSelected) Color(0xFFFF7F33) else
-                                Color.White.copy(alpha = 0.8f),
+                            color = if (isSelected) WdwOrange else
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                             fontSize = 13.sp,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
                         )
@@ -3892,7 +3896,7 @@ fun ReportUserDialog(
                 // Optional reason
                 Text(
                     "Additional details (optional)",
-                    color = Color.White.copy(alpha = 0.6f),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     fontSize = 12.sp
                 )
                 Spacer(Modifier.height(4.dp))
@@ -3907,10 +3911,10 @@ fun ReportUserDialog(
                     },
                     modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp),
                     colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedBorderColor = Color(0xFFFF7F33),
-                        unfocusedBorderColor = Color(0xFF444444),
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        focusedBorderColor = WdwOrange,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
                         cursorColor = Color(0xFFFF7F33)
                     ),
                     textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp),
@@ -3923,13 +3927,13 @@ fun ReportUserDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Surface(
-                        color = Color(0xFF2C2C2C),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.clickable { onDismiss() }
                     ) {
                         Text(
                             "Cancel",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 13.sp,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                         )
@@ -4018,28 +4022,28 @@ fun ForwardMessageDialog(
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            color = Color(0xFF1E1E2E),
+            color = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier.widthIn(max = 360.dp).heightIn(max = 400.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     "Forward Message",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
                 )
                 Spacer(Modifier.height(8.dp))
                 // Preview of message being forwarded
                 Surface(
-                    color = Color(0xFF2A2A3A),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
                         text = message.text
                             .take(100) + if (message.text.length > 100) "..." else "",
-                        color = Color.White.copy(alpha = 0.7f),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         fontSize = 12.sp,
                         maxLines = 2,
                         modifier = Modifier.padding(8.dp)
@@ -4049,11 +4053,11 @@ fun ForwardMessageDialog(
                 TextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search channels...", color = Color.Gray) },
-                    textStyle = TextStyle(color = Color.White, fontSize = 13.sp),
+                    placeholder = { Text("Search channels...", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)) },
+                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp),
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFF2C2C2C),
-                        unfocusedContainerColor = Color(0xFF2C2C2C),
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                         cursorColor = Color(0xFFFF7F33),
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent
@@ -4085,7 +4089,7 @@ fun ForwardMessageDialog(
                             }
                             Text(
                                 channel.name,
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontSize = 14.sp
                             )
                         }
@@ -4106,7 +4110,7 @@ fun ChannelInfoPanel(
     onDismiss: () -> Unit
 ) {
     Surface(
-        color = Color(0xFF1A1A2E),
+        color = MaterialTheme.colorScheme.surface,
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
@@ -4117,20 +4121,20 @@ fun ChannelInfoPanel(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         channelName,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp
                     )
                     Text(
                         "${members.size} members",
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         fontSize = 11.sp
                     )
                 }
                 Icon(
                     Icons.Default.Close,
                     contentDescription = "Close",
-                    tint = Color.Gray,
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     modifier = Modifier.size(18.dp).clickable { onDismiss() }
                 )
             }
@@ -4156,7 +4160,7 @@ fun ChannelInfoPanel(
                                 Box(
                                     modifier = Modifier.size(28.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0xFF3A3A5A)),
+                                        .background(WdwOrange),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
@@ -4173,7 +4177,7 @@ fun ChannelInfoPanel(
                                     .clip(CircleShape)
                                     .background(
                                         if (member.online) Color(0xFF4CAF50) else
-                                            Color.Gray
+                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                                     )
                                     .align(Alignment.BottomEnd)
                             )
@@ -4181,7 +4185,7 @@ fun ChannelInfoPanel(
                         Spacer(Modifier.width(8.dp))
                         Text(
                             member.userName,
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 13.sp,
                             modifier = Modifier.weight(1f)
                         )
@@ -4216,12 +4220,12 @@ fun ChatSettingsDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF1E1E1E),
+        containerColor = MaterialTheme.colorScheme.surface,
         modifier = Modifier.widthIn(min = 340.dp, max = 480.dp),
         title = {
             Text(
                 "Blocked Users",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp
             )
@@ -4248,7 +4252,7 @@ private fun BlockedUsersSection(
     if (blockedUsers.isEmpty()) {
         Text(
             "No blocked users",
-            color = Color.Gray,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
             modifier = Modifier.padding(vertical = 16.dp)
         )
     } else {
@@ -4293,7 +4297,7 @@ private fun BlockedUsersSection(
                     Spacer(Modifier.width(12.dp))
                     Text(
                         user.name,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedButton(

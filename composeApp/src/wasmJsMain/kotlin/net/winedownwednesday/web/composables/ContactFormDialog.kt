@@ -19,6 +19,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -47,11 +48,8 @@ import net.winedownwednesday.web.vibrate
 private const val CONTACT_ENDPOINT =
     "https://sendcontactemail-iktff5ztia-uc.a.run.app"
 
-private val DialogBg     = Color(0xFF1E1E1E)
 private val AccentOrange = Color(0xFFFF7F33)
-private val TextGray     = Color(0xFFAAAAAA)
 private val ErrorRed     = Color(0xFFFF5252)
-private val FieldBorder  = Color(0xFF444444)
 
 // ── JS interop ────────────────────────────────────────────────────────────────
 // In Kotlin/WASM 2.1, Promise<T> cannot be a @JsFun return type.
@@ -154,7 +152,7 @@ fun ContactFormDialog(onDismiss: () -> Unit) {
             modifier = Modifier
                 .widthIn(max = 480.dp)
                 .fillMaxWidth()
-                .background(DialogBg, RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
                 .padding(28.dp)
         ) {
             if (success) {
@@ -173,13 +171,13 @@ fun ContactFormDialog(onDismiss: () -> Unit) {
                         text = "Message sent!",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
                         text = "Thank you for reaching out. We'll get back to you soon.",
                         fontSize = 13.sp,
-                        color = TextGray
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                     )
                     Spacer(Modifier.height(20.dp))
                     Button(
@@ -193,12 +191,12 @@ fun ContactFormDialog(onDismiss: () -> Unit) {
                         text = "Get in Touch",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "We'd love to hear from you.",
                         fontSize = 12.sp,
-                        color = TextGray
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                     )
                     Spacer(Modifier.height(20.dp))
                     ContactField(
@@ -239,7 +237,7 @@ fun ContactFormDialog(onDismiss: () -> Unit) {
                         TextButton(
                             onClick = onDismiss,
                             enabled = !loading
-                        ) { Text("Cancel", color = TextGray) }
+                        ) { Text("Cancel", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)) }
                         Spacer(Modifier.width(8.dp))
                         Button(
                             onClick = {
@@ -281,7 +279,7 @@ private fun ContactField(
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            label = { Text(label, color = TextGray, fontSize = 12.sp) },
+            label = { Text(label, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), fontSize = 12.sp) },
             isError = error.isNotEmpty(),
             minLines = minLines,
             maxLines = if (minLines > 1) 8 else 1,
@@ -289,10 +287,10 @@ private fun ContactField(
             shape = RoundedCornerShape(8.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor   = AccentOrange,
-                unfocusedBorderColor = FieldBorder,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
                 errorBorderColor     = ErrorRed,
-                focusedTextColor     = Color.White,
-                unfocusedTextColor   = Color.White,
+                focusedTextColor     = MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor   = MaterialTheme.colorScheme.onSurface,
                 cursorColor          = AccentOrange,
             )
         )
