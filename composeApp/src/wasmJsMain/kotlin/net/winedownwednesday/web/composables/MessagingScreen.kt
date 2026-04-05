@@ -292,7 +292,7 @@ fun MessagingScreen(
                             onReaction = { messageId, type ->
                                 viewModel.addReaction(messageId, type)
                             },
-                            onFlag = { messageId -> viewModel.flagMessage(messageId) },
+
                             onEdit = { viewModel.setEditingMessage(it) },
                             onEditMessage = { id, text ->
                                 viewModel.editMessage(id, text)
@@ -443,7 +443,6 @@ fun ChatLayout(
     onDelete: (String) -> Unit,
     onCancelReply: () -> Unit,
     onReaction: (String, String) -> Unit,
-    onFlag: (String) -> Unit,
     onEdit: (JsChatMessage) -> Unit,
     onEditMessage: (String, String) -> Unit,
     onCancelEditing: () -> Unit,
@@ -540,7 +539,6 @@ fun ChatLayout(
                         onDelete = onDelete,
                         onCancelReply = onCancelReply,
                         onReaction = onReaction,
-                        onFlag = onFlag,
                         onEdit = onEdit,
                         onEditMessage = onEditMessage,
                         onCancelEditing = onCancelEditing,
@@ -943,7 +941,6 @@ fun ChatArea(
     onDelete: (String) -> Unit,
     onCancelReply: () -> Unit,
     onReaction: (String, String) -> Unit,
-    onFlag: (String) -> Unit,
     onEdit: (JsChatMessage) -> Unit,
     onEditMessage: (String, String) -> Unit,
     onCancelEditing: () -> Unit,
@@ -1148,7 +1145,6 @@ fun ChatArea(
                             onReply = { onReply(message) },
                             onDelete = { onDelete(message.id) },
                             onReaction = { type -> onReaction(message.id, type) },
-                            onFlag = { onFlag(message.id) },
                             onEdit = { onEdit(message) },
                             isEmojiPickerOpen = activeReactionMessageId == message.id,
                             onToggleEmojiPicker = {
@@ -1356,7 +1352,6 @@ fun MessageBubble(
     onReply: () -> Unit,
     onDelete: () -> Unit,
     onReaction: (String) -> Unit,
-    onFlag: () -> Unit,
     onEdit: () -> Unit,
     isEmojiPickerOpen: Boolean,
     onToggleEmojiPicker: () -> Unit,
@@ -1953,17 +1948,7 @@ fun MessageBubble(
                             )
                         }
                     }
-                    if (!isMe && !message.isDeleted) {
-                        Spacer(Modifier.width(8.dp))
-                        TextWithNotoImageEmoji(
-                            "🚩",
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                            fontSize = 14.sp,
-                            modifier = Modifier
-                                .clickable { onFlag() }
-                                .padding(horizontal = 2.dp)
-                        )
-                    }
+
                     // Pin / Unpin button
                     if (!message.isDeleted) {
                         Spacer(Modifier.width(8.dp))
