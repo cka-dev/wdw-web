@@ -194,9 +194,12 @@ fun MessagingScreen(
         }
         ChatSettingsDialog(
             blockedUsers = blockedUserProfiles,
+            isModerationLoading = moderationLoading,
             onUnblock = { userId ->
-                viewModel.unblockUser(userId)
-                viewModel.fetchBlockedUserProfiles()
+                // fetchBlockedUserProfiles runs after the unblock completes
+                viewModel.unblockUser(userId) {
+                    viewModel.fetchBlockedUserProfiles()
+                }
             },
             onDismiss = { showSettingsDialog = false }
         )
@@ -4283,11 +4286,12 @@ fun ChannelInfoPanel(
 @Composable
 fun ChatSettingsDialog(
     blockedUsers: List<JsStreamUser>,
+    isModerationLoading: Boolean = false,
     onUnblock: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!isModerationLoading) onDismiss() },
         containerColor = MaterialTheme.colorScheme.surface,
         modifier = Modifier.widthIn(min = 340.dp, max = 480.dp),
         title = {
@@ -4301,11 +4305,15 @@ fun ChatSettingsDialog(
         text = {
             BlockedUsersSection(
                 blockedUsers = blockedUsers,
+                isModerationLoading = isModerationLoading,
                 onUnblock = onUnblock
             )
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !isModerationLoading
+            ) {
                 Text("Close", color = Color(0xFFFF7F33))
             }
         }
@@ -4315,6 +4323,7 @@ fun ChatSettingsDialog(
 @Composable
 private fun BlockedUsersSection(
     blockedUsers: List<JsStreamUser>,
+    isModerationLoading: Boolean = false,
     onUnblock: (String) -> Unit
 ) {
     if (blockedUsers.isEmpty()) {
@@ -4370,15 +4379,30 @@ private fun BlockedUsersSection(
                     )
                     OutlinedButton(
                         onClick = { onUnblock(user.id) },
+                        enabled = !isModerationLoading,
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color(0xFFFF7F33)
+                            contentColor = if (isModerationLoading)
+                                Color(0xFFFF7F33).copy(alpha = 0.5f)
+                            else Color(0xFFFF7F33)
                         ),
-                        border = BorderStroke(1.dp, Color(0xFFFF7F33)),
+                        border = BorderStroke(
+                            1.dp,
+                            if (isModerationLoading) Color(0xFFFF7F33).copy(alpha = 0.4f)
+                            else Color(0xFFFF7F33)
+                        ),
                         contentPadding = PaddingValues(
                             horizontal = 12.dp, vertical = 4.dp
                         )
                     ) {
-                        Text("Unblock", fontSize = 12.sp)
+                        if (isModerationLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(12.dp),
+                                strokeWidth = 2.dp,
+                                color = Color(0xFFFF7F33)
+                            )
+                        } else {
+                            Text("Unblock", fontSize = 12.sp)
+                        }
                     }
                 }
             }
