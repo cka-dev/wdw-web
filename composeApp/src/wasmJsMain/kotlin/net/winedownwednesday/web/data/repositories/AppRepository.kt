@@ -136,7 +136,7 @@ class AppRepository (
         }
     }
 
-    private suspend fun fetchWines() {
+    suspend fun fetchWines() {
         try {
             val remoteWineList = remoteDataSource.fetchWines()
             if (!remoteWineList.isNullOrEmpty()){
@@ -280,6 +280,34 @@ class AppRepository (
 
     suspend fun deleteAccount(confirmPhrase: String): Boolean {
         return remoteDataSource.deleteAccount(confirmPhrase)
+    }
+
+    // ─── Wine Reviews ─────────────────────────────────────────────────────────
+
+    suspend fun getWineReviews(wineId: Long):
+            net.winedownwednesday.web.data.models.WineReviewsResponse? {
+        return remoteDataSource.getWineReviews(wineId)
+    }
+
+    suspend fun getMyWineReview(wineId: Long):
+            net.winedownwednesday.web.data.models.WineReview? {
+        return remoteDataSource.getMyWineReview(wineId)
+    }
+
+    suspend fun submitWineReview(
+        request: net.winedownwednesday.web.data.models.SubmitReviewRequest
+    ): Boolean {
+        return remoteDataSource.submitWineReview(request)
+    }
+
+    suspend fun deleteMyWineReview(wineId: Long): Boolean {
+        return remoteDataSource.deleteMyWineReview(wineId)
+    }
+
+    suspend fun flagWineReview(
+        request: net.winedownwednesday.web.data.models.FlagReviewRequest
+    ): Boolean {
+        return remoteDataSource.flagWineReview(request)
     }
 
     companion object{

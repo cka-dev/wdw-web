@@ -3,7 +3,6 @@ package net.winedownwednesday.web.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.await
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -49,6 +48,8 @@ class AuthPageViewModel(
 
     private val _isSavingProfile = MutableStateFlow(false)
     val isSavingProfile: StateFlow<Boolean> = _isSavingProfile.asStateFlow()
+
+//    private val userName
 
     init {
         viewModelScope.launch {

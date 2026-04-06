@@ -37,8 +37,6 @@ import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
 import net.winedownwednesday.web.loadThemePreference
 import net.winedownwednesday.web.saveThemePreference
-import net.winedownwednesday.web.vibrate
-import net.winedownwednesday.web.composables.HapticDuration
 import net.winedownwednesday.web.viewmodels.AuthPageViewModel
 import net.winedownwednesday.web.viewmodels.LoginUIState
 import org.koin.compose.koinInject
@@ -222,7 +220,10 @@ fun AppNavigation(
                         isDarkTheme         = isDarkTheme,
                         onThemeToggle       = ::toggleTheme,
                         onHamburgerClick    = {
-                            hapticVibrate(HapticDuration.TICK, HapticCategory.NAVIGATION)
+                            hapticVibrate(
+                                HapticDuration.TICK,
+                                HapticCategory.NAVIGATION
+                            )
                             scope.launch { drawerState.open() }
                         }
                     )
@@ -231,32 +232,57 @@ fun AppNavigation(
                         NavDisplay(
                             backStack = backStack,
                             entryProvider = entryProvider {
-                                entry<Route.Home>      { FadeInPage { HomePage(
-                                    sizeInfo = sizeInfo,
-                                    isLoggedIn = isLoggedIn,
-                                    onJoinClick = { navigateTo(Route.Login) }
-                                ) } }
-                                entry<Route.About>     { FadeInPage { AboutPage(sizeInfo = sizeInfo) } }
+                                entry<Route.Home> {
+                                    FadeInPage {
+                                        HomePage(
+                                            sizeInfo = sizeInfo,
+                                            isLoggedIn = isLoggedIn,
+                                            onJoinClick = { navigateTo(Route.Login) }
+                                        )
+                                    }
+                                }
+                                entry<Route.About> {
+                                    FadeInPage {
+                                        AboutPage(
+                                            sizeInfo = sizeInfo
+                                        )
+                                    }
+                                }
                                 entry<Route.Members>   {
                                     FadeInPage {
                                         MembersPage(
-                                            sizeInfo        = sizeInfo,
-                                            uiState         = uiState,
+                                            sizeInfo = sizeInfo,
+                                            uiState = uiState,
                                             userProfileData = userProfileData
                                         )
                                     }
                                 }
-                                entry<Route.Podcasts>  { FadeInPage { PodcastsPage(sizeInfo = sizeInfo) } }
+                                entry<Route.Podcasts>  {
+                                    FadeInPage {
+                                        PodcastsPage(
+                                            sizeInfo = sizeInfo
+                                        )
+                                    }
+                                }
                                 entry<Route.Events>    {
                                     FadeInPage {
                                         EventsPage(
-                                            sizeInfo          = sizeInfo,
-                                            uiState           = uiState,
+                                            sizeInfo = sizeInfo,
+                                            uiState = uiState,
                                             authPageViewModel = authViewModel
                                         )
                                     }
                                 }
-                                entry<Route.Wines>     { FadeInPage { WinePage(sizeInfo = sizeInfo) } }
+                                entry<Route.Wines>     {
+                                    FadeInPage {
+                                        WinePage(
+                                            sizeInfo = sizeInfo,
+                                            isLoggedIn = isLoggedIn,
+                                            userName = userProfileData?.name,
+                                            userEmail = userEmail
+                                        )
+                                    }
+                                }
                                 entry<Route.Login>     {
                                     if (!isLoggedIn) {
                                         FadeInPage {

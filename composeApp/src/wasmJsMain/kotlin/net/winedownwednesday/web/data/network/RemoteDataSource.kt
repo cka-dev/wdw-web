@@ -677,6 +677,101 @@ class RemoteDataSource (
         }
     }
 
+    // ─── Wine Reviews ─────────────────────────────────────────────────────────
+
+    override suspend fun getWineReviews(wineId: Long):
+            net.winedownwednesday.web.data.models.WineReviewsResponse? {
+        return try {
+            val response: HttpResponse = client.get(
+                "$SERVER_URL/getWineReviews?wineId=$wineId"
+            )
+            if (response.status.isSuccess()) {
+                response.body()
+            } else null
+        } catch (e: Exception) {
+            _error.value = e.message
+            null
+        }
+    }
+
+    override suspend fun getMyWineReview(wineId: Long):
+            net.winedownwednesday.web.data.models.WineReview? {
+        return try {
+            val idToken = FirebaseBridge.getIdToken().await<JsAny?>().toString()
+            val response: HttpResponse = client.get(
+                "$SERVER_URL/getMyWineReview?wineId=$wineId"
+            ) {
+                header(HttpHeaders.Authorization, "Bearer $idToken")
+            }
+            if (response.status.isSuccess()) {
+                val text = response.bodyAsText()
+                if (text == "null" || text.isBlank()) null
+                else kotlinx.serialization.json.Json.decodeFromString(text)
+            } else null
+        } catch (e: Exception) {
+            _error.value = e.message
+            null
+        }
+    }
+
+    override suspend fun submitWineReview(
+        request: net.winedownwednesday.web.data.models.SubmitReviewRequest
+    ): Boolean {
+        return try {
+            val idToken = FirebaseBridge.getIdToken().await<JsAny?>().toString()
+            val response: HttpResponse = client.post(
+                "$SERVER_URL/submitWineReview"
+            ) {
+                header(HttpHeaders.Authorization, "Bearer $idToken")
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+            response.status.isSuccess()
+        } catch (e: Exception) {
+            _error.value = e.message
+            false
+        }
+    }
+
+    override suspend fun deleteMyWineReview(wineId: Long): Boolean {
+        return try {
+            val idToken = FirebaseBridge.getIdToken().await<JsAny?>().toString()
+            val response: HttpResponse = client.post(
+                "$SERVER_URL/deleteMyWineReview"
+            ) {
+                header(HttpHeaders.Authorization, "Bearer $idToken")
+                contentType(ContentType.Application.Json)
+                setBody(mapOf("wineId" to wineId))
+            }
+            response.status.isSuccess()
+        } catch (e: Exception) {
+            _error.value = e.message
+            false
+        }
+    }
+
+    override suspend fun flagWineReview(
+        request: net.winedownwednesday.web.data.models.FlagReviewRequest
+    ): Boolean {
+        val idToken = FirebaseBridge.getIdToken().await<JsAny?>().toString()
+        val response: HttpResponse = client.post(
+            "$SERVER_URL/flagWineReview"
+        ) {
+            header(HttpHeaders.Authorization, "Bearer $idToken")
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+        if (!response.status.isSuccess()) {
+            val body = response.bodyAsText()
+            // Try to extract the error message from JSON
+            val msg = try {
+                kotlinx.serialization.json.Json.decodeFromString<Map<String, String>>(body)["error"]
+            } catch (_: Exception) { null }
+            throw Exception(msg ?: "Failed to flag review (${response.status.value})")
+        }
+        return true
+    }
+
     companion object{
         private const val SERVER_URL =
             "https://us-central1-wdw-app-52a3c.cloudfunctions.net"
