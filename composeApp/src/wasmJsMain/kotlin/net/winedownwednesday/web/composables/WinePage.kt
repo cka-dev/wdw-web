@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -58,13 +57,15 @@ import coil3.compose.rememberAsyncImagePainter
 import net.winedownwednesday.web.data.Wine
 import net.winedownwednesday.web.viewmodels.WinePageViewModel
 import net.winedownwednesday.web.viewmodels.matchesQuery
-import net.winedownwednesday.web.vibrate
 import org.koin.compose.koinInject
 
 
 @Composable
 fun WinePage(
-    sizeInfo: WindowSizeInfo
+    sizeInfo: WindowSizeInfo,
+    isLoggedIn: Boolean = false,
+    userName: String? = null,
+    userEmail: String? = null
 ) {
     val viewModel: WinePageViewModel = koinInject()
     val wines by viewModel.wineList.collectAsState()
@@ -72,7 +73,7 @@ fun WinePage(
     val searchQuery by viewModel.searchQuery.collectAsState()
 
     val filteredWines = remember(wines, searchQuery) {
-        wines.filter { it.matchesQuery(searchQuery) }
+        wines?.filter { it.matchesQuery(searchQuery) } ?: emptyList()
     }
 
     if (sizeInfo.useCompactNav) {
@@ -80,9 +81,10 @@ fun WinePage(
         CompactScreenWinePage(
             favoriteWines = filteredWines,
             selectedWine = selectedWine,
-            searchQuery = searchQuery,
-            onSearchQueryChange = { viewModel.setSearchQuery(it) },
-            onWineClick = { viewModel.setSelectedWine(it) }
+            viewModel = viewModel,
+            isLoggedIn = isLoggedIn,
+            userName = userName,
+            userEmail = userEmail
         )
     } else {
         // Expanded / Large / XLarge → side-by-side list + detail
@@ -91,15 +93,15 @@ fun WinePage(
             else -> 0.30f  // Expanded
         }
         LargeScreenWinePage(
-            searchQuery = searchQuery,
-            onQueryChange = { viewModel.setSearchQuery(it) },
             filteredWines = filteredWines,
             selectedWine = selectedWine,
-            onSelectedWineChange = { viewModel.setSelectedWine(it) },
+            viewModel = viewModel,
+            isLoggedIn = isLoggedIn,
+            userName = userName,
+            userEmail = userEmail,
             listFraction = listFraction
         )
     }
-
 }
 
 @Composable
@@ -109,7 +111,8 @@ fun WineListItem(
     onClick: () -> Unit
 ) {
     val bgColor by animateColorAsState(
-        targetValue  = if (isSelected) Color(0xFFFF7F33).copy(alpha = 0.4f) else MaterialTheme.colorScheme.surface,
+        targetValue  = if (isSelected) Color(0xFFFF7F33).copy(alpha = 0.4f) else
+            MaterialTheme.colorScheme.surface,
         animationSpec = tween(durationMillis = 300),
         label        = "wineSelection"
     )
@@ -139,7 +142,7 @@ fun WineListItem(
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(
-            modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = "${wine.name} (${wine.year})",
@@ -151,6 +154,8 @@ fun WineListItem(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                WineRatingBadge(averageRating = wine.averageRating, reviewCount = wine.reviewCount)
             }
         }
     }
@@ -159,13 +164,37 @@ fun WineListItem(
 @Composable
 fun WineDetail(
     wine: Wine,
+    viewModel: WinePageViewModel,
+    isLoggedIn: Boolean,
+    userName: String?,
+    userEmail: String?
 ) {
+    val reviews by viewModel.reviewsForSelectedWine.collectAsState()
+    val myReview by viewModel.myReviewForSelectedWine.collectAsState()
+    val isLoadingReviews by viewModel.isLoadingReviews.collectAsState()
+    val hasFetchedReviews by viewModel.hasFetchedReviews.collectAsState()
+    val isSubmittingReview by viewModel.isSubmittingReview.collectAsState()
+    val reviewSubmitError by viewModel.reviewSubmitError.collectAsState()
+    val isFlaggingReview by viewModel.isFlaggingReview.collectAsState()
+    val flagSuccess by viewModel.flagSuccess.collectAsState()
+    val flagError by viewModel.flagError.collectAsState()
+    var showWriteReview by rememberSaveable { mutableStateOf(false) }
+
+    // Close dialog when success
+    val reviewSubmitSuccess by viewModel.reviewSubmitSuccess.collectAsState()
+    if (reviewSubmitSuccess) {
+        showWriteReview = false
+        viewModel.clearReviewFeedback()
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
+        WineRatingBadge(averageRating = wine.averageRating, reviewCount = wine.reviewCount)
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = wine.name,
             style = MaterialTheme.typography.headlineMedium,
@@ -210,28 +239,43 @@ fun WineDetail(
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
-    }
-}
 
-@Composable
-fun WineImageCard(
-    wineImageUrl: String
-) {
-    Card(
-        modifier = Modifier.fillMaxSize(),
-        elevation = CardDefaults.cardElevation(8.dp)
-    ){
-
-        Image(
-            painter = rememberAsyncImagePainter(wineImageUrl),
-            contentDescription = "Wine Image",
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight()
-                .clip(RoundedCornerShape(16.dp)),
-            contentScale = ContentScale.Fit
+        ReviewsSection(
+            wineId = wine.id,
+            isLoggedIn = isLoggedIn,
+            userName = userName,
+            userEmail = userEmail,
+            reviews = reviews,
+            myReview = myReview,
+            isLoading = isLoadingReviews,
+            hasFetchedReviews = hasFetchedReviews,
+            isFlaggingReview = isFlaggingReview,
+            flagSuccess = flagSuccess,
+            flagError = flagError,
+            onWriteReviewClick = { showWriteReview = true },
+            onEditReviewClick = { showWriteReview = true },
+            onDeleteReview = { viewModel.deleteMyReview(it) },
+            onFlagReview = { email, reason -> viewModel.flagReview(wine.id, email, reason) },
+            onClearFlagFeedback = { viewModel.clearFlagFeedback() }
         )
+    }
 
+    if (showWriteReview) {
+        WriteReviewDialog(
+            wineName = wine.name,
+            initialRating = myReview?.rating ?: 0,
+            initialReviewText = myReview?.reviewText ?: "",
+            isEditing = myReview != null,
+            isSubmitting = isSubmittingReview,
+            errorMsg = reviewSubmitError,
+            onDismiss = {
+                showWriteReview = false
+                viewModel.clearReviewFeedback()
+            },
+            onSubmit = { rating, text ->
+                viewModel.submitReview(wine.id, rating, text, userName)
+            }
+        )
     }
 }
 
@@ -270,6 +314,9 @@ fun WineCard(
                 color = MaterialTheme.colorScheme.onSurface
             )
 
+            WineRatingBadge(averageRating = wine.averageRating, reviewCount = wine.reviewCount)
+            Spacer(modifier = Modifier.height(4.dp))
+
             Text(
                 text = "${wine.type} - ${wine.country}",
                 style = MaterialTheme.typography.bodyMedium
@@ -298,39 +345,82 @@ fun WineCard(
 }
 
 @Composable
-fun WineDetailPopup(wine: Wine, onDismissRequest: () -> Unit) {
+fun WineDetailPopup(
+    wine: Wine,
+    viewModel: WinePageViewModel,
+    isLoggedIn: Boolean,
+    userName: String?,
+    userEmail: String?,
+    onDismissRequest: () -> Unit
+) {
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surface,
-                modifier = Modifier
-                    .wrapContentSize()
-                    .padding(16.dp)
-            ) {
-                WineDetailContent(wine = wine, onCloseClick = onDismissRequest)
-            }
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier
+                .fillMaxHeight(0.9f)
+                .fillMaxWidth()
+                .padding(vertical = 16.dp)
+        ) {
+            WineDetailContent(
+                wine = wine,
+                viewModel = viewModel,
+                isLoggedIn = isLoggedIn,
+                userName = userName,
+                userEmail = userEmail,
+                onCloseClick = onDismissRequest
+            )
+        }
     }
 }
 
 @Composable
-fun WineDetailContent(wine: Wine, onCloseClick: () -> Unit) {
+fun WineDetailContent(
+    wine: Wine,
+    viewModel: WinePageViewModel,
+    isLoggedIn: Boolean,
+    userName: String?,
+    userEmail: String?,
+    onCloseClick: () -> Unit
+) {
+    val reviews by viewModel.reviewsForSelectedWine.collectAsState()
+    val myReview by viewModel.myReviewForSelectedWine.collectAsState()
+    val isLoadingReviews by viewModel.isLoadingReviews.collectAsState()
+    val hasFetchedReviews by viewModel.hasFetchedReviews.collectAsState()
+    val isSubmittingReview by viewModel.isSubmittingReview.collectAsState()
+    val isDeletingReview by viewModel.isDeletingReview.collectAsState()
+    val reviewSubmitError by viewModel.reviewSubmitError.collectAsState()
+    val isFlaggingReview by viewModel.isFlaggingReview.collectAsState()
+    val flagSuccess by viewModel.flagSuccess.collectAsState()
+    val flagError by viewModel.flagError.collectAsState()
+    var showWriteReview by rememberSaveable { mutableStateOf(false) }
+
+    // Close dialog when success
+    val reviewSubmitSuccess by viewModel.reviewSubmitSuccess.collectAsState()
+    if (reviewSubmitSuccess) {
+        showWriteReview = false
+        viewModel.clearReviewFeedback()
+    }
+
     Column(
         modifier = Modifier
             .padding(16.dp)
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Top
     ) {
-
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = wine.name,
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = wine.name,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                WineRatingBadge(averageRating = wine.averageRating, reviewCount = wine.reviewCount)
+            }
             IconButton(onClick = onCloseClick) {
                 Icon(
                     imageVector = Icons.Default.Close,
@@ -376,6 +466,44 @@ fun WineDetailContent(wine: Wine, onCloseClick: () -> Unit) {
                 style = MaterialTheme.typography.bodyMedium
             )
         }
+
+        ReviewsSection(
+            wineId = wine.id,
+            isLoggedIn = isLoggedIn,
+            userName = userName,
+            userEmail = userEmail,
+            reviews = reviews,
+            myReview = myReview,
+            isLoading = isLoadingReviews,
+            isDeletingReview = isDeletingReview,
+            hasFetchedReviews = hasFetchedReviews,
+            isFlaggingReview = isFlaggingReview,
+            flagSuccess = flagSuccess,
+            flagError = flagError,
+            onWriteReviewClick = { showWriteReview = true },
+            onEditReviewClick = { showWriteReview = true },
+            onDeleteReview = { viewModel.deleteMyReview(it) },
+            onFlagReview = { email, reason -> viewModel.flagReview(wine.id, email, reason) },
+            onClearFlagFeedback = { viewModel.clearFlagFeedback() }
+        )
+    }
+
+    if (showWriteReview) {
+        WriteReviewDialog(
+            wineName = wine.name,
+            initialRating = myReview?.rating ?: 0,
+            initialReviewText = myReview?.reviewText ?: "",
+            isEditing = myReview != null,
+            isSubmitting = isSubmittingReview,
+            errorMsg = reviewSubmitError,
+            onDismiss = {
+                showWriteReview = false
+                viewModel.clearReviewFeedback()
+            },
+            onSubmit = { rating, text ->
+                viewModel.submitReview(wine.id, rating, text, userName)
+            }
+        )
     }
 }
 
@@ -383,12 +511,14 @@ fun WineDetailContent(wine: Wine, onCloseClick: () -> Unit) {
 fun CompactScreenWinePage(
     favoriteWines: List<Wine>,
     selectedWine: Wine?,
-    searchQuery: String,
-    onWineClick: (Wine) -> Unit,
-    onSearchQueryChange: (String) -> Unit,
+    viewModel: WinePageViewModel,
+    isLoggedIn: Boolean,
+    userName: String?,
+    userEmail: String?,
     modifier: Modifier = Modifier,
 ) {
     var showDialog by rememberSaveable { mutableStateOf(false) }
+    val searchQuery by viewModel.searchQuery.collectAsState()
 
     LazyColumn(
         modifier = Modifier
@@ -399,7 +529,7 @@ fun CompactScreenWinePage(
             SearchBar(
                 label = "Search our wine list",
                 query = searchQuery,
-                onQueryChange = { onSearchQueryChange(it) }
+                onQueryChange = { viewModel.setSearchQuery(it) }
             )
         }
 
@@ -411,14 +541,14 @@ fun CompactScreenWinePage(
             )
         }
 
-        itemsIndexed(favoriteWines.filter { it.matchesQuery(searchQuery) }) { index, wine ->
+        itemsIndexed(favoriteWines) { index, wine ->
             GridItemReveal(index = index, animationKey = searchQuery) {
                 WineCard(
                     wine = wine,
                     isFavorite = true,
                     onClick = {
                         hapticVibrate(HapticDuration.TICK, HapticCategory.DIALOGS)
-                        onWineClick(wine)
+                        viewModel.setSelectedWine(wine)
                         showDialog = true
                     }
                 )
@@ -430,7 +560,14 @@ fun CompactScreenWinePage(
         selectedWine?.let { wine ->
             WineDetailPopup(
                 wine = wine,
-                onDismissRequest = { showDialog = false }
+                viewModel = viewModel,
+                isLoggedIn = isLoggedIn,
+                userName = userName,
+                userEmail = userEmail,
+                onDismissRequest = { 
+                    showDialog = false 
+                    viewModel.clearSelectedWine()
+                }
             )
         }
     }
@@ -438,13 +575,16 @@ fun CompactScreenWinePage(
 
 @Composable
 fun LargeScreenWinePage(
-    searchQuery: String,
-    onQueryChange: (String) -> Unit,
     filteredWines: List<Wine>,
     selectedWine: Wine?,
-    onSelectedWineChange: (Wine) -> Unit,
+    viewModel: WinePageViewModel,
+    isLoggedIn: Boolean,
+    userName: String?,
+    userEmail: String?,
     listFraction: Float = 0.30f
 ) {
+    val searchQuery by viewModel.searchQuery.collectAsState()
+
     Row(modifier = Modifier.fillMaxSize()) {
 
         Column(
@@ -456,7 +596,7 @@ fun LargeScreenWinePage(
             SearchBar(
                 label = "Search our wine list",
                 query = searchQuery,
-                onQueryChange = { onQueryChange(it) }
+                onQueryChange = { viewModel.setSearchQuery(it) }
             )
 
             if (filteredWines.isEmpty()) {
@@ -490,7 +630,7 @@ fun LargeScreenWinePage(
                                     WineListItem(
                                         wine = wine,
                                         isSelected = (wine == selectedWine),
-                                        onClick = { onSelectedWineChange(wine) }
+                                        onClick = { viewModel.setSelectedWine(wine) }
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(16.dp))
@@ -538,6 +678,10 @@ fun LargeScreenWinePage(
                     } else {
                         WineDetail(
                             wine = wine,
+                            viewModel = viewModel,
+                            isLoggedIn = isLoggedIn,
+                            userName = userName,
+                            userEmail = userEmail
                         )
                     }
                 }
@@ -545,4 +689,3 @@ fun LargeScreenWinePage(
         }
     }
 }
-

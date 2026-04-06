@@ -66,6 +66,11 @@ To prevent leaking project identifiers, some JavaScript files are excluded from 
 - **Member Directory & Spotlight**: Directory of community members, highlighting a deterministic rotating "Member Spotlight" driven by a robust round-robin queue, automated birthday prioritization, and secure manual override architecture.
 - **Blog Engine**: A rich-text publishing system where content is served from Firebase as structured JSON `ContentBlock` arrays, rather than HTML or MD files. This permitting flawless native UI rendering (without WebViews) optimized for Compose reading modes across devices.
     - **Multi-Client Support Requirement**: While fully implemented on Web/Admin, the **Android client must be updated** to consume these structured payloads natively to maintain parity. See [android_blog_implementation_guide.md] for details.
+- **Wine Catalog & Ratings**: A catalog of featured wines with aggregated ratings and user reviews.
+    - **Review System**: Authenticated users can leave 1-5 star ratings and written reviews (max 500 chars). The system pins the logged-in user's own review to the top, allowing for edits and deletions.
+    - **Soft-Delete Moderation**: Admins can remove inappropriate reviews. Instead of hard deletion, removed reviews are flagged (`flagged: true`) and hidden from the public feed. The original author still sees their review but with editing disabled and a red warning banner containing a `moderationNote` from the admin.
+    - **User Flagging**: Community members can flag inappropriate reviews for admin attention. The system guards against duplicate reports and utilizes the shared `moderation_flags` collection to feed the admin dashboard.
+    - **Multi-Client Support Requirement**: The Android client must implement the review API endpoints (`submitWineReview`, `flagWineReview`, etc.) and the corresponding UI components to reach parity. See `~/Documents/wdw-feature-docs/wdw-web/wine-reviews/mobile-client-prompt.md`.
 
 ### Messaging (Real-time Chat)
 - **Stream Chat Integration**: Real-time communication for members via Stream Chat SDK.

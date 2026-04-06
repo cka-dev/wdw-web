@@ -94,4 +94,11 @@ interface ApiService {
     suspend fun getBlockedUsers(): List<String>
     suspend fun deleteAccount(confirmPhrase: String): Boolean
 
+    // Wine Reviews
+    suspend fun getWineReviews(wineId: Long): net.winedownwednesday.web.data.models.WineReviewsResponse?
+    suspend fun getMyWineReview(wineId: Long): net.winedownwednesday.web.data.models.WineReview?
+    suspend fun submitWineReview(request: net.winedownwednesday.web.data.models.SubmitReviewRequest): Boolean
+    suspend fun deleteMyWineReview(wineId: Long): Boolean
+    suspend fun flagWineReview(request: net.winedownwednesday.web.data.models.FlagReviewRequest): Boolean
+
 }

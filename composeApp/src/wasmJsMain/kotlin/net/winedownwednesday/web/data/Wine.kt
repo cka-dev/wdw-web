@@ -13,5 +13,7 @@ data class Wine(
     val region: String,
     val imageUrl: String,
     val technicalDetails: String,
-    val whyWeLovedIt: String? = null
+    val whyWeLovedIt: String? = null,
+    val averageRating: Double = 0.0,
+    val reviewCount: Int = 0
 )
