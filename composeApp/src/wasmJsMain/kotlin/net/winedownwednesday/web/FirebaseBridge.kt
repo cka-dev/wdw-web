@@ -18,6 +18,7 @@ external object FirebaseBridge {
     fun observeAuthState(callback: (JsAny?) -> Unit)
     fun waitUntilInitialized(): Promise<JsAny>
     fun setupForegroundNotifications()
+    fun sendEmailVerification(): Promise<JsAny?>
 
 }
 

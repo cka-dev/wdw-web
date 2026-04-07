@@ -118,10 +118,31 @@ To prevent leaking project identifiers, some JavaScript files are excluded from 
     - **Self-protection**: Users cannot block or report themselves; the buttons are hidden on the user's own profile popover.
     - **Cross-platform**: Blocked list syncs via Firestore; blocking on web also takes effect on Android and vice versa.
 - **Account Deletion (Play Store Compliance)**:
-    - Users can permanently delete their account from the **Profile page** "Danger Zone" section.
+    - Users can permanently delete their account from the **Settings page** "Danger Zone" section.
     - Requires typing "DELETE MY ACCOUNT" as a confirmation phrase.
     - Backend `deleteAccount` Cloud Function chains: hard-delete from Stream Chat → delete Firestore profile → delete Firebase Auth account.
     - On success, the client signs out via `FirebaseBridge.signOut()`.
+
+### Settings Page (`SettingsPage.kt`)
+A dedicated **Settings** page accessible via a button on the Profile page (navigates to `Route.Settings`).
+
+- **Layout**: Sidebar + detail pane on wide screens (GitHub/Google settings pattern), stacked cards on compact. Categories: Security, Privacy & Moderation, Danger Zone.
+- **Security Section**: Shows password/passkey status with ✓/✗ indicators. Actions: Change Password, Link Password (passkey-only users), Add Passkey.
+- **Privacy & Moderation Section**: Displays blocked users with count badge, initial-letter avatar fallback, and per-user Unblock button with confirmation dialog. Loading states during async operations.
+- **Danger Zone Section**: Account deletion with typed confirmation (moved from Profile page).
+- **Email Verification**: Uses Firebase client-side `sendEmailVerification()` SDK directly (via `FirebaseBridge`) instead of the broken `/sendEmailVerification` server endpoint.
+
+### Profile Picture UX
+Enhanced profile picture management in `ProfilePage.kt`:
+
+- **Action Sheet**: When editing and a photo exists, clicking the avatar shows a menu: View Photo, Re-crop Photo, Choose New Photo, Remove Photo. When no photo exists, tap goes directly to file picker.
+- **Image Cropping** (`ImageCropperDialog.kt`): Pure-Compose cropper with circle mask overlay, drag-to-pan, scroll-to-zoom. Produces a 512×512px cropped bitmap.
+- **Full-Screen Viewer**: Dialog preview of current profile photo at full resolution.
+- **Remove Photo**: Clears both `profileImageBitmap` and `profileImageUrl`, allowing users to revert to the placeholder.
+
+### Profile Data Integrity
+- `ProfileEditSection` now carries `eventRsvps`, `blockedEmails`, and `profileImageUrl` through when constructing `updatedProfile`, preventing silent field drops on save.
+- Empty `phone` and `aboutMe` fields send `null` instead of `""` to avoid server-side fallback issues.
 
 ## 4. Technical Implementation Details
 

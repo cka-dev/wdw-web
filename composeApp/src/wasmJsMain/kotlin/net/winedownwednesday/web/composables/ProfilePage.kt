@@ -89,6 +89,7 @@ fun ProfilePage(
     isNewUser: Boolean,
     userEmail: String,
     viewModel: AuthPageViewModel,
+    onNavigateToSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val userProfile by viewModel.profileData.collectAsStateWithLifecycle()
@@ -239,7 +240,7 @@ fun ProfilePage(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(bottom = 16.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
                                     Button(
                                         onClick = { editMode = true },
@@ -254,6 +255,18 @@ fun ProfilePage(
                                     }
 
                                     Button(
+                                        onClick = onNavigateToSettings,
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFF555555),
+                                            contentColor = Color.White
+                                        )
+                                    ) {
+                                        Text("Settings")
+                                    }
+
+                                    Button(
                                         onClick = { onLogout() },
                                         modifier = Modifier.weight(1f),
                                         shape = RoundedCornerShape(12.dp),
@@ -265,14 +278,6 @@ fun ProfilePage(
                                         Text("Sign Out")
                                     }
                                 }
-                            }
-
-                            // ── Danger Zone: Delete Account ──
-                            item {
-                                DeleteAccountSection(
-                                    viewModel = viewModel,
-                                    onLogout = onLogout
-                                )
                             }
                         }
                     }
@@ -306,8 +311,6 @@ fun ProfileReadSection(
     viewModel: AuthPageViewModel
 ) {
     val formattedPhone = formatPhoneNumber(profile.phone ?: "")
-    var showLinkPasswordDialog by remember { mutableStateOf(false) }
-    var showChangePasswordDialog by remember { mutableStateOf(false) }
 
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A)),
@@ -328,7 +331,7 @@ fun ProfileReadSection(
                 onImageUploaded = {},
                 profileImageUrl = profile.profileImageUrl
             )
-            
+
             Text(
                 text = profile.name ?: "",
                 style = MaterialTheme.typography.titleLarge,
@@ -417,187 +420,12 @@ fun ProfileReadSection(
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Security Settings Section
-            Text(
-                text = "Security Settings",
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White
-            )
-
-            if (!profile.hasPasskey) {
-                Button(
-                    onClick = { viewModel.registerPasskeyV2(profile.email ?: "") },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF800020))
-                ) {
-                    Text("Add Passkey")
-                }
-            }
-
-            if (profile.hasPassword) {
-                Button(
-                    onClick = { showChangePasswordDialog = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
-                ) {
-                    Text("Change Password")
-                }
-            } else {
-                Button(
-                    onClick = { showLinkPasswordDialog = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
-                ) {
-                    Text("Link Password")
-                }
-            }
-
             if (editMode) {
                 Button(onClick = onEdit) {
                     Text("Edit")
                 }
             }
         }
-    }
-
-    if (showLinkPasswordDialog) {
-        var password by remember { mutableStateOf("") }
-        var confirmPassword by remember { mutableStateOf("") }
-        var isLinking by remember { mutableStateOf(false) }
-
-        AlertDialog(
-            onDismissRequest = { if (!isLinking) showLinkPasswordDialog = false },
-            title = { Text("Link Password") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Set a password for your account to use as an alternative login method.")
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it },
-                        label = { Text("Password") },
-                        visualTransformation = PasswordVisualTransformation(),
-                        enabled = !isLinking,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = confirmPassword,
-                        onValueChange = { confirmPassword = it },
-                        label = { Text("Confirm Password") },
-                        visualTransformation = PasswordVisualTransformation(),
-                        enabled = !isLinking,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (password == confirmPassword && password.isNotEmpty()) {
-                            isLinking = true
-                            viewModel.linkPasswordToAccount(password) { success ->
-                                isLinking = false
-                                if (success) showLinkPasswordDialog = false
-                            }
-                        }
-                    },
-                    enabled = !isLinking && password.isNotEmpty() && password == confirmPassword,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF800020))
-                ) {
-                    if (isLinking) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = Color.White
-                        )
-                    } else {
-                        Text("Link")
-                    }
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showLinkPasswordDialog = false },
-                    enabled = !isLinking
-                ) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    if (showChangePasswordDialog) {
-        var currentPassword by remember { mutableStateOf("") }
-        var newPassword by remember { mutableStateOf("") }
-        var confirmNewPassword by remember { mutableStateOf("") }
-        var isChanging by remember { mutableStateOf(false) }
-
-        AlertDialog(
-            onDismissRequest = { if (!isChanging) showChangePasswordDialog = false },
-            title = { Text("Change Password") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = currentPassword,
-                        onValueChange = { currentPassword = it },
-                        label = { Text("Current Password") },
-                        visualTransformation = PasswordVisualTransformation(),
-                        enabled = !isChanging,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = newPassword,
-                        onValueChange = { newPassword = it },
-                        label = { Text("New Password") },
-                        visualTransformation = PasswordVisualTransformation(),
-                        enabled = !isChanging,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = confirmNewPassword,
-                        onValueChange = { confirmNewPassword = it },
-                        label = { Text("Confirm New Password") },
-                        visualTransformation = PasswordVisualTransformation(),
-                        enabled = !isChanging,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (newPassword == confirmNewPassword && newPassword.isNotEmpty()) {
-                            isChanging = true
-                            viewModel.changePassword(currentPassword, newPassword) { success ->
-                                isChanging = false
-                                if (success) showChangePasswordDialog = false
-                            }
-                        }
-                    },
-                    enabled = !isChanging && newPassword.isNotEmpty() && newPassword == confirmNewPassword,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF800020))
-                ) {
-                    if (isChanging) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = Color.White
-                        )
-                    } else {
-                        Text("Update")
-                    }
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showChangePasswordDialog = false },
-                    enabled = !isChanging
-                ) {
-                    Text("Cancel")
-                }
-            }
-        )
     }
 }
 
@@ -621,6 +449,9 @@ fun ProfileEditSection(
     var profileImageBitmap by remember(profile) {
         mutableStateOf(profile?.profileImageBitmap)
     }
+    var profileImageUrl by remember(profile) {
+        mutableStateOf(profile?.profileImageUrl)
+    }
     var birthDate by remember(profile) { mutableStateOf(profile?.birthDate) }
     val isVerified by remember(profile) {
         mutableStateOf(profile?.isVerified ?: false)
@@ -639,14 +470,17 @@ fun ProfileEditSection(
     val updatedProfile = UserProfileData(
         name = name,
         email = email,
-        phone = phone,
-        aboutMe = aboutMe,
+        phone = phone.ifBlank { null },
+        aboutMe = aboutMe.ifBlank { null },
         profileImageBitmap = profileImageBitmap,
+        profileImageUrl = profileImageUrl,
         birthDate = birthDate,
         isVerified = isVerified,
         isMember = isMember,
         hasPassword = hasPassword,
-        hasPasskey = hasPasskey
+        hasPasskey = hasPasskey,
+        eventRsvps = profile?.eventRsvps ?: emptyMap(),
+        blockedEmails = profile?.blockedEmails ?: emptyList()
     )
 
     Card(
@@ -665,8 +499,13 @@ fun ProfileEditSection(
                 editMode = editMode,
                 onImageUploaded = {
                     profileImageBitmap = it
+                    profileImageUrl = null  // Bitmap replaces URL
                 },
-                profileImageUrl = profile?.profileImageUrl
+                profileImageUrl = profileImageUrl,
+                onImageRemoved = {
+                    profileImageBitmap = null
+                    profileImageUrl = null
+                }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -930,8 +769,13 @@ fun ProfilePictureSection(
     profileImageBitmap: Bitmap?,
     editMode: Boolean,
     onImageUploaded: (Bitmap) -> Unit,
+    onImageRemoved: (() -> Unit)? = null
 ) {
     val coroutineScope = rememberCoroutineScope()
+    var showActionSheet by remember { mutableStateOf(false) }
+    var showFullScreenViewer by remember { mutableStateOf(false) }
+    var bitmapToCrop by remember { mutableStateOf<Bitmap?>(null) }
+    val hasExistingPhoto = !profileImageUrl.isNullOrEmpty() || profileImageBitmap != null
 
     Box(
         modifier = Modifier
@@ -955,13 +799,13 @@ fun ProfilePictureSection(
                         )
                     }
                     skiaImage.readPixels(bitmap, 0, 0)
-                    onImageUploaded(bitmap)
+                    bitmapToCrop = bitmap
                 }
             }
         }
 
         if (!profileImageUrl.isNullOrEmpty()) {
-            Image(
+            androidx.compose.foundation.Image(
                 painter = rememberAsyncImagePainter(profileImageUrl),
                 contentDescription = "Profile Picture",
                 modifier = Modifier.fillMaxSize(),
@@ -969,14 +813,14 @@ fun ProfilePictureSection(
             )
         } else {
             if (profileImageBitmap != null) {
-                Image(
+                androidx.compose.foundation.Image(
                     bitmap = profileImageBitmap.asComposeImageBitmap(),
                     contentDescription = "Profile Picture",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
             } else {
-                Image(
+                androidx.compose.foundation.Image(
                     painter = painterResource(Res.drawable.placeholder),
                     contentDescription = "Profile Picture Placeholder",
                     modifier = Modifier.fillMaxSize(),
@@ -987,17 +831,167 @@ fun ProfilePictureSection(
 
         if (editMode) {
             Button(
-                onClick = { launcher.launch() },
+                onClick = {
+                    if (hasExistingPhoto) {
+                        showActionSheet = true
+                    } else {
+                        launcher.launch()
+                    }
+                },
                 modifier = Modifier.fillMaxSize(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.Transparent,
+                    containerColor = Color.Black.copy(alpha = 0.4f),
                     contentColor = Color.White
                 )
             ) {
-                Text("Change Image")
+                Text(
+                    if (hasExistingPhoto) "Edit" else "Add",
+                    style = MaterialTheme.typography.labelSmall
+                )
             }
         }
+
+        // Action Sheet popup
+        if (showActionSheet) {
+            ProfilePhotoActionSheet(
+                onViewPhoto = {
+                    showActionSheet = false
+                    showFullScreenViewer = true
+                },
+                onCropExisting = {
+                    showActionSheet = false
+                    if (profileImageBitmap != null) {
+                        bitmapToCrop = profileImageBitmap
+                    }
+                },
+                onChooseNew = {
+                    showActionSheet = false
+                    launcher.launch()
+                },
+                onRemove = {
+                    showActionSheet = false
+                    onImageRemoved?.invoke()
+                },
+                onDismiss = { showActionSheet = false },
+                hasExistingPhoto = hasExistingPhoto,
+                hasExistingBitmap = profileImageBitmap != null
+            )
+        }
     }
+
+    // Full-screen photo viewer
+    if (showFullScreenViewer) {
+        FullScreenPhotoViewer(
+            profileImageUrl = profileImageUrl,
+            profileImageBitmap = profileImageBitmap,
+            onDismiss = { showFullScreenViewer = false }
+        )
+    }
+
+    // Image cropper
+    bitmapToCrop?.let { bitmap ->
+        ImageCropperDialog(
+            sourceBitmap = bitmap,
+            onCropped = { croppedBitmap ->
+                onImageUploaded(croppedBitmap)
+                bitmapToCrop = null
+            },
+            onDismiss = { bitmapToCrop = null }
+        )
+    }
+}
+
+@Composable
+private fun ProfilePhotoActionSheet(
+    onViewPhoto: () -> Unit,
+    onCropExisting: () -> Unit,
+    onChooseNew: () -> Unit,
+    onRemove: () -> Unit,
+    onDismiss: () -> Unit,
+    hasExistingPhoto: Boolean,
+    hasExistingBitmap: Boolean
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Profile Photo") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                TextButton(
+                    onClick = onViewPhoto,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("View Photo", color = Color.White)
+                }
+                if (hasExistingBitmap) {
+                    TextButton(
+                        onClick = onCropExisting,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Crop Photo", color = Color.White)
+                    }
+                }
+                TextButton(
+                    onClick = onChooseNew,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Choose New Photo", color = Color.White)
+                }
+                TextButton(
+                    onClick = onRemove,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Remove Photo", color = Color(0xFFFF5252))
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+private fun FullScreenPhotoViewer(
+    profileImageUrl: String?,
+    profileImageBitmap: Bitmap?,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Profile Photo") },
+        text = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(400.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (!profileImageUrl.isNullOrEmpty()) {
+                    androidx.compose.foundation.Image(
+                        painter = rememberAsyncImagePainter(profileImageUrl),
+                        contentDescription = "Profile Picture Full Screen",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
+                    )
+                } else if (profileImageBitmap != null) {
+                    androidx.compose.foundation.Image(
+                        bitmap = profileImageBitmap.asComposeImageBitmap(),
+                        contentDescription = "Profile Picture Full Screen",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+    )
 }
 
 // ─── Delete Account Section ─────────────────────────────────────────────────

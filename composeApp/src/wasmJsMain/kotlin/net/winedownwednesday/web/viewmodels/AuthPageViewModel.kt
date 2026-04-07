@@ -10,7 +10,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import net.winedownwednesday.web.FirebaseBridge
 import net.winedownwednesday.web.FirebaseUser
+import net.winedownwednesday.web.JsStreamUser
 import net.winedownwednesday.web.PublicKeyCredential
+import net.winedownwednesday.web.StreamBridge
 import net.winedownwednesday.web.data.models.AuthenticationResponse
 import net.winedownwednesday.web.data.models.ChangePasswordRequest
 import net.winedownwednesday.web.data.models.EmailPasswordRequest
@@ -24,6 +26,12 @@ import net.winedownwednesday.web.data.repositories.AppRepository
 import net.winedownwednesday.web.myWebAuthnBridge
 import net.winedownwednesday.web.toBase64Url
 import kotlin.coroutines.resumeWithException
+
+data class BlockedUserInfo(
+    val id: String,
+    val name: String,
+    val image: String
+)
 
 class AuthPageViewModel(
     private val repository: AppRepository
@@ -48,6 +56,12 @@ class AuthPageViewModel(
 
     private val _isSavingProfile = MutableStateFlow(false)
     val isSavingProfile: StateFlow<Boolean> = _isSavingProfile.asStateFlow()
+
+    private val _blockedUsers = MutableStateFlow<List<BlockedUserInfo>>(emptyList())
+    val blockedUsers: StateFlow<List<BlockedUserInfo>> = _blockedUsers.asStateFlow()
+
+    private val _isUnblocking = MutableStateFlow(false)
+    val isUnblocking: StateFlow<Boolean> = _isUnblocking.asStateFlow()
 
 //    private val userName
 
@@ -540,11 +554,59 @@ class AuthPageViewModel(
         }
         viewModelScope.launch {
             try {
-                val success = repository.sendEmailVerification(email)
-                onResult(success)
+                FirebaseBridge.sendEmailVerification().await<JsAny?>()
+                onResult(true)
             } catch (e: Exception) {
-//                println("$TAG, Error sending verification email: ${e.message}")
                 onResult(false)
+            }
+        }
+    }
+
+    fun fetchBlockedUsers() {
+        viewModelScope.launch {
+            try {
+                val blockedIds = repository.getBlockedUsers()
+                if (blockedIds.isEmpty()) {
+                    _blockedUsers.value = emptyList()
+                    return@launch
+                }
+                // Resolve IDs to display names via Stream
+                try {
+                    val csv = blockedIds.joinToString(",")
+                    val streamUsers = StreamBridge.queryUsersByIds(csv)
+                        .await<JsArray<JsStreamUser>>()
+                    val resolved = (0 until streamUsers.length).map { i ->
+                        val u = streamUsers[i]!!
+                        BlockedUserInfo(
+                            id = u.id,
+                            name = u.name.ifBlank { u.id },
+                            image = u.image
+                        )
+                    }
+                    _blockedUsers.value = resolved
+                } catch (_: Exception) {
+                    // Stream not connected — fall back to raw IDs
+                    _blockedUsers.value = blockedIds.map {
+                        BlockedUserInfo(id = it, name = it, image = "")
+                    }
+                }
+            } catch (_: Exception) { }
+        }
+    }
+
+    fun unblockUser(targetId: String, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            _isUnblocking.value = true
+            try {
+                val success = repository.unblockUser(targetId)
+                if (success) {
+                    _blockedUsers.value = _blockedUsers.value.filter { it.id != targetId }
+                }
+                onResult(success)
+            } catch (_: Exception) {
+                onResult(false)
+            } finally {
+                _isUnblocking.value = false
             }
         }
     }

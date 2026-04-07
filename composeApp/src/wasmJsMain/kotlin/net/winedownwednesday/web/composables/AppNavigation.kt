@@ -56,6 +56,7 @@ import org.w3c.dom.events.Event
     @Serializable data object Profile   : Route
     @Serializable data object Blog      : Route
     @Serializable data object Messaging : Route
+    @Serializable data object Settings  : Route
 }
 
 // Map a Route to its URL hash fragment (e.g. Route.Home → "home")
@@ -70,6 +71,7 @@ private fun Route.toHash(): String = when (this) {
     is Route.Profile   -> "profile"
     is Route.Blog      -> "blog"
     is Route.Messaging -> "messaging"
+    is Route.Settings  -> "settings"
 }
 
 // Restore a Route from a URL hash string (handles "#home" or "home")
@@ -86,6 +88,7 @@ private fun routeFromHash(hash: String): Route {
         "profile"   -> Route.Profile
         "blog"      -> Route.Blog
         "messaging" -> Route.Messaging
+        "settings"  -> Route.Settings
         else        -> Route.Home
     }
 }
@@ -115,6 +118,7 @@ fun AppNavigation(
                 subclass(Route.Profile::class)
                 subclass(Route.Blog::class)
                 subclass(Route.Messaging::class)
+                subclass(Route.Settings::class)
             }
         }
     }
@@ -299,11 +303,12 @@ fun AppNavigation(
                                 entry<Route.Profile>   {
                                     FadeInPage {
                                         ProfilePage(
-                                            isCompactScreen = sizeInfo.useCompactNav,
-                                            onLogout        = { scope.launch { authViewModel.logout() } },
-                                            isNewUser       = isNewUser,
-                                            viewModel       = authViewModel,
-                                            userEmail       = userEmail
+                                            isCompactScreen        = sizeInfo.useCompactNav,
+                                            onLogout               = { scope.launch { authViewModel.logout() } },
+                                            isNewUser              = isNewUser,
+                                            viewModel              = authViewModel,
+                                            userEmail              = userEmail,
+                                            onNavigateToSettings   = { navigateTo(Route.Settings) }
                                         )
                                     }
                                 }
@@ -311,6 +316,23 @@ fun AppNavigation(
                                 entry<Route.Messaging> {
                                     if (isLoggedIn) {
                                         MessagingScreen(isCompactScreen = sizeInfo.useCompactNav)
+                                    } else {
+                                        LaunchedEffect(Unit) { replaceTop(Route.Login) }
+                                    }
+                                }
+                                entry<Route.Settings> {
+                                    if (isLoggedIn) {
+                                        FadeInPage {
+                                            SettingsPage(
+                                                isCompactScreen = sizeInfo.useCompactNav,
+                                                viewModel       = authViewModel,
+                                                onLogout        = { scope.launch { authViewModel.logout() } },
+                                                onNavigateBack  = {
+                                                    if (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
+                                                    else replaceTop(Route.Profile)
+                                                }
+                                            )
+                                        }
                                     } else {
                                         LaunchedEffect(Unit) { replaceTop(Route.Login) }
                                     }
