@@ -68,10 +68,12 @@ To prevent leaking project identifiers, some JavaScript files are excluded from 
 - **Member Directory & Spotlight**: Directory of community members, highlighting a deterministic rotating "Member Spotlight" driven by a robust round-robin queue, automated birthday prioritization, and secure manual override architecture.
 - **Blog Engine**: A rich-text publishing system where content is served from Firebase as structured JSON `ContentBlock` arrays, rather than HTML or MD files. This permitting flawless native UI rendering (without WebViews) optimized for Compose reading modes across devices.
     - **Multi-Client Support Requirement**: While fully implemented on Web/Admin, the **Android client must be updated** to consume these structured payloads natively to maintain parity. See [android_blog_implementation_guide.md] for details.
+    - **Blog TL;DR Summarizer**: When a blog post is opened, the client silently extracts all text blocks (Paragraph, Heading, Quote, ListBlock) and calls `aiInfer` with `task: "summarize"`. If the post has ≥50 chars of content, a collapsed "✨ TL;DR" pill appears below the author line. Expanding it reveals a 3-bullet summary with WdwOrange left-accent card. Requires authentication. Results cached per post ID for the session.
 - **Wine Catalog & Ratings**: A catalog of featured wines with aggregated ratings and user reviews.
     - **Review System**: Authenticated users can leave 1-5 star ratings and written reviews (max 500 chars). The system pins the logged-in user's own review to the top, allowing for edits and deletions.
     - **Soft-Delete Moderation**: Admins can remove inappropriate reviews. Instead of hard deletion, removed reviews are flagged (`flagged: true`) and hidden from the public feed. The original author still sees their review but with editing disabled and a red warning banner containing a `moderationNote` from the admin.
     - **User Flagging**: Community members can flag inappropriate reviews for admin attention. The system guards against duplicate reports and utilizes the shared `moderation_flags` collection to feed the admin dashboard.
+    - **Vino Wine Recommendations** (`recommendWines` Cloud Function): On The Cellar page, a collapsed "✨ Vino's Picks" pill is silently auto-fetched on login via `LaunchedEffect`. Expands to compact `surfaceVariant` cards with WdwOrange left accent, capped at `widthIn(max=500dp)`. **Zero-signal guard**: returns empty if the user has no wine reviews *and* no attended events — prevents hallucinated preferences for new members.
     - **Multi-Client Support Requirement**: The Android client must implement the review API endpoints (`submitWineReview`, `flagWineReview`, etc.) and the corresponding UI components to reach parity. See `~/Documents/wdw-feature-docs/wdw-web/wine-reviews/mobile-client-prompt.md`.
 
 ### Messaging (Real-time Chat)
@@ -153,6 +155,10 @@ To prevent leaking project identifiers, some JavaScript files are excluded from 
     - **Birthday & Wineversary Bot**: Scheduled Cloud Function (`checkBirthdaysAndWineversaries`) runs daily at 9 AM ET. Scans `members` collection for today’s birthdays and membership anniversaries (“Wineversary”). Posts Gemini-generated personalized greetings to Community Lounge only. Duplicate prevention via `bot_greetings` Firestore collection.
     - **JS Bridge**: `ai-bridge.js` (`window.wdwAiBridge`) with `AiBridge.kt` Kotlin external declarations.
     - **Cloud Model**: Gemini 3.1 Flash Lite (`gemini-3.1-flash-lite-preview`) — $0.25/1M input tokens, $1.50/1M output tokens.
+    - **Beyond-Chat AI Functions** (all on `beyond-chat-ai` branch, deployed):
+        - **`recommendWines`**: Personalized wine recommendations. Takes user's review history and attended events from Firestore; feeds to Gemini for top-3 picks with rationale. Zero-signal guard returns `[]` if user has no reviews and no attendance history.
+        - **`recommendEvents`**: Event suggestions based on past attendance patterns. Infrastructure deployed; UI intentionally removed from web client (club is small enough that all-events attendance is the norm). Can be re-enabled in a single PR.
+        - **`aiInfer` (summarize task)**: Called for Blog TL;DR. Context body `{ text, maxBullets }`. Returns `{ result: "• Bullet1\n• Bullet2\n• Bullet3" }`.
     - **Data Requirements**: `memberSince` field on `members` collection for Wineversary tracking; `birthday` field parsed from mixed formats ("March 14", "03/14").
     - **UI Treatment**: Vino bot messages are visually distinct from regular messages:
         - Purple gradient background with gradient border instead of the standard `surfaceVariant`.
