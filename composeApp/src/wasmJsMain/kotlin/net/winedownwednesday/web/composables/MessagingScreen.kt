@@ -2680,6 +2680,14 @@ fun VinoRsvpConfirmCard(
                             fontSize = 12.sp,
                             color = Color.White.copy(alpha = 0.65f)
                         )
+                        if (action.isUpdate) {
+                            Text(
+                                text = "Already registered — update guest count?",
+                                fontSize = 11.sp,
+                                color = vinoAccent.copy(alpha = 0.90f),
+                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                            )
+                        }
                     }
                 }
 
@@ -2776,7 +2784,8 @@ fun VinoRsvpConfirmCard(
                             )
                         } else {
                             Text(
-                                text = "✓  Confirm RSVP",
+                                text = if (action.isUpdate) "↑  Update RSVP"
+                                       else "✓  Confirm RSVP",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = Color.White

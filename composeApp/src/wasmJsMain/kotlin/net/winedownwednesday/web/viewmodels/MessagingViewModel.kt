@@ -1013,7 +1013,8 @@ class MessagingViewModel(
             val eventId: Long,
             val eventName: String,
             val eventDate: String,
-            val guestsCount: Int
+            val guestsCount: Int,
+            val isUpdate: Boolean = false
         ) : VinoAction()
     }
 
@@ -1074,15 +1075,18 @@ class MessagingViewModel(
                     allowUpdates = false,
                     guestsCount = guestsCount
                 )
+                val isUpdate = (_vinoActionsByMessageId.value[messageId]
+                    as? VinoAction.RsvpPending)?.isUpdate ?: false
                 val success = appRepository.addRsvpToEvent(rsvp)
                 if (success) {
                     dismissVinoRsvp(messageId)
                     showModerationFeedback(
-                        "You’re registered! See you there 🍷"
+                        if (isUpdate) "Guest count updated 🍷"
+                        else "You're registered! See you there 🍷"
                     )
                 } else {
                     showModerationFeedback(
-                        "Couldn’t complete your RSVP. Try again or visit Gatherings."
+                        "Couldn't complete your RSVP. Try again or visit Gatherings."
                     )
                 }
             } catch (e: Exception) {
@@ -1236,7 +1240,9 @@ class MessagingViewModel(
                                     eventName = str("eventName"),
                                     eventDate = str("eventDate"),
                                     guestsCount = str("guestsCount")
-                                        .toIntOrNull() ?: 0
+                                        .toIntOrNull() ?: 0,
+                                    isUpdate = actionObj["isUpdate"]
+                                        ?.jsonPrimitive?.content == "true"
                                 )
                             }
                         }
