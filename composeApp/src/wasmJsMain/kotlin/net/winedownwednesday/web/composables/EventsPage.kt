@@ -125,12 +125,26 @@ fun EventsPage(
 
     val upcomingEvents by viewModel.upcomingEvents.collectAsState()
     val pastEvents by viewModel.pastEvents.collectAsState()
+    val pendingEventName by viewModel.pendingEventName.collectAsState()
 
     var showUpcoming by remember { mutableStateOf(true) }
 
     val selectedEvent by viewModel.selectedEvent.collectAsState()
 
     var eventForRsvp by remember { mutableStateOf<Event?>(null) }
+
+    // Auto-select an event by name when navigated from a Vino card
+    androidx.compose.runtime.LaunchedEffect(upcomingEvents, pastEvents, pendingEventName) {
+        val name = pendingEventName ?: return@LaunchedEffect
+        val allEventsFlat = (upcomingEvents ?: emptyList()) + (pastEvents ?: emptyList())
+        val match = allEventsFlat.firstOrNull { it.name.equals(name, ignoreCase = true) }
+        if (match != null) {
+            // Switch to the right tab so the user sees the card highlighted
+            showUpcoming = (upcomingEvents ?: emptyList()).contains(match)
+            viewModel.setSelectedEvent(match)
+            viewModel.clearPendingEventName()
+        }
+    }
 
 
     Column(

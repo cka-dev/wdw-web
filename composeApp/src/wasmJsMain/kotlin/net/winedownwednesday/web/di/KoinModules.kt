@@ -36,7 +36,7 @@ val provideMembersViewModel = module {
 }
 
 val provideEventsPageViewModel = module {
-    viewModel { EventsPageViewModel(get()) }
+    single { EventsPageViewModel(get()) }
 }
 
 val providePodcastsPageViewModel = module {
@@ -48,7 +48,7 @@ val provideAboutPageViewModel = module {
 }
 
 val provideWinePageViewModel = module {
-    viewModel { WinePageViewModel(get()) }
+    single { WinePageViewModel(get()) }
 }
 
 val provideAuthPageViewModel = module {

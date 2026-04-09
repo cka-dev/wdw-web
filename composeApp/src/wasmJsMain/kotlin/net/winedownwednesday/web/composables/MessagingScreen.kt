@@ -14,6 +14,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -34,6 +35,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -64,6 +66,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -93,12 +97,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextRange
@@ -108,11 +109,13 @@ import androidx.compose.ui.text.font.FontStyle.Companion.Italic
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 import net.winedownwednesday.web.JsChannelMember
@@ -124,7 +127,6 @@ import net.winedownwednesday.web.data.Member
 import net.winedownwednesday.web.getDroppedFile
 import net.winedownwednesday.web.isDraggingOver
 import net.winedownwednesday.web.setupDragDrop
-import net.winedownwednesday.web.vibrate
 import net.winedownwednesday.web.viewmodels.MessagingViewModel
 import org.kodein.emoji.compose.EmojiService
 import org.kodein.emoji.compose.m3.TextWithNotoImageEmoji
@@ -158,10 +160,40 @@ data class ModerationCallbacks(
 
 val LocalModeration = androidx.compose.runtime.compositionLocalOf { ModerationCallbacks() }
 
+// ─── AI Feature Callbacks (provided at MessagingScreen level) ───────────────
+ data class AiCallbacks(
+    val smartReplies: List<String> = emptyList(),
+    val onSendSmartReply: (String) -> Unit = {},
+    val onClearSmartReplies: () -> Unit = {},
+    val aiRewriteState: MessagingViewModel.AiRewriteState = MessagingViewModel.AiRewriteState.Idle,
+    val onRewriteMessage: (String, String, (String) -> Unit) -> Unit = { _, _, _ -> },
+    val onUndoRewrite: () -> String? = { null },
+    val onClearRewriteState: () -> Unit = {},
+    val catchUpState: MessagingViewModel.CatchUpState = MessagingViewModel.CatchUpState.Hidden,
+    val onSummarize: () -> Unit = {},
+    val onDismissCatchUp: () -> Unit = {},
+    val translations: Map<String, MessagingViewModel.TranslationResult> = emptyMap(),
+    val onTranslate: (String, String) -> Unit = { _, _ -> },
+    val onClearTranslation: (String) -> Unit = {},
+    val vinoCardsByMessageId: Map<String, List<MessagingViewModel.VinoCard>> = emptyMap(),
+    val vinoActionsByMessageId: Map<String, MessagingViewModel.VinoAction> = emptyMap(),
+    val vinoRsvpLoading: Set<String> = emptySet(),
+    val onClearVinoCards: () -> Unit = {},
+    val onNavigateToEvent: (eventName: String) -> Unit = {},
+    val onNavigateToWine: (wineName: String) -> Unit = {},
+    val onSubmitVinoRsvp: (messageId: String, eventId: Long, guestsCount: Int) -> Unit =
+        { _, _, _ -> },
+    val onDismissVinoRsvp: (messageId: String) -> Unit = {}
+)
+
+val LocalAi = androidx.compose.runtime.compositionLocalOf { AiCallbacks() }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessagingScreen(
-    isCompactScreen: Boolean
+    isCompactScreen: Boolean,
+    onNavigateToEvents: (eventName: String) -> Unit = {},
+    onNavigateToWines: (wineName: String) -> Unit = {}
 ) {
     val viewModel: MessagingViewModel = koinInject()
     val streamToken by viewModel.streamToken.collectAsState()
@@ -184,6 +216,15 @@ fun MessagingScreen(
     val blockedEmails by viewModel.blockedEmails.collectAsState()
     val blockedUserProfiles by viewModel.blockedUserProfiles.collectAsState()
     val moderationLoading by viewModel.moderationLoading.collectAsState()
+    val vinoResponding by viewModel.vinoResponding.collectAsState()
+    val smartReplies by viewModel.smartReplies.collectAsState()
+    val threadSmartReplies by viewModel.threadSmartReplies.collectAsState()
+    val aiRewriteState by viewModel.aiRewriteState.collectAsState()
+    val catchUpState by viewModel.catchUpState.collectAsState()
+    val translations by viewModel.translations.collectAsState()
+    val vinoCardsByMessageId by viewModel.vinoCardsByMessageId.collectAsState()
+    val vinoActionsByMessageId by viewModel.vinoActionsByMessageId.collectAsState()
+    val vinoRsvpLoading by viewModel.vinoRsvpLoading.collectAsState()
     var showNewChatDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
 
@@ -255,9 +296,42 @@ fun MessagingScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
+        val aiCallbacks = remember(
+            smartReplies, aiRewriteState, catchUpState, translations,
+            vinoCardsByMessageId, vinoActionsByMessageId, vinoRsvpLoading
+        ) {
+            AiCallbacks(
+                smartReplies = smartReplies,
+                onSendSmartReply = { viewModel.sendSmartReply(it) },
+                onClearSmartReplies = { viewModel.clearSmartReplies() },
+                aiRewriteState = aiRewriteState,
+                onRewriteMessage = { text, instr, cb -> viewModel.rewriteMessage(text, instr, cb) },
+                onUndoRewrite = { viewModel.undoRewrite() },
+                onClearRewriteState = { viewModel.clearRewriteState() },
+                catchUpState = catchUpState,
+                onSummarize = { viewModel.summarizeThread() },
+                onDismissCatchUp = { viewModel.dismissCatchUp() },
+                translations = translations,
+                onTranslate = { id, text -> viewModel.translateMessage(id, text) },
+                onClearTranslation = { viewModel.clearTranslation(it) },
+                vinoCardsByMessageId = vinoCardsByMessageId,
+                vinoActionsByMessageId = vinoActionsByMessageId,
+                vinoRsvpLoading = vinoRsvpLoading,
+                onClearVinoCards = { viewModel.clearVinoCards() },
+                onNavigateToEvent = onNavigateToEvents,
+                onNavigateToWine = onNavigateToWines,
+                onSubmitVinoRsvp = { msgId, evId, guests ->
+                    viewModel.submitVinoRsvp(msgId, evId, guests)
+                },
+                onDismissVinoRsvp = { msgId ->
+                    viewModel.dismissVinoRsvp(msgId)
+                }
+            )
+        }
         CompositionLocalProvider(
             LocalMembers provides membersList,
-            LocalModeration provides moderationCallbacks
+            LocalModeration provides moderationCallbacks,
+            LocalAi provides aiCallbacks
         ) {
             when {
                 isConnecting -> {
@@ -322,12 +396,16 @@ fun MessagingScreen(
                                 )
                             },
                             onOpenSettings = { showSettingsDialog = true },
+                            onOpenVinoDm = { viewModel.openVinoDm() },
+                            onClearVinoChat = { viewModel.clearVinoChat() },
+                            isVinoDm = viewModel.isVinoDmChannel(),
+                            vinoResponding = vinoResponding,
                             modifier = Modifier
-                                .weight(if (threadParentMessage != null) 0.65f else 1f)
+                                .weight(if (!isCompactScreen && threadParentMessage != null) 0.65f else 1f)
                                 .fillMaxHeight()
                         )
                         // Thread panel slides in from the right
-                        if (threadParentMessage != null) {
+                        if (!isCompactScreen && threadParentMessage != null) {
                             Box(
                                 modifier = Modifier
                                     .width(2.dp)
@@ -338,11 +416,37 @@ fun MessagingScreen(
                                 parentMessage = threadParentMessage!!,
                                 replies = threadReplies,
                                 currentUserId = streamToken?.userId,
+                                threadSmartReplies = threadSmartReplies,
                                 onClose = { viewModel.closeThread() },
-                                onSendReply = { viewModel.sendThreadReply(it) },
+                                onSendReply = { text, file -> viewModel.sendThreadReply(text, file) },
+                                onSendGif = { url, title -> viewModel.sendGiphyMessage(url, title, threadParentMessage!!.id) },
+                                onSendSmartReply = { viewModel.sendThreadSmartReply(it) },
+                                onClearSmartReplies = { viewModel.clearThreadSmartReplies() },
                                 modifier = Modifier
                                     .weight(0.35f)
                                     .fillMaxHeight()
+                            )
+                        }
+                    }
+                    
+                    // Thread panel overlay on compact screens
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = isCompactScreen && threadParentMessage != null,
+                        enter = androidx.compose.animation.slideInHorizontally { it },
+                        exit = androidx.compose.animation.slideOutHorizontally { it }
+                    ) {
+                        if (threadParentMessage != null) {
+                            ThreadPanel(
+                                parentMessage = threadParentMessage!!,
+                                replies = threadReplies,
+                                currentUserId = streamToken?.userId,
+                                threadSmartReplies = threadSmartReplies,
+                                onClose = { viewModel.closeThread() },
+                                onSendReply = { text, file -> viewModel.sendThreadReply(text, file) },
+                                onSendGif = { url, title -> viewModel.sendGiphyMessage(url, title, threadParentMessage!!.id) },
+                                onSendSmartReply = { viewModel.sendThreadSmartReply(it) },
+                                onClearSmartReplies = { viewModel.clearThreadSmartReplies() },
+                                modifier = Modifier.fillMaxSize()
                             )
                         }
                     }
@@ -460,6 +564,10 @@ fun ChatLayout(
     onSendGif: (String, String) -> Unit,
     onForward: (String, String) -> Unit,
     onOpenSettings: () -> Unit = {},
+    onOpenVinoDm: () -> Unit = {},
+    onClearVinoChat: () -> Unit = {},
+    isVinoDm: Boolean = false,
+    vinoResponding: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var splitRatio by remember { mutableStateOf(0.3f) }
@@ -478,6 +586,7 @@ fun ChatLayout(
                     selectedChannelId = selectedChannelId,
                     onChannelSelect = onChannelSelect,
                     onNewChatClick = onNewChatClick,
+                    onOpenVinoDm = onOpenVinoDm,
                     notificationsEnabled = notificationsEnabled,
                     onEnableNotifications = onEnableNotifications,
                     searchQuery = channelSearchQuery,
@@ -554,7 +663,10 @@ fun ChatLayout(
                         onSendGif = onSendGif,
                         onForward = onForward,
                         channels = channels,
-                        onOpenSettings = onOpenSettings
+                        onOpenSettings = onOpenSettings,
+                        onClearVinoChat = onClearVinoChat,
+                        isVinoDm = isVinoDm,
+                        vinoResponding = vinoResponding
                     )
                 }
             }
@@ -569,6 +681,7 @@ fun ChannelSidebar(
     selectedChannelId: String?,
     onChannelSelect: (String) -> Unit,
     onNewChatClick: () -> Unit,
+    onOpenVinoDm: () -> Unit,
     notificationsEnabled: Boolean,
     onEnableNotifications: () -> Unit,
     searchQuery: String,
@@ -643,7 +756,10 @@ fun ChannelSidebar(
                 val groupChats = filteredChannels.filter { !it.isDirectMessage }
                 val dms = filteredChannels.filter { it.isDirectMessage }
                 val blockedIds = LocalModeration.current.blockedUserIds
-                val unblockedDMs = dms.filter { it.otherUserId !in blockedIds }
+                // Exclude the Vino DM — it's always represented by the pinned entry
+                val unblockedDMs = dms.filter {
+                    it.otherUserId !in blockedIds && it.otherUserId != "vino-bot"
+                }
                 val blockedDMs = dms.filter { it.otherUserId in blockedIds }
                 var blockedExpanded by remember { mutableStateOf(false) }
                 var unblockTarget by remember { mutableStateOf<JsChatChannel?>(null) }
@@ -707,7 +823,7 @@ fun ChannelSidebar(
                         }
                     }
 
-                    if (unblockedDMs.isNotEmpty()) {
+                    if (unblockedDMs.isNotEmpty() || true) { // always show DMs section for Vino
                         item {
                             Text(
                                 "DIRECT MESSAGES",
@@ -720,6 +836,68 @@ fun ChannelSidebar(
                                     bottom = 8.dp
                                 )
                             )
+                        }
+                        // Pinned Vino entry — always present
+                        item {
+                            val vinoDmSelected = channels
+                                .find { it.isDirectMessage && it.otherUserId == "vino-bot" }
+                                ?.id == selectedChannelId
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 2.dp)
+                                    .clickable { onOpenVinoDm() },
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (vinoDmSelected)
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    else MaterialTheme.colorScheme.surface
+                                ),
+                                border = if (vinoDmSelected) BorderStroke(
+                                    1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                                ) else null,
+                                elevation = CardDefaults.cardElevation(0.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                androidx.compose.ui.graphics.Color(
+                                                    0xFFFF7F33
+                                                ).copy(alpha = 0.15f)
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            "🍷",
+                                            fontSize = 20.sp
+                                        )
+                                    }
+                                    Spacer(Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            "Vino",
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 14.sp
+                                        )
+                                        Text(
+                                            "Your AI sommelier",
+                                            color = MaterialTheme.colorScheme.onSurface
+                                                .copy(alpha = 0.5f),
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                    Text(
+                                        "🤖",
+                                        fontSize = 14.sp
+                                    )
+                                }
+                            }
                         }
                         items(unblockedDMs) { channel ->
                             ChannelItem(
@@ -954,7 +1132,10 @@ fun ChatArea(
     onSendGif: (String, String) -> Unit,
     onForward: (String, String) -> Unit,
     channels: List<JsChatChannel>,
-    onOpenSettings: () -> Unit = {}
+    onOpenSettings: () -> Unit = {},
+    onClearVinoChat: () -> Unit = {},
+    isVinoDm: Boolean = false,
+    vinoResponding: Boolean = false
 ) {
     var activeReactionMessageId by remember { mutableStateOf<String?>(null) }
     var isInputEmojiPickerOpen by remember { mutableStateOf(false) }
@@ -1013,6 +1194,53 @@ fun ChatArea(
                     }
                 },
                 actions = {
+                    // Clear chat — only shown in the Vino DM
+                    var showClearConfirm by remember { mutableStateOf(false) }
+                    if (isVinoDm) {
+                        if (showClearConfirm) {
+                            AlertDialog(
+                                onDismissRequest = { showClearConfirm = false },
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                title = {
+                                    Text(
+                                        "Clear chat history?",
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                },
+                                text = {
+                                    Text(
+                                        "All messages in this conversation will be permanently deleted. Vino will start fresh with no prior context.",
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                    )
+                                },
+                                confirmButton = {
+                                    TextButton(onClick = {
+                                        onClearVinoChat()
+                                        showClearConfirm = false
+                                    }) {
+                                        Text("Clear", color = Color(0xFFE53935))
+                                    }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { showClearConfirm = false }) {
+                                        Text(
+                                            "Cancel",
+                                            color = MaterialTheme.colorScheme.onSurface
+                                                .copy(alpha = 0.6f)
+                                        )
+                                    }
+                                }
+                            )
+                        }
+                        IconButton(onClick = { showClearConfirm = true }) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "Clear Vino chat history",
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
                     IconButton(onClick = {
                         isSearchVisible = !isSearchVisible
                         if (!isSearchVisible) onSearchQueryChange("")
@@ -1085,15 +1313,11 @@ fun ChatArea(
 
             var unreadCount by remember { mutableStateOf(0) }
 
-            // Track new messages arriving while scrolled up
+            // Always scroll to bottom on new messages — users expect to see the latest
             LaunchedEffect(filteredMessages.size) {
                 if (filteredMessages.isNotEmpty()) {
-                    if (isAtBottom) {
-                        listState.animateScrollToItem(filteredMessages.size - 1)
-                        unreadCount = 0
-                    } else {
-                        unreadCount++
-                    }
+                    listState.animateScrollToItem(filteredMessages.size - 1)
+                    unreadCount = 0
                 }
             }
 
@@ -1105,6 +1329,147 @@ fun ChatArea(
             val coroutineScope = rememberCoroutineScope()
 
             Box(modifier = Modifier.weight(1f)) {
+                // ─── CatchUp Banner (Phase 4) ───────────────────────────
+                val aiState = LocalAi.current
+                val catchUp = aiState.catchUpState
+                if (catchUp !is MessagingViewModel.CatchUpState.Hidden) {
+                    Box(
+                        modifier = Modifier.align(Alignment.TopCenter).zIndex(10f)
+                ) {
+                    when (catchUp) {
+                        is MessagingViewModel.CatchUpState.Available -> {
+                            Surface(
+                                onClick = { aiState.onSummarize() },
+                                color = Color(0xFF9C6ADE),
+                                shape = RoundedCornerShape(20.dp),
+                                shadowElevation = 4.dp,
+                                modifier = Modifier.padding(top = 8.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    Text("✨", fontSize = 14.sp)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        "What did I miss? (${catchUp.count} new)",
+                                        color = Color.White,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+                        }
+                        is MessagingViewModel.CatchUpState.Loading -> {
+                            Surface(
+                                color = Color(0xFF9C6ADE),
+                                shape = RoundedCornerShape(20.dp),
+                                shadowElevation = 4.dp,
+                                modifier = Modifier.padding(top = 8.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(14.dp),
+                                        strokeWidth = 1.5.dp,
+                                        color = Color.White
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        "Summarizing...",
+                                        color = Color.White,
+                                        fontSize = 13.sp
+                                    )
+                                }
+                            }
+                        }
+                        is MessagingViewModel.CatchUpState.Ready -> {
+                            Card(
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                                    .fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                ),
+                                elevation = CardDefaults.cardElevation(4.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            "✨ Catch-Up Summary",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 15.sp,
+                                            color = Color(0xFF9C6ADE),
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        IconButton(
+                                            onClick = { aiState.onDismissCatchUp() },
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Close,
+                                                contentDescription = "Dismiss",
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                    val s = catchUp.summary
+                                    if (s.key_topics.isNotEmpty()) {
+                                        Spacer(Modifier.height(8.dp))
+                                        Text("📋 Key Topics", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                        s.key_topics.forEach { Text("  • $it", fontSize = 13.sp) }
+                                    }
+                                    if (s.decisions.isNotEmpty()) {
+                                        Spacer(Modifier.height(6.dp))
+                                        Text("✅ Decisions", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                        s.decisions.forEach { Text("  • $it", fontSize = 13.sp) }
+                                    }
+                                    if (s.mentions_of_you.isNotEmpty()) {
+                                        Spacer(Modifier.height(6.dp))
+                                        Text("📌 Your Mentions", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                        s.mentions_of_you.forEach { Text("  • $it", fontSize = 13.sp) }
+                                    }
+                                    if (s.action_items.isNotEmpty()) {
+                                        Spacer(Modifier.height(6.dp))
+                                        Text("🎯 Action Items", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                        s.action_items.forEach { Text("  • $it", fontSize = 13.sp) }
+                                    }
+                                    if (s.vibe.isNotBlank()) {
+                                        Spacer(Modifier.height(6.dp))
+                                        Text(
+                                            "🍷 Vibe: ${s.vibe}",
+                                            fontSize = 13.sp,
+                                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        is MessagingViewModel.CatchUpState.Error -> {
+                            Surface(
+                                onClick = { aiState.onDismissCatchUp() },
+                                color = MaterialTheme.colorScheme.errorContainer,
+                                shape = RoundedCornerShape(20.dp),
+                                modifier = Modifier.padding(top = 8.dp)
+                            ) {
+                                Text(
+                                    catchUp.message,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    fontSize = 13.sp,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                            }
+                        }
+                        else -> {}
+                    }
+                    }
+                }
                 LazyColumn(
                     state = listState,
                     modifier = Modifier
@@ -1138,6 +1503,10 @@ fun ChatArea(
                             }
                         }
 
+                        // Determine if this is the last Vino message in the list
+                        val lastVinoBotIndex = filteredMessages.indexOfLast {
+                            it.userId == "vino-bot"
+                        }
                         MessageBubble(
                             message = message,
                             isMe = message.userId == currentUserId,
@@ -1168,6 +1537,7 @@ fun ChatArea(
                             onForward = { forwardingMessage = message },
                             onImageClick = { lightboxImageUrl = it },
                             currentUserId = currentUserId,
+                            isLastVinoMessage = index == lastVinoBotIndex,
                         )
                     }
                 }
@@ -1240,6 +1610,36 @@ fun ChatArea(
                     fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
                 )
+            }
+
+            // Vino AI "thinking" indicator
+            AnimatedVisibility(
+                visible = vinoResponding,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "\uD83E\uDD16",
+                        fontSize = 14.sp
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "Vino is thinking...",
+                        color = Color(0xFF9C6ADE),
+                        fontSize = 12.sp,
+                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(12.dp),
+                        strokeWidth = 1.5.dp,
+                        color = Color(0xFF9C6ADE)
+                    )
+                }
             }
 
             // Reply Banner
@@ -1363,11 +1763,13 @@ fun MessageBubble(
     onForward: () -> Unit = {},
     onImageClick: (String) -> Unit = {},
     currentUserId: String?,
+    isLastVinoMessage: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var dragOffsetX by remember { mutableFloatStateOf(0f) }
     val swipeThreshold = 60f
     var showProfilePopover by remember { mutableStateOf(false) }
+    val isVinoBot = message.userId == "vino-bot"
 
     Box(
         modifier = Modifier
@@ -1433,13 +1835,28 @@ fun MessageBubble(
                 Box(
                     modifier = Modifier
                         .size(28.dp)
-                        .clickable { showProfilePopover = true }
+                        .then(
+                            if (isVinoBot) Modifier.border(
+                                2.dp,
+                                Brush.linearGradient(
+                                    listOf(
+                                        Color(0xFF9C6ADE),
+                                        Color(0xFF6C5CE7)
+                                    )
+                                ),
+                                CircleShape
+                            ) else Modifier
+                        )
+                        .clickable { if (!isVinoBot) showProfilePopover = true }
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .clip(CircleShape)
-                            .background(WdwOrange),
+                            .background(
+                                if (isVinoBot) Color(0xFF6C5CE7)
+                                else WdwOrange
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         val userImg = message.userImage
@@ -1510,12 +1927,43 @@ fun MessageBubble(
             ) {
                 if (!isMe) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            message.userName,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                            fontSize = 10.sp,
-                            modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
-                        )
+                        if (isVinoBot) {
+                            Text(
+                                "\uD83E\uDD16",
+                                fontSize = 10.sp
+                            )
+                            Spacer(Modifier.width(3.dp))
+                            Text(
+                                "Vino",
+                                color = Color(0xFF9C6ADE),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(bottom = 2.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Surface(
+                                color = Color(0xFF9C6ADE).copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    "AI",
+                                    color = Color(0xFF9C6ADE),
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(
+                                        horizontal = 4.dp,
+                                        vertical = 1.dp
+                                    )
+                                )
+                            }
+                        } else {
+                            Text(
+                                message.userName,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                fontSize = 10.sp,
+                                modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
+                            )
+                        }
                         if (message.pinned) {
                             Spacer(Modifier.width(4.dp))
                             TextWithNotoImageEmoji(
@@ -1590,6 +2038,7 @@ fun MessageBubble(
                     Surface(
                         color = if (isMediaOnlyMessage) Color.Transparent
                         else if (isMe) WdwOrange
+                        else if (isVinoBot) Color.Transparent
                         else MaterialTheme.colorScheme.surfaceVariant,
                         shadowElevation = 0.dp,
                         shape = RoundedCornerShape(
@@ -1602,6 +2051,34 @@ fun MessageBubble(
                             .then(mentionBorder)
                             .then(
                                 if (isMediaOnlyMessage) Modifier.widthIn(max = 220.dp)
+                                else if (isVinoBot) Modifier.background(
+                                    brush = Brush.linearGradient(
+                                        colors = listOf(
+                                            Color(0xFF9C6ADE).copy(alpha = 0.12f),
+                                            Color(0xFF6C5CE7).copy(alpha = 0.08f)
+                                        )
+                                    ),
+                                    shape = RoundedCornerShape(
+                                        topStart = 16.dp,
+                                        topEnd = 16.dp,
+                                        bottomStart = 4.dp,
+                                        bottomEnd = 16.dp
+                                    )
+                                ).border(
+                                    width = 2.dp,
+                                    brush = Brush.verticalGradient(
+                                        listOf(
+                                            Color(0xFF9C6ADE),
+                                            Color(0xFF6C5CE7)
+                                        )
+                                    ),
+                                    shape = RoundedCornerShape(
+                                        topStart = 16.dp,
+                                        topEnd = 16.dp,
+                                        bottomStart = 4.dp,
+                                        bottomEnd = 16.dp
+                                    )
+                                )
                                 else Modifier
                             )
                             .let {
@@ -1975,6 +2452,25 @@ fun MessageBubble(
                                 .padding(horizontal = 2.dp)
                         )
                     }
+                    // ─── Translate button (Phase 5) ─────────────────
+                    if (!message.isDeleted && !isMe && message.text.isNotBlank()) {
+                        val aiLocal = LocalAi.current
+                        val hasTranslation = aiLocal.translations.containsKey(message.id)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "🌐",
+                            fontSize = 14.sp,
+                            modifier = Modifier
+                                .clickable {
+                                    if (hasTranslation) {
+                                        aiLocal.onClearTranslation(message.id)
+                                    } else {
+                                        aiLocal.onTranslate(message.id, message.text)
+                                    }
+                                }
+                                .padding(horizontal = 2.dp)
+                        )
+                    }
                 }
 
                 // Clickable reply count to open thread
@@ -1991,6 +2487,103 @@ fun MessageBubble(
                             .clickable { onOpenThread() }
                             .padding(start = 4.dp, top = 2.dp)
                     )
+                }
+
+                // ─── Translation Overlay (Phase 5) ──────────────────
+                val aiTr = LocalAi.current
+                val translation = aiTr.translations[message.id]
+                AnimatedVisibility(
+                    visible = translation != null,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    if (translation != null) {
+                        Surface(
+                            color = Color(0xFF4ea4e8).copy(alpha = 0.08f),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.padding(top = 4.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(8.dp)) {
+                                if (translation.sourceLanguage.isNotBlank()) {
+                                    Text(
+                                        "Translated from ${translation.sourceLanguage}",
+                                        color = Color(0xFF4ea4e8),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                }
+                                Text(
+                                    translation.translatedText,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // ─── Vino Cards (inline below each Vino reply that has them) ───
+                if (isVinoBot) {
+                    val aiLocal = LocalAi.current
+                    val rsvpAction = aiLocal.vinoActionsByMessageId[message.id]
+                    val hasRsvpPending = rsvpAction is MessagingViewModel.VinoAction.RsvpPending
+
+                    // Suppress event cards while RSVP confirmation is showing —
+                    // the confirm card already displays event name & date, and
+                    // "View Details" would navigate the user away mid-flow.
+                    val cards = (aiLocal.vinoCardsByMessageId[message.id] ?: emptyList())
+                        .let { all ->
+                            if (hasRsvpPending)
+                                all.filterIsInstance<MessagingViewModel.VinoCard.WineCard>()
+                            else all
+                        }
+                    AnimatedVisibility(
+                        visible = cards.isNotEmpty(),
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        LazyRow(
+                            modifier = Modifier
+                                .padding(top = 8.dp)
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(start = 4.dp, end = 4.dp)
+                        ) {
+                            items(cards.size) { i ->
+                                val card = cards[i]
+                                VinoCardItem(
+                                    card = card,
+                                    onClick = {
+                                        when (card) {
+                                            is MessagingViewModel.VinoCard.EventCard ->
+                                                aiLocal.onNavigateToEvent(card.name)
+                                            is MessagingViewModel.VinoCard.WineCard ->
+                                                aiLocal.onNavigateToWine(card.name)
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    // ─── RSVP Confirmation Card ────────────────────────────────
+                    if (rsvpAction is MessagingViewModel.VinoAction.RsvpPending) {
+                        val isLoading = aiLocal.vinoRsvpLoading.contains(message.id)
+                        VinoRsvpConfirmCard(
+                            action = rsvpAction,
+                            messageId = message.id,
+                            isLoading = isLoading,
+                            onConfirm = { guests ->
+                                aiLocal.onSubmitVinoRsvp(
+                                    message.id, rsvpAction.eventId, guests
+                                )
+                            },
+                            onDismiss = {
+                                aiLocal.onDismissVinoRsvp(message.id)
+                            }
+                        )
+                    }
                 }
 
                 // Reaction picker — use full emoji suite
@@ -2014,29 +2607,428 @@ fun MessageBubble(
 }
 
 /**
+ * Inline RSVP confirmation card rendered below a Vino message.
+ * The user can adjust the guest count and confirm or cancel the RSVP.
+ */
+@Composable
+fun VinoRsvpConfirmCard(
+    action: MessagingViewModel.VinoAction.RsvpPending,
+    messageId: String,
+    isLoading: Boolean,
+    onConfirm: (guestsCount: Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val vinoAccent = Color(0xFF9C6ADE)
+    val vinoAccentDark = Color(0xFF7B4FBF)
+    var guestsCount by remember(messageId) {
+        mutableStateOf(action.guestsCount.coerceIn(0, 5))
+    }
+
+    AnimatedVisibility(
+        visible = true,
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically()
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(top = 10.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            vinoAccent.copy(alpha = 0.18f),
+                            vinoAccentDark.copy(alpha = 0.10f)
+                        )
+                    )
+                )
+                .border(
+                    width = 1.dp,
+                    brush = Brush.linearGradient(
+                        listOf(vinoAccent.copy(alpha = 0.55f), vinoAccent.copy(alpha = 0.2f))
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .padding(horizontal = 16.dp, vertical = 14.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                // Header
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(vinoAccent.copy(alpha = 0.22f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("🎟", fontSize = 14.sp)
+                    }
+                    Column {
+                        Text(
+                            text = action.eventName,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp,
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = action.eventDate,
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.65f)
+                        )
+                    }
+                }
+
+                // Guest counter
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Additional guests:",
+                        fontSize = 13.sp,
+                        color = Color.White.copy(alpha = 0.80f)
+                    )
+                    // − button
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (guestsCount > 0)
+                                    vinoAccent.copy(alpha = 0.30f)
+                                else
+                                    Color.White.copy(alpha = 0.08f)
+                            )
+                            .clickable(enabled = guestsCount > 0) {
+                                guestsCount = (guestsCount - 1).coerceAtLeast(0)
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "−",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (guestsCount > 0) vinoAccent else Color.White.copy(alpha = 0.30f)
+                        )
+                    }
+                    Text(
+                        text = "$guestsCount",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White,
+                        modifier = Modifier.widthIn(min = 20.dp),
+                        textAlign = TextAlign.Center
+                    )
+                    // + button
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (guestsCount < 5)
+                                    vinoAccent.copy(alpha = 0.30f)
+                                else
+                                    Color.White.copy(alpha = 0.08f)
+                            )
+                            .clickable(enabled = guestsCount < 5) {
+                                guestsCount = (guestsCount + 1).coerceAtMost(5)
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "+",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (guestsCount < 5) vinoAccent else Color.White.copy(alpha = 0.30f)
+                        )
+                    }
+                }
+
+                // Action buttons
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Confirm button
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                brush = Brush.linearGradient(
+                                    listOf(vinoAccent, vinoAccentDark)
+                                )
+                            )
+                            .clickable(enabled = !isLoading) { onConfirm(guestsCount) }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = Color.White
+                            )
+                        } else {
+                            Text(
+                                text = "✓  Confirm RSVP",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                    // Cancel button
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .border(
+                                1.dp,
+                                vinoAccent.copy(alpha = 0.45f),
+                                RoundedCornerShape(10.dp)
+                            )
+                            .clickable(enabled = !isLoading) { onDismiss() }
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Cancel",
+                            fontSize = 13.sp,
+                            color = Color.White.copy(alpha = 0.70f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Renders a single compact Vino Card for display in a horizontal scroll row.
+ * Supports EventCard and WineCard variants.
+ * Tapping the card triggers [onClick] (e.g. navigate to Gatherings).
+ */
+@Composable
+fun VinoCardItem(
+    card: MessagingViewModel.VinoCard,
+    onClick: () -> Unit = {}
+) {
+    val vinoPurple    = Color(0xFF9C6ADE)
+    val vinoAccent    = Color(0xFF6C5CE7)
+    val wineTerracotta = Color(0xFFE07B5F)  // warm accent for wine cards
+    val cardBg        = Color(0xFF1A1040)
+
+    // Type-specific colours
+    val (headerAccent, bodyAccent) = when (card) {
+        is MessagingViewModel.VinoCard.WineCard  ->
+            Pair(wineTerracotta.copy(alpha = 0.32f),  wineTerracotta)
+        is MessagingViewModel.VinoCard.EventCard ->
+            Pair(vinoPurple.copy(alpha = 0.35f),      vinoPurple)
+    }
+    val borderBrush = when (card) {
+        is MessagingViewModel.VinoCard.WineCard  ->
+            androidx.compose.ui.graphics.Brush.linearGradient(
+                colors = listOf(wineTerracotta.copy(alpha = 0.55f), vinoAccent.copy(alpha = 0.25f))
+            )
+        is MessagingViewModel.VinoCard.EventCard ->
+            androidx.compose.ui.graphics.Brush.linearGradient(
+                colors = listOf(vinoPurple.copy(alpha = 0.6f), vinoAccent.copy(alpha = 0.3f))
+            )
+    }
+
+    Surface(
+        onClick = onClick,
+        color = cardBg,
+        shape = RoundedCornerShape(14.dp),
+        modifier = Modifier
+            .width(200.dp)
+            .hoverScale(1.03f)
+            .border(width = 1.dp, brush = borderBrush, shape = RoundedCornerShape(14.dp))
+    ) {
+        Column {
+            // ── Coloured header strip with emoji + type label ──
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                            colors = listOf(headerAccent, vinoAccent.copy(alpha = 0.15f))
+                        )
+                    )
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = when (card) {
+                            is MessagingViewModel.VinoCard.EventCard -> "\uD83D\uDCC5"
+                            is MessagingViewModel.VinoCard.WineCard  -> "\uD83C\uDF77"
+                        },
+                        fontSize = 16.sp
+                    )
+                    Text(
+                        text = when (card) {
+                            is MessagingViewModel.VinoCard.EventCard -> "Upcoming Event"
+                            is MessagingViewModel.VinoCard.WineCard  -> "Featured Wine"
+                        },
+                        color = Color.White.copy(alpha = 0.75f),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = 0.5.sp
+                    )
+                }
+            }
+
+            // ── Card body ──
+            Column(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                when (card) {
+                    is MessagingViewModel.VinoCard.EventCard -> {
+                        Text(
+                            text = card.name,
+                            color = Color.White,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 2
+                        )
+                        if (card.date.isNotBlank()) {
+                            val displayDate = formatVinoCardDate(card.date)
+                            val dateTime = buildString {
+                                append(displayDate)
+                                if (card.time.isNotBlank()) append(" \u2022 ${card.time}")
+                            }
+                            Text(
+                                text = dateTime,
+                                color = bodyAccent.copy(alpha = 0.9f),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        if (card.location.isNotBlank()) {
+                            Text(
+                                text = "\uD83D\uDCCD ${card.location}",
+                                color = Color.White.copy(alpha = 0.55f),
+                                fontSize = 10.sp,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                    is MessagingViewModel.VinoCard.WineCard -> {
+                        Text(
+                            text = card.name,
+                            color = Color.White,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 2
+                        )
+                        val details = buildString {
+                            if (card.year.isNotBlank()) append(card.year)
+                            if (card.wine_type.isNotBlank()) {
+                                if (isNotEmpty()) append(" \u2022 ")
+                                append(card.wine_type)
+                            }
+                        }
+                        if (details.isNotBlank()) {
+                            Text(
+                                text = details,
+                                color = bodyAccent.copy(alpha = 0.9f),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        if (card.region.isNotBlank()) {
+                            Text(
+                                text = "\uD83C\uDF0D ${card.region}",
+                                color = Color.White.copy(alpha = 0.55f),
+                                fontSize = 10.sp,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+
+                // ── "View Details" pill button ──
+                Spacer(Modifier.height(6.dp))
+                Surface(
+                    onClick = onClick,
+                    color = bodyAccent.copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "View Details \u2192",
+                            color = bodyAccent,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 0.3.sp
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Formats a raw date string from Firestore ("2026,4,22" or "2026-04-22") as "April 22, 2026". */
+private fun formatVinoCardDate(raw: String): String {
+    return try {
+        jsFormatCardDate(raw)
+    } catch (_: Exception) {
+        raw
+    }
+}
+
+@JsFun("""
+    (raw) => {
+        let date;
+        if (raw.includes(',')) {
+            const p = raw.split(',').map(s => parseInt(s.trim(), 10));
+            if (p.length === 3) date = new Date(p[0], p[1] - 1, p[2]);
+        } else {
+            // ISO yyyy-MM-dd — parse as local to avoid UTC-offset day shift
+            const p = raw.split('-').map(s => parseInt(s, 10));
+            if (p.length === 3) date = new Date(p[0], p[1] - 1, p[2]);
+        }
+        if (!date || isNaN(date.getTime())) return raw;
+        return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    }
+""")
+private external fun jsFormatCardDate(raw: String): String
+
+/**
  * Parses an ISO 8601 timestamp and returns a short time string (e.g., "2:30 PM").
  */
 private fun formatMessageTime(isoString: String): String {
     return try {
-        // ISO format: "2026-03-12T14:30:00.000Z"
-        val timePart = isoString.substringAfter("T").substringBefore("Z")
-            .substringBefore("+").substringBefore("-")
-        val parts = timePart.split(":")
-        if (parts.size >= 2) {
-            val hour = parts[0].toIntOrNull() ?: return ""
-            val minute = parts[1]
-            val amPm = if (hour >= 12) "PM" else "AM"
-            val displayHour = when {
-                hour == 0 -> 12
-                hour > 12 -> hour - 12
-                else -> hour
-            }
-            "$displayHour:$minute $amPm"
-        } else ""
+        if (isoString.isBlank()) return ""
+        jsFormatLocalTime(isoString)
     } catch (e: Exception) {
         ""
     }
 }
+
+@JsFun("""
+    (isoString) => {
+        const d = new Date(isoString);
+        if (isNaN(d.getTime())) return '';
+        return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+    }
+""")
+private external fun jsFormatLocalTime(isoString: String): String
 
 /**
  * Extracts the date portion (YYYY-MM-DD) from an ISO 8601 timestamp.
@@ -2371,6 +3363,163 @@ fun MessageInput(
                 )
             }
 
+            // @Vino autocomplete suggestion
+            val showVinoHint = remember(textFieldValue.text) {
+                val text = textFieldValue.text
+                val cursorPos = textFieldValue.selection.start
+                if (cursorPos == 0) return@remember false
+                // Find the word being typed at cursor
+                val beforeCursor = text.substring(0, cursorPos)
+                val lastWord = beforeCursor.split(" ", "\n").lastOrNull() ?: ""
+                lastWord.equals("@", ignoreCase = true) ||
+                    lastWord.startsWith("@v", ignoreCase = true) ||
+                    lastWord.startsWith("@vi", ignoreCase = true) ||
+                    lastWord.startsWith("@vin", ignoreCase = true)
+            }
+            AnimatedVisibility(
+                visible = showVinoHint,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Surface(
+                    onClick = {
+                        // Replace the partial @mention with @Vino
+                        val text = textFieldValue.text
+                        val cursorPos = textFieldValue.selection.start
+                        val beforeCursor = text.substring(0, cursorPos)
+                        val afterCursor = text.substring(cursorPos)
+                        val lastSpaceOrNewline = maxOf(
+                            beforeCursor.lastIndexOf(' '),
+                            beforeCursor.lastIndexOf('\n'),
+                            -1
+                        )
+                        val prefix = beforeCursor.substring(0, lastSpaceOrNewline + 1)
+                        val newText = prefix + "@Vino " + afterCursor
+                        val newCursor = prefix.length + 7 // "@Vino " length
+                        textFieldValue = TextFieldValue(
+                            text = newText,
+                            selection = TextRange(newCursor)
+                        )
+                    },
+                    color = Color(0xFF9C6ADE).copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            "\uD83E\uDD16",
+                            fontSize = 14.sp
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "@Vino",
+                            color = Color(0xFF9C6ADE),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "— Ask the AI sommelier",
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+            }
+
+            // ─── Smart Reply Chips (Phase 2) ────────────────────────────
+            val ai = LocalAi.current
+            AnimatedVisibility(
+                visible = ai.smartReplies.isNotEmpty() && !isEditing,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ai.smartReplies.forEach { reply ->
+                        Surface(
+                            onClick = {
+                                hapticVibrate(HapticDuration.LIGHT, HapticCategory.INTERACTIONS)
+                                ai.onSendSmartReply(reply)
+                            },
+                            color = Color.Transparent,
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.dp, WdwOrange.copy(alpha = 0.6f))
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text("✨", fontSize = 12.sp)
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    reply,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 13.sp,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                    }
+                    // Dismiss X
+                    Surface(
+                        onClick = { ai.onClearSmartReplies() },
+                        color = Color.Transparent,
+                        shape = CircleShape
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Dismiss suggestions",
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                            modifier = Modifier.size(20.dp).padding(2.dp)
+                        )
+                    }
+                }
+            }
+
+            // ─── Undo Rewrite Chip (Phase 3) ────────────────────────────
+            AnimatedVisibility(
+                visible = ai.aiRewriteState is MessagingViewModel.AiRewriteState.Done,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Surface(
+                    onClick = {
+                        val original = ai.onUndoRewrite()
+                        if (original != null) {
+                            textFieldValue = TextFieldValue(
+                                text = original,
+                                selection = TextRange(original.length)
+                            )
+                        }
+                    },
+                    color = Color(0xFF9C6ADE).copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text("↩", fontSize = 13.sp)
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            "Undo AI rewrite",
+                            color = Color(0xFF9C6ADE),
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+
             Row(
                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -2474,6 +3623,90 @@ fun MessageInput(
                         "😊",
                         fontSize = 20.sp
                     )
+                }
+
+                // ─── AI Draft Button (Phase 3) ──────────────────────
+                var showDraftMenu by remember { mutableStateOf(false) }
+                val showAiButton = textFieldValue.text.length >= 15 && !isEditing
+                AnimatedVisibility(
+                    visible = showAiButton,
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    Box {
+                        Surface(
+                            onClick = { showDraftMenu = true },
+                            color = if (ai.aiRewriteState is MessagingViewModel.AiRewriteState.Loading)
+                                Color(0xFF9C6ADE).copy(alpha = 0.2f)
+                            else Color(0xFF9C6ADE).copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.padding(horizontal = 2.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                if (ai.aiRewriteState is MessagingViewModel.AiRewriteState.Loading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(14.dp),
+                                        strokeWidth = 1.5.dp,
+                                        color = Color(0xFF9C6ADE)
+                                    )
+                                } else {
+                                    Text("✨", fontSize = 14.sp)
+                                }
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    "AI",
+                                    color = Color(0xFF9C6ADE),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                        MaterialTheme(
+                            colorScheme = MaterialTheme.colorScheme.copy(
+                                surface = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        ) {
+                            DropdownMenu(
+                                expanded = showDraftMenu,
+                                onDismissRequest = { showDraftMenu = false }
+                            ) {
+                                val options = listOf(
+                                    "improve" to "✏️ Improve",
+                                    "casual" to "💬 Casual",
+                                    "formal" to "👔 Formal",
+                                    "expand" to "↗️ Expand",
+                                    "shorten" to "↙️ Shorten",
+                                    "wine_flair" to "🍷 Wine Flair"
+                                )
+                                options.forEach { (instruction, label) ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                label,
+                                                fontSize = 14.sp,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        },
+                                        onClick = {
+                                            showDraftMenu = false
+                                            ai.onRewriteMessage(
+                                                textFieldValue.text,
+                                                instruction
+                                            ) { result ->
+                                                textFieldValue = TextFieldValue(
+                                                    text = result,
+                                                    selection = TextRange(result.length)
+                                                )
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
                 IconButton(
@@ -3154,11 +4387,20 @@ fun ThreadPanel(
     parentMessage: JsChatMessage,
     replies: List<JsChatMessage>,
     currentUserId: String?,
+    threadSmartReplies: List<String> = emptyList(),
     onClose: () -> Unit,
-    onSendReply: (String) -> Unit,
+    onSendReply: (String, org.w3c.files.File?) -> Unit,
+    onSendGif: (String, String) -> Unit,
+    onSendSmartReply: (String) -> Unit = {},
+    onClearSmartReplies: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    var replyText by remember { mutableStateOf("") }
+    var isThreadEmojiPickerOpen by remember { mutableStateOf(false) }
+    var isThreadGifPanelOpen by remember { mutableStateOf(false) }
+    val closePickers = {
+        isThreadEmojiPickerOpen = false
+        isThreadGifPanelOpen = false
+    }
 
     Card(
         modifier = modifier.padding(8.dp),
@@ -3220,7 +4462,17 @@ fun ThreadPanel(
             )
 
             // Replies list
+            val repliesListState = rememberLazyListState()
+
+            // Auto-scroll thread to bottom when new replies arrive
+            LaunchedEffect(replies.size) {
+                if (replies.isNotEmpty()) {
+                    repliesListState.animateScrollToItem(replies.size - 1)
+                }
+            }
+
             LazyColumn(
+                state = repliesListState,
                 modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
                 contentPadding = PaddingValues(bottom = 8.dp)
             ) {
@@ -3288,63 +4540,50 @@ fun ThreadPanel(
             }
 
             // Reply input
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextField(
-                    value = replyText,
-                    onValueChange = { replyText = it },
-                    placeholder = {
-                        Text(
-                            "Reply in thread...",
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                            fontSize = 13.sp
-                        )
+            AnimatedVisibility(visible = isThreadGifPanelOpen) {
+                GifSearchPanel(
+                    onGifSelected = { url, title ->
+                        onSendGif(url, title)
+                        isThreadGifPanelOpen = false
                     },
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 36.dp, max = 100.dp)
-                        .onKeyEvent { event ->
-                            if (event.key == Key.Enter
-                                && !event.isShiftPressed && replyText.isNotBlank())
-                            {
-                                hapticVibrate(HapticDuration.LIGHT, HapticCategory.INTERACTIONS)
-                                onSendReply(replyText)
-                                replyText = ""
-                                true
-                            } else false
-                        },
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        cursorColor = Color(0xFFFF7F33),
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent
-                    ),
-                    textStyle = TextStyle(fontSize = 13.sp),
-                    shape = RoundedCornerShape(18.dp),
-                    singleLine = false
+                    onDismiss = { isThreadGifPanelOpen = false }
                 )
-                Spacer(modifier = Modifier.width(6.dp))
-                IconButton(
-                    onClick = {
-                        if (replyText.isNotBlank()) {
-                            hapticVibrate(HapticDuration.LIGHT, HapticCategory.INTERACTIONS)
-                            onSendReply(replyText)
-                            replyText = ""
+            }
+
+            // Override LocalAi for thread scope so smart reply chips target the thread
+            val baseAi = LocalAi.current
+            val threadAi = remember(threadSmartReplies, onSendSmartReply, onClearSmartReplies) {
+                baseAi.copy(
+                    smartReplies = threadSmartReplies,
+                    onSendSmartReply = onSendSmartReply,
+                    onClearSmartReplies = onClearSmartReplies
+                )
+            }
+            CompositionLocalProvider(LocalAi provides threadAi) {
+                Box(modifier = Modifier) {
+                    MessageInput(
+                        replyingToUser = null,
+                        editingMessage = null,
+                        onSendMessage = { text, file ->
+                            onSendReply(text, file)
+                        },
+                        onEditMessage = { _, _ -> },
+                        onCancelEditing = { },
+                        onTyping = { },
+                        isEmojiPickerOpen = isThreadEmojiPickerOpen,
+                        onToggleEmojiPicker = {
+                            if (isThreadEmojiPickerOpen) {
+                                isThreadEmojiPickerOpen = false
+                            } else {
+                                closePickers()
+                                isThreadEmojiPickerOpen = true
+                            }
+                        },
+                        onClosePickers = closePickers,
+                        isGifPanelOpen = isThreadGifPanelOpen,
+                        onToggleGifPanel = {
+                            isThreadGifPanelOpen = !isThreadGifPanelOpen
                         }
-                    },
-                    enabled = replyText.isNotBlank()
-                ) {
-                    Icon(
-                        Icons.Default.Send,
-                        contentDescription = "Send reply",
-                        tint = if (replyText.isNotBlank()) WdwOrange else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                     )
                 }
             }

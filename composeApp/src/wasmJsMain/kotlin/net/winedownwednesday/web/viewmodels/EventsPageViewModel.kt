@@ -32,6 +32,10 @@ class EventsPageViewModel(
     private val _selectedEvent = MutableStateFlow<Event?>(null)
     val selectedEvent = _selectedEvent.asStateFlow()
 
+    /** Set by external callers (e.g. Vino card tap) to auto-open a specific event by name. */
+    private val _pendingEventName = MutableStateFlow<String?>(null)
+    val pendingEventName = _pendingEventName.asStateFlow()
+
     private val today: LocalDate =
         Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
 
@@ -75,6 +79,14 @@ class EventsPageViewModel(
 
     fun clearSelectedEvent() {
         _selectedEvent.value = null
+    }
+
+    fun setPendingEventName(name: String) {
+        _pendingEventName.value = name
+    }
+
+    fun clearPendingEventName() {
+        _pendingEventName.value = null
     }
 
     fun submitRSVP(rsvp: RSVPRequest, onResult: (Boolean) -> Unit) {

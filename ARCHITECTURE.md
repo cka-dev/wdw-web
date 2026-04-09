@@ -32,6 +32,7 @@ The project follows a clean architecture approach, though currently heavily conc
     - **`di/`**: Koin module definitions.
     - **`FirebaseBridge.kt`**: Kotlin external declarations for JavaScript Firebase interop.
     - **`WebAuthn.kt`**: Kotlin wrapper for the WebAuthn JavaScript bridge.
+    - **`AiBridge.kt`**: Kotlin external declarations for the AI bridge (on-device + cloud inference).
 - **`StreamBridge.kt`**: Kotlin external declarations for Stream Chat JS SDK.
 
 ### JS Interop & Security
@@ -43,6 +44,7 @@ To prevent leaking project identifiers, some JavaScript files are excluded from 
 - **`firebase-messaging-sw.js`**: Firebase Messaging Service Worker. Template: `firebase-messaging-sw.js.example`.
 - **`webauthn-bridge.js`**: Utility functions for WebAuthn cryptography. Template: `webauthn-bridge.js.example`.
 - **`stream-bridge.js`**: Bridges Kotlin to Stream JS SDK. Template: `stream-bridge.js.example`.
+- **`ai-bridge.js`**: AI inference bridge implementing three-tier hybrid architecture (on-device Chrome Prompt API → server-side Gemini 3.1 Flash Lite fallback → dedicated bot/summarization endpoints). Powers the Vino AI bot, smart replies, message drafting, translation, and thread summarization.
 
 ## 3. Key Features
 
@@ -122,6 +124,50 @@ To prevent leaking project identifiers, some JavaScript files are excluded from 
     - Requires typing "DELETE MY ACCOUNT" as a confirmation phrase.
     - Backend `deleteAccount` Cloud Function chains: hard-delete from Stream Chat → delete Firestore profile → delete Firebase Auth account.
     - On success, the client signs out via `FirebaseBridge.signOut()`.
+- **Vino AI Bot** (`vino-bot`):
+    - **Identity**: Vino is the WDW community AI sommelier — professional but approachable personality, wine-knowledgeable with a warm tone.
+    - **Three-Tier Hybrid AI Architecture**:
+        - **Tier 1 (On-Device)**: Chrome Prompt API (Gemini Nano) for smart replies, message drafting, and translation. Zero cost, zero latency, private.
+        - **Tier 2 (Server Lightweight)**: `aiInfer` Cloud Function using Gemini 3.1 Flash Lite for browsers without Prompt API (Safari, Firefox, iOS). Same prompts as on-device, served from server.
+        - **Tier 3 (Server Heavy)**: `chatWithBot` and `summarizeThread` Cloud Functions for Vino Q&A and thread catch-up features, grounded in Firestore data.
+    - **Bot Q&A**: Users mention `@Vino` or `@bot` in any channel (DM or community). The message is sent normally, then `chatWithBot` Cloud Function processes it via Gemini 3.1 Flash Lite with WDW context (wines, events, members, spotlight), and Vino responds in-thread. Rate limited to 20 queries/hour per user (server) + 3-second client-side cooldown.
+    - **Two-Layer Contextual Intelligence**: `buildWdwContext` in `ai_bot.ts` uses two detection layers:
+        1. **Layer 1 (current query keywords)**: Absolute precedence — explicit domain terms ("wine", "event", "gathering", "upcoming", etc.) determine context regardless of history.
+        2. **Layer 2 (history fallback)**: Only fires when the current query is ambiguous (no strong keywords). Scans the last 3 messages for domain signals. Prevents context drift on short follow-ups like "tell me more".
+        - Returns `detectedTopic`: `"wines"` | `"events"` | `"both"` | `"general"`.
+    - **Topic Anchor**: After context detection, a hard domain lock is injected into the Gemini prompt: `[Topic: WINES. Answer ONLY about wines — do NOT mention events.]`. Prevents Gemini from drifting to a different topic on ambiguous phrasing.
+    - **Vino Cards**: `chatWithBot` returns a `cards` array alongside the text reply:
+        - `EventCard`: `{ type, name, date, time, location, description }`
+        - `WineCard`: `{ type, name, year, wine_type, region }`
+        - Cards are only included when domain-relevant data exists. The client renders them as inline rich cards below the Vino message bubble.
+        - **Per-message persistence**: Cards are stored in `_vinoCardsByMessageId: Map<String, List<VinoCard>>` keyed by Vino message ID. Each Vino reply permanently owns its cards for the session — they don’t disappear when new messages arrive.
+        - **View Details**: Each card has a "View Details →" pill button that navigates to the Wine Cellar or Gatherings page.
+        - **Type-specific accents**: Wine cards use a terracotta accent (`#E07B5F`); event cards use purple (`#9C6ADE`).
+    - **Domain-Aware Smart Replies**: `chatWithBot` returns `detectedTopic` in the response. The client stores it in `_lastVinoTopic` and injects it into the smart reply context so the AI generates on-topic suggestions (wine-focused after wine Qs, event-focused after event Qs).
+    - **Rate Limiting**:
+        - **Server**: In-memory `rateLimitMap` — 20 queries/hour per user. Returns `{ rateLimited: true, retryAfter: 3600 }` on 429.
+        - **Client**: 3-second cooldown between @Vino messages. Rapid-fire sends are blocked with a toast: "Give Vino a moment to think... 🍷".
+        - **Gemini quota (503)**: If Google’s Gemini API itself returns a 429/quota error, `chatWithBot` catches it and returns 503 with a Vino-voiced message: "I’m getting a lot of questions right now — give me a moment! 🍷"
+    - **Clear Chat**: A 🗑️ trash icon in the Vino DM header lets users wipe the conversation. Triggers Stream’s `truncateChannel()` server-side and clears `_messages`, `_vinoCardsByMessageId`, and `_pendingVinoCards` client-side. Guarded by a confirmation `AlertDialog`.
+    - **Community Lounge**: `@Vino` mentions in any channel (not just DM) trigger `chatWithBot`. In community/team channels, Vino’s reply is a top-level message (not threaded) so all members see it.
+    - **Birthday & Wineversary Bot**: Scheduled Cloud Function (`checkBirthdaysAndWineversaries`) runs daily at 9 AM ET. Scans `members` collection for today’s birthdays and membership anniversaries (“Wineversary”). Posts Gemini-generated personalized greetings to Community Lounge only. Duplicate prevention via `bot_greetings` Firestore collection.
+    - **JS Bridge**: `ai-bridge.js` (`window.wdwAiBridge`) with `AiBridge.kt` Kotlin external declarations.
+    - **Cloud Model**: Gemini 3.1 Flash Lite (`gemini-3.1-flash-lite-preview`) — $0.25/1M input tokens, $1.50/1M output tokens.
+    - **Data Requirements**: `memberSince` field on `members` collection for Wineversary tracking; `birthday` field parsed from mixed formats ("March 14", "03/14").
+    - **UI Treatment**: Vino bot messages are visually distinct from regular messages:
+        - Purple gradient background with gradient border instead of the standard `surfaceVariant`.
+        - "🤖 Vino `[AI]`" label with purple accent instead of plain username.
+        - Purple-ringed avatar with gradient border (2dp `linearGradient`).
+        - Profile popover disabled on bot avatar (non-clickable).
+        - "Vino is thinking..." indicator with purple spinner appears in all channel types while waiting for bot response.
+        - `@Vino` autocomplete: typing `@` or `@v` shows a suggestion chip ("🤖 @Vino — Ask the AI sommelier") above the input; clicking completes to `@Vino `.
+- **Admin Tooling** (`wdw-firebase/admin-scripts/`):
+    - **`manage-channels.js`**: Node.js script using Stream Chat Admin API and GCP Secret Manager for secure credential access.
+    - **`wdw-admin.sh`**: Shell wrapper for developer convenience. Commands:
+        - `clear-community` — truncates `wdw-community` and `wdw-community-test` history.
+        - `create-test-channel` — creates `wdw-community-test` for safe feature testing.
+        - `list-channels` — lists all active channels.
+    - Credentials are fetched from GCP Secret Manager at runtime; not stored in the repo.
 
 ### Settings Page (`SettingsPage.kt`)
 A dedicated **Settings** page accessible via a button on the Profile page (navigates to `Route.Settings`).

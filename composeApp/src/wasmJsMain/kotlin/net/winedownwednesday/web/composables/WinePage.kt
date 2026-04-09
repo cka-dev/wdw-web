@@ -38,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -71,9 +72,20 @@ fun WinePage(
     val wines by viewModel.wineList.collectAsState()
     val selectedWine by viewModel.selectedWine.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val pendingWineName by viewModel.pendingWineName.collectAsState()
 
     val filteredWines = remember(wines, searchQuery) {
         wines?.filter { it.matchesQuery(searchQuery) } ?: emptyList()
+    }
+
+    // Auto-select a wine by name when navigated from a Vino card
+    LaunchedEffect(wines, pendingWineName) {
+        val name = pendingWineName ?: return@LaunchedEffect
+        val match = wines?.firstOrNull { it.name.equals(name, ignoreCase = true) }
+        if (match != null) {
+            viewModel.setSelectedWine(match)
+            viewModel.clearPendingWineName()
+        }
     }
 
     if (sizeInfo.useCompactNav) {

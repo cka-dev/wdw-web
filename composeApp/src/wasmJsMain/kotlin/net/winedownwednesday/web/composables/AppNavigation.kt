@@ -38,7 +38,9 @@ import kotlinx.serialization.modules.subclass
 import net.winedownwednesday.web.loadThemePreference
 import net.winedownwednesday.web.saveThemePreference
 import net.winedownwednesday.web.viewmodels.AuthPageViewModel
+import net.winedownwednesday.web.viewmodels.EventsPageViewModel
 import net.winedownwednesday.web.viewmodels.LoginUIState
+import net.winedownwednesday.web.viewmodels.WinePageViewModel
 import org.koin.compose.koinInject
 import org.w3c.dom.events.Event
 
@@ -101,6 +103,8 @@ private fun routeFromHash(hash: String): Route {
 fun AppNavigation(
     authViewModel: AuthPageViewModel = koinInject()
 ) {
+    val eventsViewModel: EventsPageViewModel = koinInject()
+    val wineViewModel: WinePageViewModel = koinInject()
     // --- Nav 3 back stack ------------------------------------------------
     // SavedStateConfiguration is required by the API. An empty config is safe
     // because browser URL hash handles route restoration on reload.
@@ -315,7 +319,21 @@ fun AppNavigation(
                                 entry<Route.Blog>      { FadeInPage { BlogPage(sizeInfo = sizeInfo) } }
                                 entry<Route.Messaging> {
                                     if (isLoggedIn) {
-                                        MessagingScreen(isCompactScreen = sizeInfo.useCompactNav)
+                                        MessagingScreen(
+                                            isCompactScreen = sizeInfo.useCompactNav,
+                                            onNavigateToEvents = { eventName ->
+                                                if (eventName.isNotBlank()) {
+                                                    eventsViewModel.setPendingEventName(eventName)
+                                                }
+                                                navigateTo(Route.Events)
+                                            },
+                                            onNavigateToWines = { wineName ->
+                                                if (wineName.isNotBlank()) {
+                                                    wineViewModel.setPendingWineName(wineName)
+                                                }
+                                                navigateTo(Route.Wines)
+                                            }
+                                        )
                                     } else {
                                         LaunchedEffect(Unit) { replaceTop(Route.Login) }
                                     }

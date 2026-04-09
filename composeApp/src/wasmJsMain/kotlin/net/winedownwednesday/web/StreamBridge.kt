@@ -28,12 +28,14 @@ external object StreamBridge {
     fun sendImageMessage(
         channelId: String,
         text: String,
-        file: org.w3c.files.File
+        file: org.w3c.files.File,
+        parentId: String?
     ): Promise<JsChatMessage?>
     fun sendFileMessage(
         channelId: String,
         text: String,
-        file: org.w3c.files.File
+        file: org.w3c.files.File,
+        parentId: String?
     ): Promise<JsChatMessage?>
     fun onMessageNew(callback: (JsChatEvent) -> Unit)
     fun searchUsers(query: String): Promise<JsArray<JsStreamUser>>
@@ -48,11 +50,13 @@ external object StreamBridge {
     fun sendGiphyMessage(
         channelId: String,
         gifUrl: String,
-        gifTitle: String
+        gifTitle: String,
+        parentId: String?
     ): Promise<JsChatMessage?>
     fun getChannelMembers(channelId: String): Promise<JsArray<JsChannelMember>>
     fun addDevice(token: String, pushProvider: String): Promise<JsBoolean>
     fun removeDevice(token: String): Promise<JsBoolean>
+    fun truncateChannel(channelId: String): Promise<JsBoolean>
     fun disconnectUser(): Promise<JsAny?>
 }
 
@@ -61,6 +65,7 @@ external interface JsChatEvent : JsAny {
     val userId: String
     val userName: String
     val channelId: String
+    val parentId: String?  // present when the message is a thread reply
 }
 
 external interface JsStreamUser : JsAny {

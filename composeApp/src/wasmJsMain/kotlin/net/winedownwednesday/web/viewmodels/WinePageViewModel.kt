@@ -30,6 +30,13 @@ class WinePageViewModel(
     private val _selectedWine = MutableStateFlow<Wine?>(null)
     val selectedWine: StateFlow<Wine?> = _selectedWine.asStateFlow()
 
+    /** Set by external callers (e.g. Vino card tap) to auto-select a wine by name. */
+    private val _pendingWineName = MutableStateFlow<String?>(null)
+    val pendingWineName: StateFlow<String?> = _pendingWineName.asStateFlow()
+
+    fun setPendingWineName(name: String) { _pendingWineName.value = name }
+    fun clearPendingWineName() { _pendingWineName.value = null }
+
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
