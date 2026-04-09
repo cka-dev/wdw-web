@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -108,7 +107,6 @@ import net.winedownwednesday.web.utils.toDisplayString
 import net.winedownwednesday.web.utils.toEventDisplayDate
 import net.winedownwednesday.web.utils.toEventLocalDate
 import net.winedownwednesday.web.viewmodels.AuthPageViewModel
-import net.winedownwednesday.web.viewmodels.EventSuggestion
 import net.winedownwednesday.web.viewmodels.EventsPageViewModel
 import net.winedownwednesday.web.viewmodels.LoginUIState
 import org.jetbrains.compose.resources.painterResource
@@ -145,17 +143,6 @@ fun EventsPage(
             showUpcoming = (upcomingEvents ?: emptyList()).contains(match)
             viewModel.setSelectedEvent(match)
             viewModel.clearPendingEventName()
-        }
-    }
-
-    val isLoggedIn = uiState is LoginUIState.Authenticated
-    val vinoSuggestions by viewModel.vinoEventSuggestions.collectAsState()
-    val isFetchingEventRecs by viewModel.isFetchingEventRecs.collectAsState()
-
-    // Fetch event suggestions once when user lands on Upcoming tab logged-in
-    androidx.compose.runtime.LaunchedEffect(isLoggedIn, showUpcoming) {
-        if (isLoggedIn && showUpcoming && vinoSuggestions.isEmpty()) {
-            viewModel.fetchVinoEventSuggestions()
         }
     }
 
@@ -217,19 +204,6 @@ fun EventsPage(
         }
 
         val eventsToDisplay = if (showUpcoming) upcomingEvents else pastEvents
-
-        // ── Vino event suggestions banner (upcoming only, logged-in only) ────────
-        if (showUpcoming && isLoggedIn && (vinoSuggestions.isNotEmpty() || isFetchingEventRecs)) {
-            EventSuggestionBanner(
-                suggestions = vinoSuggestions,
-                isLoading = isFetchingEventRecs,
-                onSuggestionClick = { name ->
-                    val match = (upcomingEvents ?: emptyList())
-                        .firstOrNull { it.name.equals(name, ignoreCase = true) }
-                    if (match != null) viewModel.setSelectedEvent(match)
-                }
-            )
-        }
 
         // Adaptive column min size grows with screen width
         val colMinSize = when (sizeInfo.widthClass) {
@@ -1730,61 +1704,4 @@ sealed class SubmissionStatus {
     object InProgress : SubmissionStatus()
     object Success : SubmissionStatus()
     data class Failure(val errorMessage: String) : SubmissionStatus()
-}
-// ─── Vino Event Suggestion Banner ────────────────────────────────────────────
-
-@Composable
-fun EventSuggestionBanner(
-    suggestions: List<EventSuggestion>,
-    isLoading: Boolean,
-    onSuggestionClick: (String) -> Unit = {}
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // Label
-        Text(
-            text = "✨ Picked for you:",
-            style = MaterialTheme.typography.labelSmall,
-            color = WdwOrange,
-            modifier = Modifier.padding(end = 2.dp)
-        )
-
-        if (isLoading) {
-            androidx.compose.material3.CircularProgressIndicator(
-                modifier = Modifier.size(16.dp),
-                strokeWidth = 2.dp,
-                color = WdwOrange
-            )
-        } else {
-            suggestions.forEach { suggestion ->
-                Card(
-                    modifier = Modifier
-                        .wrapContentWidth()
-                        .clickable { onSuggestionClick(suggestion.name) },
-                    shape = RoundedCornerShape(50),
-                    colors = CardDefaults.cardColors(
-                        containerColor = WdwOrange.copy(alpha = 0.12f)
-                    ),
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp, WdwOrange.copy(alpha = 0.5f)
-                    ),
-                    elevation = CardDefaults.cardElevation(0.dp)
-                ) {
-                    Text(
-                        text = "📅 ${suggestion.name}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = WdwOrange,
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                    )
-                }
-            }
-        }
-    }
 }
