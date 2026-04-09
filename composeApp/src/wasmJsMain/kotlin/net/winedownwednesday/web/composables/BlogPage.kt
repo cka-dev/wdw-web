@@ -142,7 +142,7 @@ fun BlogPage(
                                          shape = RoundedCornerShape(50),
                                          colors = CardDefaults.cardColors(
                                              containerColor = if (showTldr)
-                                                 Color(0xFF7B3F9E)
+                                                 WdwOrange
                                              else
                                                  MaterialTheme.colorScheme.surfaceVariant
                                          )
@@ -152,8 +152,7 @@ fun BlogPage(
                                                     else if (showTldr) "✨ TL;DR ▲"
                                                     else "✨ TL;DR",
                                              style = MaterialTheme.typography.labelMedium,
-                                             color = if (showTldr) Color.White
-                                                     else Color(0xFF9C6ADE),
+                                             color = if (showTldr) Color.White else WdwOrange,
                                              modifier = Modifier.padding(
                                                  horizontal = 12.dp, vertical = 6.dp
                                              )
@@ -161,15 +160,20 @@ fun BlogPage(
                                      }
                                  }
                                  if (showTldr && summary != null) {
-                                     Card(
+                                     Row(
                                          modifier = Modifier
                                              .fillMaxWidth()
-                                             .padding(bottom = 16.dp),
-                                         shape = RoundedCornerShape(12.dp),
-                                         colors = CardDefaults.cardColors(
-                                             containerColor = Color(0xFF9C6ADE).copy(alpha = 0.12f)
-                                         )
+                                             .padding(bottom = 16.dp)
+                                             .clip(RoundedCornerShape(8.dp))
+                                             .background(MaterialTheme.colorScheme.surfaceVariant)
                                      ) {
+                                         // Orange left accent strip
+                                         Box(
+                                             modifier = Modifier
+                                                 .width(3.dp)
+                                                 .fillMaxHeight()
+                                                 .background(WdwOrange)
+                                         )
                                          Text(
                                              text = summary,
                                              style = MaterialTheme.typography.bodyMedium,

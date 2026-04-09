@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -1738,55 +1739,50 @@ fun EventSuggestionBanner(
     isLoading: Boolean,
     onSuggestionClick: (String) -> Unit = {}
 ) {
-    Card(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF3A1C5A).copy(alpha = 0.85f)
-        ),
-        elevation = CardDefaults.cardElevation(2.dp)
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                text = "✨ You might like this",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color(0xFFCE93D8),
-                modifier = Modifier.padding(bottom = 6.dp)
+        // Label
+        Text(
+            text = "✨ Picked for you:",
+            style = MaterialTheme.typography.labelSmall,
+            color = WdwOrange,
+            modifier = Modifier.padding(end = 2.dp)
+        )
+
+        if (isLoading) {
+            androidx.compose.material3.CircularProgressIndicator(
+                modifier = Modifier.size(16.dp),
+                strokeWidth = 2.dp,
+                color = WdwOrange
             )
-            if (isLoading) {
-                androidx.compose.material3.LinearProgressIndicator(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = Color(0xFF9C6ADE)
-                )
-            } else {
-                suggestions.forEach { suggestion ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onSuggestionClick(suggestion.name) }
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "📅 ",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Column {
-                            Text(
-                                text = suggestion.name,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
-                            )
-                            Text(
-                                text = suggestion.reason,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
+        } else {
+            suggestions.forEach { suggestion ->
+                Card(
+                    modifier = Modifier
+                        .wrapContentWidth()
+                        .clickable { onSuggestionClick(suggestion.name) },
+                    shape = RoundedCornerShape(50),
+                    colors = CardDefaults.cardColors(
+                        containerColor = WdwOrange.copy(alpha = 0.12f)
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp, WdwOrange.copy(alpha = 0.5f)
+                    ),
+                    elevation = CardDefaults.cardElevation(0.dp)
+                ) {
+                    Text(
+                        text = "📅 ${suggestion.name}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = WdwOrange,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                    )
                 }
             }
         }
