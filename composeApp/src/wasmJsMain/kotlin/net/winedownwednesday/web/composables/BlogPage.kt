@@ -50,10 +50,16 @@ fun BlogPage(
     LaunchedEffect(selectedPost) {
         showTldr = false  // collapse when switching posts
         val post = selectedPost ?: return@LaunchedEffect
-        val bodyText = post.content
-            .filterIsInstance<ContentBlock.Paragraph>()
-            .joinToString(" ") { it.text }
-        if (bodyText.length >= 300) {
+        val bodyText = post.content.joinToString(" ") { block ->
+            when (block) {
+                is ContentBlock.Paragraph  -> block.text
+                is ContentBlock.Heading    -> block.text
+                is ContentBlock.Quote      -> block.text
+                is ContentBlock.ListBlock  -> block.items.joinToString(" ")
+                else -> ""
+            }
+        }.trim()
+        if (bodyText.length >= 50) {
             viewModel.summarizePost(post.id, bodyText)
         }
     }
