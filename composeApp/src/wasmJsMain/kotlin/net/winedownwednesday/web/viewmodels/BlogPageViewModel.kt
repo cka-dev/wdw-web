@@ -40,7 +40,7 @@ class BlogPageViewModel(
     fun summarizePost(postId: String, bodyText: String) {
         if (_summarizing.value.contains(postId)) return
         if (_summaries.value.containsKey(postId)) return
-        if (bodyText.length < 300) return   // too short to summarize
+
 
         viewModelScope.launch {
             _summarizing.value = _summarizing.value + postId
