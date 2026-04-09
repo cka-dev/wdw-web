@@ -761,7 +761,7 @@ fun WineRecommendationPanel(
     isLoading: Boolean,
     onWineClick: (String) -> Unit = {}
 ) {
-    var expanded by remember { mutableStateOf(true) }
+    var expanded by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
