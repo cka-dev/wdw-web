@@ -57,6 +57,7 @@ import coil3.compose.AsyncImage
 import coil3.compose.rememberAsyncImagePainter
 import net.winedownwednesday.web.data.Wine
 import net.winedownwednesday.web.viewmodels.WinePageViewModel
+import net.winedownwednesday.web.viewmodels.WineRecommendation
 import net.winedownwednesday.web.viewmodels.matchesQuery
 import org.koin.compose.koinInject
 
@@ -88,15 +89,21 @@ fun WinePage(
         }
     }
 
+    val recommendations by viewModel.vinoRecommendations.collectAsState()
+    val isFetchingRecs by viewModel.isFetchingRecs.collectAsState()
+
     if (sizeInfo.useCompactNav) {
-        // Compact + Medium → stacked list layout
+        // Compact + Medium → stacked list layout with rec panel at top
         CompactScreenWinePage(
             favoriteWines = filteredWines,
             selectedWine = selectedWine,
             viewModel = viewModel,
             isLoggedIn = isLoggedIn,
             userName = userName,
-            userEmail = userEmail
+            userEmail = userEmail,
+            recommendations = recommendations,
+            isFetchingRecs = isFetchingRecs,
+            onFetchRecs = { if (isLoggedIn) viewModel.fetchVinoRecommendations() }
         )
     } else {
         // Expanded / Large / XLarge → side-by-side list + detail
@@ -111,7 +118,10 @@ fun WinePage(
             isLoggedIn = isLoggedIn,
             userName = userName,
             userEmail = userEmail,
-            listFraction = listFraction
+            listFraction = listFraction,
+            recommendations = recommendations,
+            isFetchingRecs = isFetchingRecs,
+            onFetchRecs = { if (isLoggedIn) viewModel.fetchVinoRecommendations() }
         )
     }
 }
@@ -528,6 +538,9 @@ fun CompactScreenWinePage(
     userName: String?,
     userEmail: String?,
     modifier: Modifier = Modifier,
+    recommendations: List<WineRecommendation> = emptyList(),
+    isFetchingRecs: Boolean = false,
+    onFetchRecs: () -> Unit = {}
 ) {
     var showDialog by rememberSaveable { mutableStateOf(false) }
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -543,6 +556,25 @@ fun CompactScreenWinePage(
                 query = searchQuery,
                 onQueryChange = { viewModel.setSearchQuery(it) }
             )
+        }
+
+        if (isLoggedIn) {
+            item {
+                WineRecommendationPanel(
+                    recommendations = recommendations,
+                    isLoading = isFetchingRecs,
+                    onFetch = onFetchRecs,
+                    onWineClick = { name ->
+                        val match = favoriteWines.firstOrNull {
+                            it.name.equals(name, ignoreCase = true)
+                        }
+                        if (match != null) {
+                            viewModel.setSelectedWine(match)
+                            showDialog = true
+                        }
+                    }
+                )
+            }
         }
 
         item {
@@ -593,7 +625,10 @@ fun LargeScreenWinePage(
     isLoggedIn: Boolean,
     userName: String?,
     userEmail: String?,
-    listFraction: Float = 0.30f
+    listFraction: Float = 0.30f,
+    recommendations: List<WineRecommendation> = emptyList(),
+    isFetchingRecs: Boolean = false,
+    onFetchRecs: () -> Unit = {}
 ) {
     val searchQuery by viewModel.searchQuery.collectAsState()
 
@@ -661,12 +696,26 @@ fun LargeScreenWinePage(
             }
         }
 
-        Column(
+            Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight()
                 .background(MaterialTheme.colorScheme.background),
         ) {
+            if (isLoggedIn) {
+                WineRecommendationPanel(
+                    recommendations = recommendations,
+                    isLoading = isFetchingRecs,
+                    onFetch = onFetchRecs,
+                    onWineClick = { name ->
+                        viewModel.setSelectedWine(
+                            filteredWines.firstOrNull {
+                                it.name.equals(name, ignoreCase = true)
+                            }
+                        )
+                    }
+                )
+            }
             Card(
                 modifier = Modifier.padding(16.dp),
                 elevation = CardDefaults.cardElevation(4.dp),
@@ -695,6 +744,114 @@ fun LargeScreenWinePage(
                             userName = userName,
                             userEmail = userEmail
                         )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─── Vino Wine Recommendation Panel ─────────────────────────────────────────
+
+@Composable
+fun WineRecommendationPanel(
+    recommendations: List<WineRecommendation>,
+    isLoading: Boolean,
+    onFetch: () -> Unit,
+    onWineClick: (String) -> Unit = {}
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        // ── Pill trigger ─────────────────────────────────────────────
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    expanded = !expanded
+                    if (expanded && recommendations.isEmpty() && !isLoading) onFetch()
+                },
+            shape = RoundedCornerShape(50),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFF7B3F9E)
+            ),
+            elevation = CardDefaults.cardElevation(4.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = if (isLoading) "✨ Finding your next wine…"
+                           else "✨ Find My Next Wine",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+
+        // ── Expanded recommendation cards ─────────────────────────────
+        if (expanded) {
+            Spacer(modifier = Modifier.height(8.dp))
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        color = Color(0xFF9C6ADE)
+                    )
+                }
+            } else if (recommendations.isEmpty()) {
+                Text(
+                    text = "Tap the pill again to load recommendations.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(8.dp)
+                )
+            } else {
+                recommendations.forEach { rec ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .clickable { onWineClick(rec.name) },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color(0xFF9C6ADE).copy(alpha = 0.12f)
+                        ),
+                        elevation = CardDefaults.cardElevation(2.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = rec.name,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = Color(0xFF9C6ADE),
+                                fontWeight = FontWeight.Bold
+                            )
+                            if (rec.wine_type.isNotEmpty() || rec.region.isNotEmpty()) {
+                                Text(
+                                    text = listOf(rec.wine_type, rec.region)
+                                        .filter { it.isNotEmpty() }.joinToString(" · "),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = rec.reason,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                            )
+                        }
                     }
                 }
             }

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import coil3.compose.AsyncImage
 import net.winedownwednesday.web.data.models.BlogPost
+import net.winedownwednesday.web.data.models.ContentBlock
 import net.winedownwednesday.web.viewmodels.BlogPageViewModel
 import org.koin.compose.koinInject
 
@@ -38,10 +39,25 @@ fun BlogPage(
 ) {
     val blogPosts by viewModel.blogPosts.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
-    
+    val summaries by viewModel.summaries.collectAsState()
+    val summarizing by viewModel.summarizing.collectAsState()
+
     // Simple state to hold the currently selected post for reading, null means list view.
     var selectedPost by remember { mutableStateOf<BlogPost?>(null) }
-    
+    var showTldr by remember { mutableStateOf(false) }
+
+    // Auto-trigger summarization when a post is opened
+    LaunchedEffect(selectedPost) {
+        showTldr = false  // collapse when switching posts
+        val post = selectedPost ?: return@LaunchedEffect
+        val bodyText = post.content
+            .filterIsInstance<ContentBlock.Paragraph>()
+            .joinToString(" ") { it.text }
+        if (bodyText.length >= 300) {
+            viewModel.summarizePost(post.id, bodyText)
+        }
+    }
+
     val padding = when (sizeInfo.widthClass) {
         WidthClass.Compact  -> 16.dp
         WidthClass.Medium   -> 24.dp
@@ -110,8 +126,61 @@ fun BlogPage(
                                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                             )
                             Spacer(modifier = Modifier.height(32.dp))
-                            
-                            BlogPostContent(blocks = selectedPost!!.content)
+
+                             // ── TL;DR pill ───────────────────────────────────────────
+                             val postId = selectedPost!!.id
+                             val summary = summaries[postId]
+                             val isSummarizing = summarizing.contains(postId)
+
+                             if (summary != null || isSummarizing) {
+                                 Row(
+                                     verticalAlignment = Alignment.CenterVertically,
+                                     modifier = Modifier.padding(bottom = 8.dp)
+                                 ) {
+                                     Card(
+                                         modifier = Modifier.clickable { showTldr = !showTldr },
+                                         shape = RoundedCornerShape(50),
+                                         colors = CardDefaults.cardColors(
+                                             containerColor = if (showTldr)
+                                                 Color(0xFF7B3F9E)
+                                             else
+                                                 MaterialTheme.colorScheme.surfaceVariant
+                                         )
+                                     ) {
+                                         Text(
+                                             text = if (isSummarizing) "✨ Summarizing…"
+                                                    else if (showTldr) "✨ TL;DR ▲"
+                                                    else "✨ TL;DR",
+                                             style = MaterialTheme.typography.labelMedium,
+                                             color = if (showTldr) Color.White
+                                                     else Color(0xFF9C6ADE),
+                                             modifier = Modifier.padding(
+                                                 horizontal = 12.dp, vertical = 6.dp
+                                             )
+                                         )
+                                     }
+                                 }
+                                 if (showTldr && summary != null) {
+                                     Card(
+                                         modifier = Modifier
+                                             .fillMaxWidth()
+                                             .padding(bottom = 16.dp),
+                                         shape = RoundedCornerShape(12.dp),
+                                         colors = CardDefaults.cardColors(
+                                             containerColor = Color(0xFF9C6ADE).copy(alpha = 0.12f)
+                                         )
+                                     ) {
+                                         Text(
+                                             text = summary,
+                                             style = MaterialTheme.typography.bodyMedium,
+                                             color = MaterialTheme.colorScheme.onSurface,
+                                             modifier = Modifier.padding(12.dp)
+                                         )
+                                     }
+                                 }
+                             }
+
+                             BlogPostContent(blocks = selectedPost!!.content)
                         }
                     }
                 }

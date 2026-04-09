@@ -107,6 +107,7 @@ import net.winedownwednesday.web.utils.toDisplayString
 import net.winedownwednesday.web.utils.toEventDisplayDate
 import net.winedownwednesday.web.utils.toEventLocalDate
 import net.winedownwednesday.web.viewmodels.AuthPageViewModel
+import net.winedownwednesday.web.viewmodels.EventSuggestion
 import net.winedownwednesday.web.viewmodels.EventsPageViewModel
 import net.winedownwednesday.web.viewmodels.LoginUIState
 import org.jetbrains.compose.resources.painterResource
@@ -146,6 +147,16 @@ fun EventsPage(
         }
     }
 
+    val isLoggedIn = uiState is LoginUIState.Authenticated
+    val vinoSuggestions by viewModel.vinoEventSuggestions.collectAsState()
+    val isFetchingEventRecs by viewModel.isFetchingEventRecs.collectAsState()
+
+    // Fetch event suggestions once when user lands on Upcoming tab logged-in
+    androidx.compose.runtime.LaunchedEffect(isLoggedIn, showUpcoming) {
+        if (isLoggedIn && showUpcoming && vinoSuggestions.isEmpty()) {
+            viewModel.fetchVinoEventSuggestions()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -205,6 +216,20 @@ fun EventsPage(
         }
 
         val eventsToDisplay = if (showUpcoming) upcomingEvents else pastEvents
+
+        // ── Vino event suggestions banner (upcoming only, logged-in only) ────────
+        if (showUpcoming && isLoggedIn && (vinoSuggestions.isNotEmpty() || isFetchingEventRecs)) {
+            EventSuggestionBanner(
+                suggestions = vinoSuggestions,
+                isLoading = isFetchingEventRecs,
+                onSuggestionClick = { name ->
+                    val match = (upcomingEvents ?: emptyList())
+                        .firstOrNull { it.name.equals(name, ignoreCase = true) }
+                    if (match != null) viewModel.setSelectedEvent(match)
+                }
+            )
+        }
+
         // Adaptive column min size grows with screen width
         val colMinSize = when (sizeInfo.widthClass) {
             WidthClass.Compact  -> 280.dp
@@ -1704,4 +1729,66 @@ sealed class SubmissionStatus {
     object InProgress : SubmissionStatus()
     object Success : SubmissionStatus()
     data class Failure(val errorMessage: String) : SubmissionStatus()
+}
+// ─── Vino Event Suggestion Banner ────────────────────────────────────────────
+
+@Composable
+fun EventSuggestionBanner(
+    suggestions: List<EventSuggestion>,
+    isLoading: Boolean,
+    onSuggestionClick: (String) -> Unit = {}
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF3A1C5A).copy(alpha = 0.85f)
+        ),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = "✨ You might like this",
+                style = MaterialTheme.typography.labelMedium,
+                color = Color(0xFFCE93D8),
+                modifier = Modifier.padding(bottom = 6.dp)
+            )
+            if (isLoading) {
+                androidx.compose.material3.LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFF9C6ADE)
+                )
+            } else {
+                suggestions.forEach { suggestion ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSuggestionClick(suggestion.name) }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "📅 ",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Column {
+                            Text(
+                                text = suggestion.name,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                            )
+                            Text(
+                                text = suggestion.reason,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

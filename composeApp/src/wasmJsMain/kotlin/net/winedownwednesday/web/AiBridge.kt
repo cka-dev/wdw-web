@@ -107,3 +107,21 @@ external object AiBridge {
         functionUrl: String
     ): Promise<JsString>
 }
+
+// Extension: generic authenticated POST for recommendation endpoints
+@JsName("wdwAiBridge")
+external object AiBridgeExt {
+    /**
+     * Generic authenticated POST to any Cloud Function.
+     * Used by recommendWines, recommendEvents, and aiInfer(summarize).
+     * @param functionUrl Full Cloud Function URL
+     * @param bodyJson JSON body string
+     * @param idToken Firebase auth ID token
+     * @return Raw JSON response string
+     */
+    fun callAuthenticatedApi(
+        functionUrl: String,
+        bodyJson: String,
+        idToken: String
+    ): Promise<JsString>
+}

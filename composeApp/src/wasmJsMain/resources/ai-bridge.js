@@ -302,4 +302,32 @@ window.wdwAiBridge = {
         const data = await response.json();
         return JSON.stringify(data);
     },
+    // ─── Public API: Generic Authenticated POST ─────────────────────────────
+
+    /**
+     * Generic authenticated POST to any Cloud Function URL.
+     * Used by recommendWines, recommendEvents, and aiInfer(summarize).
+     * @param {string} functionUrl Full Cloud Function URL.
+     * @param {string} bodyJson JSON body string.
+     * @param {string} idToken Firebase auth ID token.
+     * @returns {Promise<string>} Raw JSON response string.
+     */
+    callAuthenticatedApi: async function(functionUrl, bodyJson, idToken) {
+        const response = await fetch(functionUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + idToken,
+            },
+            body: bodyJson,
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || "API request failed");
+        }
+
+        const data = await response.json();
+        return JSON.stringify(data);
+    },
 };

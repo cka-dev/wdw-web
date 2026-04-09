@@ -2,13 +2,19 @@ package net.winedownwednesday.web.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.await
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import net.winedownwednesday.web.AiBridgeExt
+import net.winedownwednesday.web.FirebaseBridge
 import net.winedownwednesday.web.data.Event
 import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.data.repositories.AppRepository
@@ -137,6 +143,44 @@ class EventsPageViewModel(
     companion object {
         private const val TAG = "EventsPageViewModel"
     }
+
+    // ─── Vino Event Suggestions ───────────────────────────────────────────────
+
+    private val _vinoEventSuggestions =
+        MutableStateFlow<List<EventSuggestion>>(emptyList())
+    val vinoEventSuggestions: StateFlow<List<EventSuggestion>> =
+        _vinoEventSuggestions.asStateFlow()
+
+    private val _isFetchingEventRecs = MutableStateFlow(false)
+    val isFetchingEventRecs: StateFlow<Boolean> =
+        _isFetchingEventRecs.asStateFlow()
+
+    fun fetchVinoEventSuggestions() {
+        if (_isFetchingEventRecs.value) return
+        viewModelScope.launch {
+            _isFetchingEventRecs.value = true
+            try {
+                val idToken = FirebaseBridge
+                    .getIdToken()
+                    .await<JsString?>()?.toString()
+                    ?: return@launch
+                val url = "https://us-central1-wdw-app-52a3c.cloudfunctions.net/recommendEvents"
+                val raw = AiBridgeExt
+                    .callAuthenticatedApi(url, "{}", idToken)
+                    .await<JsString>()
+                    .toString()
+                val decoded = Json { ignoreUnknownKeys = true }
+                    .decodeFromString<Map<String, kotlinx.serialization.json.JsonElement>>(raw)
+                val suggestionsJson = decoded["suggestions"]?.toString() ?: "[]"
+                _vinoEventSuggestions.value =
+                    Json { ignoreUnknownKeys = true }.decodeFromString(suggestionsJson)
+            } catch (_: Exception) {
+                // Silent fail
+            } finally {
+                _isFetchingEventRecs.value = false
+            }
+        }
+    }
 }
 
 object RsvpValidator {
@@ -185,4 +229,9 @@ enum class RSVPField {
 data class RsvpValidationResult(
     val isValid: Boolean,
     val errors: Map<RSVPField, String>
+)
+@Serializable
+data class EventSuggestion(
+    val name: String = "",
+    val reason: String = ""
 )

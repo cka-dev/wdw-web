@@ -3,10 +3,15 @@ package net.winedownwednesday.web.viewmodels
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.await
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import net.winedownwednesday.web.AiBridgeExt
+import net.winedownwednesday.web.FirebaseBridge
 import net.winedownwednesday.web.data.Wine
 import net.winedownwednesday.web.data.models.FlagReviewRequest
 import net.winedownwednesday.web.data.models.SubmitReviewRequest
@@ -206,7 +211,54 @@ class WinePageViewModel(
         _reviewSubmitError.value = null
         _reviewSubmitSuccess.value = false
     }
+
+    // ─── Vino Recommendations ─────────────────────────────────────────────────
+
+    private val _vinoRecommendations =
+        MutableStateFlow<List<WineRecommendation>>(emptyList())
+    val vinoRecommendations: StateFlow<List<WineRecommendation>> =
+        _vinoRecommendations.asStateFlow()
+
+    private val _isFetchingRecs = MutableStateFlow(false)
+    val isFetchingRecs: StateFlow<Boolean> = _isFetchingRecs.asStateFlow()
+
+    fun fetchVinoRecommendations() {
+        if (_isFetchingRecs.value) return
+        viewModelScope.launch {
+            _isFetchingRecs.value = true
+            try {
+                val idToken = FirebaseBridge
+                    .getIdToken()
+                    .await<JsString?>()?.toString()
+                    ?: return@launch
+                val url = "https://us-central1-wdw-app-52a3c.cloudfunctions.net/recommendWines"
+                val raw = AiBridgeExt
+                    .callAuthenticatedApi(url, "{}", idToken)
+                    .await<JsString>()
+                    .toString()
+                val decoded = Json { ignoreUnknownKeys = true }
+                    .decodeFromString<Map<String, kotlinx.serialization.json.JsonElement>>(raw)
+                val recsJson = decoded["recommendations"]?.toString() ?: "[]"
+                _vinoRecommendations.value = Json { ignoreUnknownKeys = true }
+                    .decodeFromString(recsJson)
+            } catch (_: Exception) {
+                // Silent fail — recommendations are non-critical
+            } finally {
+                _isFetchingRecs.value = false
+            }
+        }
+    }
 }
+
+// ─── Wine Recommendation model ────────────────────────────────────────────────
+
+@Serializable
+data class WineRecommendation(
+    val name: String = "",
+    val reason: String = "",
+    val wine_type: String = "",
+    val region: String = ""
+)
 
 // Extension used by CompactScreenWinePage / LargeScreenWinePage filter
 fun Wine.matchesQuery(query: String): Boolean {
