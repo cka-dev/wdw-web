@@ -173,7 +173,6 @@ fun ProfilePage(
                                                 editMode = false
                                                 showSuccessToast = true
                                                 showFailureToast = false
-                                                viewModel.fetchProfile(userEmail)
                                             } else {
                                                 showFailureToast = true
                                                 showSuccessToast = false
