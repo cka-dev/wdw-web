@@ -78,13 +78,15 @@ To prevent leaking project identifiers, some JavaScript files are excluded from 
 
 ### Messaging (Real-time Chat)
 - **Stream Chat Integration**: Real-time communication for members via Stream Chat SDK.
-- **Token Infrastructure**: Secure authentication using a dedicated `generateStreamToken` Cloud Function that verifies Firebase ID tokens.
+- **Token Infrastructure**: Secure authentication using a dedicated `generateStreamToken` Cloud Function that verifies Firebase ID tokens. Profile image URLs are sanitized before being passed to Stream to filter out CORS-unfriendly sources (e.g., Google's default avatar `google.com/images/branding/`).
 - **Tiered Channel Access**: The `generateStreamToken` function looks up the user's `memberType` from the `members` Firestore collection and assigns channels accordingly:
   - **Community Lounge** (`wdw-community`): All authenticated users (GUEST, MEMBER, LEADER).
   - **Members Circle** (`wdw-members`): MEMBER and LEADER only.
   - **Leaders Room** (`wdw-leaders`): LEADER only.
 - **Admin Role Syncing**: Firebase `isAdmin` flag from the `users` Firestore collection is synced to Stream's role system. Admin users receive the Stream `admin` role, granting moderation powers (ban, remove members, delete messages).
 - **JS Bridge (Web)**: Leverages the established JS interop pattern to maintain a lightweight Wasm bundle while utilizing the full Stream Browser SDK.
+- **Bot-Aware DM Detection**: The `_mapChannelData` function in `stream-bridge.js` uses a bot-filtered member count (`_botUserIds: ['vino-bot']`) to correctly identify DMs. A channel is classified as a DM when it has no explicit name AND either `allMembers.length === 2` (user+human or user+bot) OR `humanMembers.length === 2` (human DM where a bot was added later). For the "other user" display (name, avatar, online), it prefers a human member and falls back to the bot.
+- **Image URL Sanitization**: `_sanitizeImageUrl()` in `stream-bridge.js` filters out CORS-unfriendly URLs (Google default avatars) before they reach the UI. Applied to all image touchpoints: messages, channel data, user search results, and channel members.
 - **Inline Replies**: Users can drag/swipe a message right (or tap Reply) to reply to specific messages; the reply bubble shows a quoted preview of the parent message with an accent border. A stylized, elevated reply banner appears above the input when composing.
 - **Emoji Reactions**: Tap-accessible emoji picker (👍❤️😂🔥🎉) on each message. WhatsApp-style reaction chips with counts are anchored overlapping the bottom edge of the message bubbles. Reactions use a 500ms consistency delay before refreshing to ensure Stream's backend has processed the update.
 - **Expanded Emoji Picker**: Full emoji suite with 270+ emojis across 7 categories (Smileys, Gestures, Animals, Food, Activities, Hearts, Symbols) with category search.
@@ -133,6 +135,11 @@ To prevent leaking project identifiers, some JavaScript files are excluded from 
         - **Tier 2 (Server Lightweight)**: `aiInfer` Cloud Function using Gemini 3.1 Flash Lite for browsers without Prompt API (Safari, Firefox, iOS). Same prompts as on-device, served from server.
         - **Tier 3 (Server Heavy)**: `chatWithBot` and `summarizeThread` Cloud Functions for Vino Q&A and thread catch-up features, grounded in Firestore data.
     - **Bot Q&A**: Users mention `@Vino` or `@bot` in any channel (DM or community). The message is sent normally, then `chatWithBot` Cloud Function processes it via Gemini 3.1 Flash Lite with WDW context (wines, events, members, spotlight), and Vino responds in-thread. Rate limited to 20 queries/hour per user (server) + 3-second client-side cooldown.
+    - **Vino Auto-Response Rules**:
+        - **Vino DM**: Every message auto-triggers Vino — no @mention needed. Responses are flat (no threading), `parentMessageId = null`.
+        - **Community channels**: Requires explicit `@Vino` mention. Vino replies as a top-level message.
+        - **Thread continuation**: Once Vino is engaged in a thread, subsequent replies auto-trigger Vino if: (a) the thread parent was a Vino message, OR (b) Vino was the last to reply. If another human replies and breaks the chain, Vino goes silent until explicitly @mentioned again.
+        - **GIFs in threads**: GIF messages in Vino-active threads also trigger Vino (using the GIF title as message text).
     - **Two-Layer Contextual Intelligence**: `buildWdwContext` in `ai_bot.ts` uses two detection layers:
         1. **Layer 1 (current query keywords)**: Absolute precedence — explicit domain terms ("wine", "event", "gathering", "upcoming", etc.) determine context regardless of history.
         2. **Layer 2 (history fallback)**: Only fires when the current query is ambiguous (no strong keywords). Scans the last 3 messages for domain signals. Prevents context drift on short follow-ups like "tell me more".
@@ -152,6 +159,7 @@ To prevent leaking project identifiers, some JavaScript files are excluded from 
         - **Gemini quota (503)**: If Google’s Gemini API itself returns a 429/quota error, `chatWithBot` catches it and returns 503 with a Vino-voiced message: "I’m getting a lot of questions right now — give me a moment! 🍷"
     - **Clear Chat**: A 🗑️ trash icon in the Vino DM header lets users wipe the conversation. Triggers Stream’s `truncateChannel()` server-side and clears `_messages`, `_vinoCardsByMessageId`, and `_pendingVinoCards` client-side. Guarded by a confirmation `AlertDialog`.
     - **Community Lounge**: `@Vino` mentions in any channel (not just DM) trigger `chatWithBot`. In community/team channels, Vino’s reply is a top-level message (not threaded) so all members see it.
+    - **Vino Avatar**: Stored in Firebase Storage at `vino_avatar.png`, served via public GCS URL (`storage.googleapis.com/wdw-app-52a3c.firebasestorage.app/vino_avatar.png`). Set to `publicRead` ACL via `gsutil acl ch`. Firebase Storage security rules (`allow read: if false`) block the REST API URL; the public GCS URL bypasses these rules.
     - **Birthday & Wineversary Bot**: Scheduled Cloud Function (`checkBirthdaysAndWineversaries`) runs daily at 9 AM ET. Scans `members` collection for today’s birthdays and membership anniversaries (“Wineversary”). Posts Gemini-generated personalized greetings to Community Lounge only. Duplicate prevention via `bot_greetings` Firestore collection.
     - **JS Bridge**: `ai-bridge.js` (`window.wdwAiBridge`) with `AiBridge.kt` Kotlin external declarations.
     - **Cloud Model**: Gemini 3.1 Flash Lite (`gemini-3.1-flash-lite-preview`) — $0.25/1M input tokens, $1.50/1M output tokens.
@@ -173,6 +181,7 @@ To prevent leaking project identifiers, some JavaScript files are excluded from 
         - `clear-community` — truncates `wdw-community` and `wdw-community-test` history.
         - `create-test-channel` — creates `wdw-community-test` for safe feature testing.
         - `list-channels` — lists all active channels.
+        - `fix-stream-images` — scans all Stream users and clears CORS-unfriendly image URLs (e.g., Google default avatars). One-time migration utility.
     - Credentials are fetched from GCP Secret Manager at runtime; not stored in the repo.
 
 ### Settings Page (`SettingsPage.kt`)
