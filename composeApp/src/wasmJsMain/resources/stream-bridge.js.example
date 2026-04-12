@@ -111,7 +111,7 @@ window.wdwStreamBridge = {
             text: isMessageDeleted ? 'This message was deleted.' : (m.text || ''),
             userId: m.user?.id || '',
             userName: m.user?.name || m.user?.id || '',
-            userImage: m.user?.image || '',
+            userImage: this._sanitizeImageUrl(m.user?.image),
             createdAt: new Date(m.created_at).toISOString(),
             parentId: m.parent_id || '',
             replyCount: m.reply_count || 0,
@@ -160,18 +160,47 @@ window.wdwStreamBridge = {
     },
 
     /**
+     * Known bot user IDs — excluded from member counts when detecting DMs
+     * so that a bot joining a 1-on-1 channel doesn't break DM detection.
+     */
+    _botUserIds: ['vino-bot'],
+
+    /**
+     * Returns a usable image URL or empty string.
+     * Filters out URLs known to cause CORS errors or 403s.
+     */
+    _sanitizeImageUrl: function(url) {
+        if (!url) return '';
+        // Google's default profile icon blocks CORS from other origins
+        if (url.includes('google.com/images/branding/')) return '';
+        return url;
+    },
+
+    /**
      * Helper to map a raw JS channel object to our Kotlin-friendly format
      */
     _mapChannelData: function(c) {
         let channelName = c.data.name;
         let isDM = false;
 
-        // Determine if it's a direct message (1-on-1)
-        const members = Object.values(c.state.members || {});
-        if (!channelName && members.length === 2) {
+        // All members in the channel (may include bots like vino-bot)
+        const allMembers = Object.values(c.state.members || {});
+        // Human-only members: exclude known bots so their presence
+        // doesn't break the "exactly 2 members" DM check.
+        const humanMembers = allMembers.filter(
+            m => !this._botUserIds.includes(m.user_id)
+        );
+
+        // Determine if it's a direct message (1-on-1 conversation).
+        // A channel is a DM when it has no explicit name and ONE of:
+        //  • Exactly 2 total members (user+human OR user+bot like Vino)
+        //  • Exactly 2 human members (human DM where a bot was added later)
+        if (!channelName && (allMembers.length === 2 || humanMembers.length === 2)) {
             isDM = true;
-            // Find the other user
-            const otherMember = members.find(m => m.user_id !== this.client.userID);
+            // Find the "other" participant: prefer a human, fall back to bot
+            const otherMember =
+                humanMembers.find(m => m.user_id !== this.client.userID) ||
+                allMembers.find(m => m.user_id !== this.client.userID);
             if (otherMember && otherMember.user) {
                 channelName = otherMember.user.name || otherMember.user.id;
             }
@@ -184,19 +213,23 @@ window.wdwStreamBridge = {
         // Get channel image: for DMs use the other member's avatar, for groups use channel image
         let channelImage = '';
         if (isDM) {
-            const otherMember = members.find(m => m.user_id !== this.client.userID);
+            const otherMember =
+                humanMembers.find(m => m.user_id !== this.client.userID) ||
+                allMembers.find(m => m.user_id !== this.client.userID);
             if (otherMember && otherMember.user && otherMember.user.image) {
-                channelImage = otherMember.user.image;
+                channelImage = this._sanitizeImageUrl(otherMember.user.image);
             }
         } else {
-            channelImage = c.data.image || '';
+            channelImage = this._sanitizeImageUrl(c.data.image);
         }
 
         // Online status: for DMs, check if the other member is online
         let otherUserOnline = false;
         let otherUserId = '';
         if (isDM) {
-            const otherMember = members.find(m => m.user_id !== this.client.userID);
+            const otherMember =
+                humanMembers.find(m => m.user_id !== this.client.userID) ||
+                allMembers.find(m => m.user_id !== this.client.userID);
             if (otherMember && otherMember.user) {
                 otherUserOnline = otherMember.user.online || false;
                 otherUserId = otherMember.user_id || '';
@@ -569,7 +602,7 @@ window.wdwStreamBridge = {
             return response.users.map(u => ({
                 id: u.id,
                 name: u.name || u.id,
-                image: u.image || ''
+                image: this._sanitizeImageUrl(u.image)
             }));
         } catch (error) {
             console.error("StreamBridge: Error searching users:", error);
@@ -592,7 +625,7 @@ window.wdwStreamBridge = {
             return response.users.map(u => ({
                 id: u.id,
                 name: u.name || u.id,
-                image: u.image || ''
+                image: this._sanitizeImageUrl(u.image)
             }));
         } catch (error) {
             console.error("StreamBridge: Error querying users by IDs:", error);
@@ -614,7 +647,7 @@ window.wdwStreamBridge = {
             return response.users.map(u => ({
                 id: u.id,
                 name: u.name || u.id,
-                image: u.image || ''
+                image: this._sanitizeImageUrl(u.image)
             }));
         } catch (error) {
             console.error("StreamBridge: Error querying all users:", error);
@@ -734,7 +767,7 @@ window.wdwStreamBridge = {
             return members.map(m => ({
                 userId: m.user?.id || '',
                 userName: m.user?.name || m.user?.id || '',
-                userImage: m.user?.image || '',
+                userImage: this._sanitizeImageUrl(m.user?.image),
                 role: m.role || 'member',
                 online: m.user?.online || false,
                 lastActive: m.user?.last_active ? new Date(m.user.last_active).toISOString() : ''
