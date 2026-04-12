@@ -78,6 +78,7 @@ fun WinePage(
     val pendingWineName by viewModel.pendingWineName.collectAsState()
     val recommendations by viewModel.vinoRecommendations.collectAsState()
     val isFetchingRecs by viewModel.isFetchingRecs.collectAsState()
+    val isWinesLoaded = wines != null
 
     val filteredWines = remember(wines, searchQuery) {
         wines?.filter { it.matchesQuery(searchQuery) } ?: emptyList()
@@ -109,7 +110,8 @@ fun WinePage(
             userName = userName,
             userEmail = userEmail,
             recommendations = recommendations,
-            isFetchingRecs = isFetchingRecs
+            isFetchingRecs = isFetchingRecs,
+            isLoaded = isWinesLoaded
         )
     } else {
         val listFraction = when (sizeInfo.widthClass) {
@@ -125,7 +127,8 @@ fun WinePage(
             userEmail = userEmail,
             listFraction = listFraction,
             recommendations = recommendations,
-            isFetchingRecs = isFetchingRecs
+            isFetchingRecs = isFetchingRecs,
+            isLoaded = isWinesLoaded
         )
     }
 }
@@ -543,7 +546,8 @@ fun CompactScreenWinePage(
     userEmail: String?,
     modifier: Modifier = Modifier,
     recommendations: List<WineRecommendation> = emptyList(),
-    isFetchingRecs: Boolean = false
+    isFetchingRecs: Boolean = false,
+    isLoaded: Boolean = false
 ) {
     var showDialog by rememberSaveable { mutableStateOf(false) }
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -588,17 +592,39 @@ fun CompactScreenWinePage(
             )
         }
 
-        itemsIndexed(favoriteWines) { index, wine ->
-            GridItemReveal(index = index, animationKey = searchQuery) {
-                WineCard(
-                    wine = wine,
-                    isFavorite = true,
-                    onClick = {
-                        hapticVibrate(HapticDuration.TICK, HapticCategory.DIALOGS)
-                        viewModel.setSelectedWine(wine)
-                        showDialog = true
-                    }
+        if (!isLoaded) {
+            item {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Loading wines",
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                    LinearProgressBar()
+                }
+            }
+        } else if (favoriteWines.isEmpty()) {
+            item {
+                ComingSoonPlaceholder(
+                    title = "Wine Collection",
+                    subtitle = "Our curated wine list is being prepared. Check back soon!"
                 )
+            }
+        } else {
+            itemsIndexed(favoriteWines) { index, wine ->
+                GridItemReveal(index = index, animationKey = searchQuery) {
+                    WineCard(
+                        wine = wine,
+                        isFavorite = true,
+                        onClick = {
+                            hapticVibrate(HapticDuration.TICK, HapticCategory.DIALOGS)
+                            viewModel.setSelectedWine(wine)
+                            showDialog = true
+                        }
+                    )
+                }
             }
         }
     }
@@ -630,7 +656,8 @@ fun LargeScreenWinePage(
     userEmail: String?,
     listFraction: Float = 0.30f,
     recommendations: List<WineRecommendation> = emptyList(),
-    isFetchingRecs: Boolean = false
+    isFetchingRecs: Boolean = false,
+    isLoaded: Boolean = false
 ) {
     val searchQuery by viewModel.searchQuery.collectAsState()
 
@@ -648,12 +675,21 @@ fun LargeScreenWinePage(
                 onQueryChange = { viewModel.setSearchQuery(it) }
             )
 
-            if (filteredWines.isEmpty()) {
-                Text(
-                    text = "No wines found.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(16.dp)
+            if (!isLoaded) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Loading wines",
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                    LinearProgressBar()
+                }
+            } else if (filteredWines.isEmpty()) {
+                ComingSoonPlaceholder(
+                    title = "Wine Collection",
+                    subtitle = "Our curated wine list is being prepared. Check back soon!"
                 )
             } else {
                 Card(

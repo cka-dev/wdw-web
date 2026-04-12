@@ -157,23 +157,37 @@ fun LargeScreenPodcastPage(
                         modifier = Modifier.fillMaxSize()
                     ) {
                         filteredEpisodes?.let { episodes ->
-                            items(episodes) { episode ->
-                                ScrollReveal {
-                                    EpisodeListItem(
-                                        episode = episode,
-                                        isSelected = (
-                                                if (selectedEpisode != null) {
-                                                    episode == selectedEpisode
-                                                } else {
-                                                    false
-                                                }),
-                                        onClick = {
-                                            onEpisodeSelected(episode)
-                                        }
+                            if (episodes.isEmpty()) {
+                                item {
+                                    ComingSoonPlaceholder(
+                                        title = "Uncorked Conversations",
+                                        subtitle = "Our podcast episodes are coming soon! Stay tuned."
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(16.dp))
+                            } else {
+                                items(episodes) { episode ->
+                                    ScrollReveal {
+                                        EpisodeListItem(
+                                            episode = episode,
+                                            isSelected = (
+                                                    if (selectedEpisode != null) {
+                                                        episode == selectedEpisode
+                                                    } else {
+                                                        false
+                                                    }),
+                                            onClick = {
+                                                onEpisodeSelected(episode)
+                                            }
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                }
                             }
+                        } ?: item {
+                            ComingSoonPlaceholder(
+                                title = "Uncorked Conversations",
+                                subtitle = "Our podcast episodes are coming soon! Stay tuned."
+                            )
                         }
                     }
                     VerticalScrollbar(
@@ -418,6 +432,13 @@ fun CompactPodcastsScreen(
                                 onClick = { onSelectedEpisodeChange(episode) }
                             )
                         }
+                    }
+                } else {
+                    item {
+                        ComingSoonPlaceholder(
+                            title = "Uncorked Conversations",
+                            subtitle = "Our podcast episodes are coming soon! Stay tuned."
+                        )
                     }
                 }
             }

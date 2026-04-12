@@ -215,6 +215,37 @@ fun EventsPage(
         }
         val gridState = rememberLazyGridState()
         Box(modifier = Modifier.fillMaxSize()) {
+            if (eventsToDisplay.isNullOrEmpty()) {
+                // Empty state — centered in the available space
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(32.dp)
+                    ) {
+                        Text(
+                            text = if (showUpcoming) "No Upcoming Gatherings"
+                                   else "No Past Events",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = if (showUpcoming)
+                                "Stay tuned — our next gathering is being planned!"
+                            else
+                                "Check back after our first event!",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            } else {
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(minSize = colMinSize),
                 state = gridState,
@@ -224,7 +255,6 @@ fun EventsPage(
                 modifier = Modifier
                     .fillMaxSize()
             ) {
-                if (!eventsToDisplay.isNullOrEmpty()) {
                     itemsIndexed(eventsToDisplay) { index, event ->
                         GridItemReveal(index = index, animationKey = showUpcoming) {
                             EventCard(

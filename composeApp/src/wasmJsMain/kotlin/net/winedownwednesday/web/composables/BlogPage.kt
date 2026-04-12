@@ -226,10 +226,10 @@ fun BlogPage(
                         val posts = blogPosts ?: emptyList()
                         if (posts.isEmpty()) {
                             item {
-                                Text(
-                                    text = "No posts available at the moment.",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = Color.LightGray
+                                ComingSoonPlaceholder(
+                                    title = "Tasting Notes Blog",
+                                    subtitle = "Our blog posts are being crafted. Check back soon for stories, news, and insights from the club.",
+                                    emoji = "📝"
                                 )
                             }
                         } else {

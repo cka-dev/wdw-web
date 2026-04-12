@@ -83,6 +83,7 @@ fun HomePage(
     val featuredWines by viewModel.featuredWines.collectAsState()
     val highlightedMember by viewModel.highlightedMember.collectAsState()
     val eventsLoaded by viewModel.eventsLoaded.collectAsState()
+    val winesLoaded by viewModel.winesLoaded.collectAsState()
     val campaignName by viewModel.campaignName.collectAsState()
     val campaignDescription by viewModel.campaignDescription.collectAsState()
 
@@ -211,7 +212,8 @@ fun HomePage(
                             wines = featuredWines,
                             currentIndex = currentIndex,
                             sizeInfo = sizeInfo,
-                            onWineDetailsClick = { wine -> selectedWine = wine }
+                            onWineDetailsClick = { wine -> selectedWine = wine },
+                            isLoaded = winesLoaded
                         )
                     }
                     SlideInCard(delayMs = 650) {
@@ -334,10 +336,11 @@ fun AutoScrollingWineListHorizontal(
     onWineDetailsClick: (Wine) -> Unit = {},
     currentIndex: Int,
     sizeInfo: WindowSizeInfo,
+    isLoaded: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     if (wines.size <= 1) {
-        SingleWineOrEmptyHorizontal(title, description, wines, onWineDetailsClick, sizeInfo, modifier)
+        SingleWineOrEmptyHorizontal(title, description, wines, onWineDetailsClick, sizeInfo, isLoaded, modifier)
         return
     }
     val transition = updateTransition(targetState = currentIndex, label = "wineSlide")
@@ -504,6 +507,7 @@ private fun SingleWineOrEmptyHorizontal(
     wines: List<Wine>,
     onWineDetailsClick: (Wine) -> Unit,
     sizeInfo: WindowSizeInfo,
+    isLoaded: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val swWidthMod = when (sizeInfo.widthClass) {
@@ -539,11 +543,37 @@ private fun SingleWineOrEmptyHorizontal(
             }
             Spacer(modifier = Modifier.height(8.dp))
             if (wines.isEmpty()) {
-                Text(
-                    text = "Fetching wines",
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-                LinearProgressBar()
+                if (isLoaded) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "No Featured Wines",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Check back soon for our curated selections!",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            )
+                        }
+                    }
+                } else {
+                    Text(
+                        text = "Fetching wines",
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                    LinearProgressBar()
+                }
             } else {
                 WineCard(
                     wine = wines.first(),

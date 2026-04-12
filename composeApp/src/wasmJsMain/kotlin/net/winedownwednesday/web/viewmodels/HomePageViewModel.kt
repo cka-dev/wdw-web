@@ -28,6 +28,9 @@ class HomePageViewModel(
     private val _featuredWines = MutableStateFlow<List<Wine>>(emptyList())
     val featuredWines = _featuredWines.asStateFlow()
 
+    private val _winesLoaded = MutableStateFlow(false)
+    val winesLoaded = _winesLoaded.asStateFlow()
+
     private val _highlightedMember = MutableStateFlow<Member?>(null)
     val highlightedMember = _highlightedMember.asStateFlow()
 
@@ -59,6 +62,7 @@ class HomePageViewModel(
                     _campaignName.value = featured.campaignName
                     _campaignDescription.value = featured.description
                 }
+                _winesLoaded.value = true
             }
         }
 

@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.Icon
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -113,18 +115,24 @@ fun Footer(modifier: Modifier = Modifier) {
             // ── Col 2 · Contact ───────────────────────────────────────
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 FooterLabel("Contact")
-                Text(
-                    text = "info@winedownwednesday.net",
-                    fontSize = 12.sp,
-                    color = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.75f),
-                    modifier = Modifier.clickable { showContactForm = true }
-                )
-                Text(
-                    text = "+1 (404) 939-3370",
-                    fontSize = 12.sp,
-                    color = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.75f),
-                    modifier = Modifier.clickable { window.open("tel:+14049393370") }
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.Email,
+                        contentDescription = "Email us",
+                        tint = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable { showContactForm = true }
+                    )
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.Phone,
+                        contentDescription = "Call us",
+                        tint = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable { window.open("tel:+14049393370") }
+                    )
+                }
             }
 
             // ── Col 3 · Get our Apps ──────────────────────────────────
