@@ -16,7 +16,9 @@ This document provides a detailed overview of the architecture, features, and te
 - **Authentication**: Hybrid Model (Passkeys/WebAuthn + Server-Side Password Validation)
 - **Messaging**: Stream Chat SDK (with custom Cloud Function token generation)
 - **Emoji Rendering**: Emoji.kt (Noto vector images for Wasm, where system emoji fonts are unavailable)
-- **Backend**: Firebase Cloud Functions (Node.js)
+- **Image Loading**: Coil 3 (`setSingletonImageLoaderFactory` configured with 25% memory cache + crossfade)
+- **Image Serialization**: `ImageBitmapSerializer` encodes bitmaps as JPEG (quality 80) for upload payloads
+- **Backend**: Firebase Cloud Functions (Node.js) with `sharp` for server-side image optimisation (resize, WebP conversion, immutable cache headers). Core read endpoints use `minInstances: 1` for warm starts.
 - **State Management**: MVVM (Model-View-ViewModel) using Kotlin Coroutines and Flow
 
 ### Project Structure
@@ -200,6 +202,7 @@ Enhanced profile picture management in `ProfilePage.kt`:
 - **Image Cropping** (`ImageCropperDialog.kt`): Pure-Compose cropper with circle mask overlay, drag-to-pan, scroll-to-zoom. Produces a 512×512px cropped bitmap.
 - **Full-Screen Viewer**: Dialog preview of current profile photo at full resolution.
 - **Remove Photo**: Clears both `profileImageBitmap` and `profileImageUrl`, allowing users to revert to the placeholder.
+- **Upload Optimisation**: Profile images are serialized as JPEG (quality 80) on the client, then server-side `sharp` resizes to 600px max width, converts to WebP, and sets `cacheControl: public, max-age=31536000, immutable`. The `fetchUserProfile` response no longer returns `profileImageBitmap` (always null; the field is client-local only).
 
 ### Profile Data Integrity
 - `ProfileEditSection` now carries `eventRsvps`, `blockedEmails`, and `profileImageUrl` through when constructing `updatedProfile`, preventing silent field drops on save.
@@ -215,6 +218,13 @@ To ensure compatibility with various backend configurations, sensitive identifie
 
 ### Cloud Functions v2 Routing
 For Firebase Functions v2 (e.g., Passkey Auth, Messaging), the application uses explicit Cloud Run URLs (e.g., `https://function-name-iktff5ztia-uc.a.run.app`) instead of the legacy `cloudfunctions.net` proxy. This ensures consistent routing for functions with project secrets and mitigates 404 errors during proxy propagation.
+
+### API Performance Optimisations
+- **Batch Initial Data** (`getInitialData`): A single endpoint returns `members`, `events`, `episodes`, `wines`, `aboutItems`, `memberSpotlight`, `featuredWines`, and `blogPosts` in one gzip-compressed response. Uses `Promise.all` for parallel Firestore reads. The web client calls this at startup (via `AppRepository.init`), falling back to individual endpoints on failure. Mobile clients still use individual endpoints until their next App Store release.
+- **Cold-Start Mitigation**: All core read endpoints (`getInitialData`, `fetchUserProfile`, `getMembers`, `getEvents`, `getWines`, `getEpisodes`, `getAboutItems`, `getMemberSpotlight`, `getFeaturedWines`) use `minInstances: 1` to keep one container warm.
+- **Gzip Compression**: A shared `sendCompressed()` helper gzips JSON payloads > 1KB when the client sends `Accept-Encoding: gzip`. Ktor auto-decompresses.
+- **Parallelised Reads**: `fetchUserProfile` reads `userProfiles`, `members`, and `users` collections in parallel via `Promise.all` (previously 3 sequential awaits).
+- **Extracted Mapping Helpers**: `mapMemberDoc`, `mapEventDoc`, `mapWineDoc`, `mapEpisodeDoc`, `mapAboutItemDoc`, `sortEventsDesc` — shared by both individual and batch endpoints.
 
 ### Haptic Feedback (Vibration API)
 Mobile compact layouts use the browser [Vibration API](https://developer.mozilla.org/en-US/docs/Web/API/Vibration_API) (`navigator.vibrate()`) for subtle haptic feedback on interactive elements.
@@ -364,6 +374,8 @@ Top-level `@Composable` that uses `LocalWindowInfo.containerSize` + `LocalDensit
 - **Build Command**: `./gradlew :composeApp:wasmJsBrowserDistribution`
 - **Memory**: Production WASM compilation requires at least 6 GB heap. Set in `gradle.properties`: `kotlin.daemon.jvmargs=-Xmx6G` and `org.gradle.jvmargs=-Xmx6G`.
 - **Headers**: `firebase.json` is configured to serve `.wasm` files with `application/wasm` MIME type and specific caching headers for performance.
+- **Hosting Cache Headers**: JS/CSS/Wasm files are served with `Cache-Control: public, max-age=604800, stale-while-revalidate=86400` (7-day cache), and images with `max-age=2592000` (30-day cache), on both the admin and default hosting targets.
+- **Storage Image Optimisation**: All uploaded images are processed by `sharp` (resize + WebP conversion) and served with `cacheControl: public, max-age=31536000, immutable` metadata. Event gallery uploads generate separate thumbnail (400px) and full-resolution (1200px) URLs.
 - **Versioning**: Semantic Versioning (`MAJOR.MINOR.PATCH`).
     - **Web Client**: Source of truth is `gradle.properties` → `appVersion`. A Gradle task (`generateBuildConfig`) auto-generates `BuildConfig.kt` with a `VERSION` constant at compile time. Displayed in the footer (desktop: Legal column, mobile: compact footer).
     - **Admin Dashboard**: Source of truth is `admin/package.json` → `"version"`. Injected at build time via Vite `define` → `__APP_VERSION__`. Displayed in sidebar footer, logged to console on mount.

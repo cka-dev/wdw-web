@@ -66,14 +66,32 @@ class AppRepository (
 
     init {
         repositoryScope.launch {
-            fetchMembers()
-            fetchEvents()
-            fetchEpisodes()
-            fetchBlogPosts()
-            fetchAboutItems()
-            fetchWines()
-            fetchFeaturedWinesResponse()
-            fetchMemberSpotlight()
+            // Primary: single batch call replaces 8 individual requests
+            val initialData = remoteDataSource.fetchInitialData()
+            if (initialData != null) {
+                _members.value = initialData.members
+                _events.value = initialData.events
+                _episodes.value = initialData.episodes
+                _wineList.value = initialData.wines
+                _aboutItems.value = initialData.aboutItems
+                _memberSpotlight.value = initialData.memberSpotlight
+                _featuredWinesResponse.value = initialData.featuredWines
+                if (initialData.blogPosts != null &&
+                    initialData.blogPosts.posts.isNotEmpty()
+                ) {
+                    _blogPosts.value = initialData.blogPosts.posts
+                }
+            } else {
+                // Fallback: individual calls if batch fails
+                fetchMembers()
+                fetchEvents()
+                fetchEpisodes()
+                fetchBlogPosts()
+                fetchAboutItems()
+                fetchWines()
+                fetchFeaturedWinesResponse()
+                fetchMemberSpotlight()
+            }
         }
     }
 

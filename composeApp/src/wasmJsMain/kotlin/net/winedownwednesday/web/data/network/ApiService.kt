@@ -18,8 +18,11 @@ import net.winedownwednesday.web.data.models.UserProfileData
 import net.winedownwednesday.web.data.models.FeaturedWinesResponse
 import net.winedownwednesday.web.data.models.BlogPostsResponse
 import net.winedownwednesday.web.data.models.BlogPost
+import net.winedownwednesday.web.data.models.InitialDataResponse
 
 interface ApiService {
+
+    suspend fun fetchInitialData(): InitialDataResponse?
 
     suspend fun fetchEpisodes(): List<Episode>?
 

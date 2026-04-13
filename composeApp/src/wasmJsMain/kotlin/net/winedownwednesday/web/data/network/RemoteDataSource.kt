@@ -30,6 +30,7 @@ import net.winedownwednesday.web.data.models.EmailPasswordRequest
 import net.winedownwednesday.web.data.models.FcmInstanceRegistrationRequest
 import net.winedownwednesday.web.data.models.FeaturedWinesResponse
 import net.winedownwednesday.web.data.models.FirebaseAuthResponse
+import net.winedownwednesday.web.data.models.InitialDataResponse
 import net.winedownwednesday.web.data.models.PublicKeyCredentialCreationOptions
 import net.winedownwednesday.web.data.models.PublicKeyCredentialRequestOptions
 import net.winedownwednesday.web.data.models.RSVPRequest
@@ -53,6 +54,20 @@ class RemoteDataSource (
 
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
+
+    override suspend fun fetchInitialData(): InitialDataResponse? {
+        return try {
+            client.get("$SERVER_URL/getInitialData"){
+                headers {
+                    append(HttpHeaders.AccessControlAllowOrigin, "*")
+                    append(HttpHeaders.Accept, ContentType.Application.Json.toString())
+                }
+            }.body()
+        } catch (e: Exception) {
+            _error.value = e.message ?: "Unknown error occurred"
+            null
+        }
+    }
 
     override suspend fun fetchEpisodes(): List<Episode>? {
         _isLoading.value = true
