@@ -10,5 +10,6 @@ fun App() {
 
 @Composable
 fun WineDownWebApp() {
+    InitCoilImageLoader()
     MainNavigation()
 }

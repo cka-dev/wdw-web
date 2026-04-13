@@ -11,6 +11,8 @@ data class UserProfileData(
     val email: String?,
     val phone: String?,
     val aboutMe: String?,
+    // Client-local only: used to serialize the bitmap for upload.
+    // The server never returns this field (always null after save).
     @Serializable(with = ImageBitmapSerializer::class)
     val profileImageBitmap: Bitmap? = null,
     val profileImageUrl: String? = null,

@@ -22,7 +22,7 @@ object ImageBitmapSerializer : KSerializer<Bitmap> {
     override fun serialize(encoder: Encoder, value: Bitmap) {
         val image = Image.makeFromBitmap(value)
 
-        val encodedBytes = image.encodeToData(EncodedImageFormat.PNG, 80)?.bytes ?: byteArrayOf()
+        val encodedBytes = image.encodeToData(EncodedImageFormat.JPEG, 80)?.bytes ?: byteArrayOf()
 
         val base64String = Base64.encode(encodedBytes)
 
