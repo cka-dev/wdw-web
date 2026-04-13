@@ -364,6 +364,10 @@ Top-level `@Composable` that uses `LocalWindowInfo.containerSize` + `LocalDensit
 - **Build Command**: `./gradlew :composeApp:wasmJsBrowserDistribution`
 - **Memory**: Production WASM compilation requires at least 6 GB heap. Set in `gradle.properties`: `kotlin.daemon.jvmargs=-Xmx6G` and `org.gradle.jvmargs=-Xmx6G`.
 - **Headers**: `firebase.json` is configured to serve `.wasm` files with `application/wasm` MIME type and specific caching headers for performance.
+- **Versioning**: Semantic Versioning (`MAJOR.MINOR.PATCH`).
+    - **Web Client**: Source of truth is `gradle.properties` → `appVersion`. A Gradle task (`generateBuildConfig`) auto-generates `BuildConfig.kt` with a `VERSION` constant at compile time. Displayed in the footer (desktop: Legal column, mobile: compact footer).
+    - **Admin Dashboard**: Source of truth is `admin/package.json` → `"version"`. Injected at build time via Vite `define` → `__APP_VERSION__`. Displayed in sidebar footer, logged to console on mount.
+    - **Bump Policy**: Versions are only bumped at deploy time, not on every commit. Git tags use `wdw-web@X.Y.Z` / `wdw-admin@X.Y.Z` prefixes.
 
 ---
 

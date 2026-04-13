@@ -1,5 +1,7 @@
 package net.winedownwednesday.web.composables
 
+import net.winedownwednesday.web.BuildConfig
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -170,7 +172,7 @@ fun Footer(modifier: Modifier = Modifier) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 FooterLabel("Legal")
                 Text(
-                    text = "© 2025 Wine Down Wednesday",
+                    text = "© 2025 Wine Down Wednesday · v${BuildConfig.VERSION}",
                     fontSize = 11.sp,
                     color = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f),
                 )
@@ -274,6 +276,13 @@ fun CompactFooter(modifier: Modifier = Modifier) {
                     )
                 }
             }
+
+            // Version label
+            Text(
+                text = "v${BuildConfig.VERSION}",
+                fontSize = 9.sp,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.3f),
+            )
         }
     }
 }

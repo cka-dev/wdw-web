@@ -111,6 +111,31 @@ kotlin {
     }
 }
 
+// ── Build-time version injection ────────────────────────────────
+val generateBuildConfig by tasks.registering {
+    val version = project.findProperty("appVersion")?.toString() ?: "0.0.0"
+    val outputDir = layout.buildDirectory.dir("generated/buildconfig/kotlin")
+    outputs.dir(outputDir)
+    doLast {
+        val dir = outputDir.get().asFile.resolve("net/winedownwednesday/web")
+        dir.mkdirs()
+        dir.resolve("BuildConfig.kt").writeText(
+            """
+            |package net.winedownwednesday.web
+            |
+            |/** Auto-generated — do NOT edit. Sourced from gradle.properties `appVersion`. */
+            |object BuildConfig {
+            |    const val VERSION: String = "$version"
+            |}
+            """.trimMargin()
+        )
+    }
+}
 
+kotlin.sourceSets.named("wasmJsMain") {
+    kotlin.srcDir(generateBuildConfig.map { layout.buildDirectory.dir("generated/buildconfig/kotlin").get() })
+}
 
-
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
+    dependsOn(generateBuildConfig)
+}
