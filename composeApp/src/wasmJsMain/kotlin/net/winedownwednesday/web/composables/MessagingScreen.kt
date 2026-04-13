@@ -4728,7 +4728,7 @@ fun GifSearchPanel(
     }
 }
 
-@JsFun("(query, callback) => { fetch('https://tenor.googleapis.com/v2/search?q=' + encodeURIComponent(query) + '&key=REDACTED_TENOR_API_KEY&client_key=wdw_web&limit=20').then(r => r.json()).then(data => { const results = (data.results || []).map(g => [g.media_formats.tinygif.url, g.media_formats.gif.url, g.content_description || g.title || 'GIF']); callback(results); }).catch(e => { console.error('GIF search error:', e); callback([]); }); }")
+@JsFun("(query, callback) => { window.wdwFirebaseBridge.searchTenorGifs(query, callback); }")
 private external fun searchGiphyJs(query: String, callback: (JsArray<JsArray<JsString>>) -> Unit)
 
 private fun searchGiphy(query: String, onResults: (List<Triple<String, String, String>>) -> Unit) {
