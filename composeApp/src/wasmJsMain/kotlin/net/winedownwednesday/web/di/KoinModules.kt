@@ -12,7 +12,6 @@ import net.winedownwednesday.web.viewmodels.MembersPageViewModel
 import net.winedownwednesday.web.viewmodels.PodcastsPageViewModel
 import net.winedownwednesday.web.viewmodels.WinePageViewModel
 import net.winedownwednesday.web.viewmodels.MessagingViewModel
-import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val provideHttpClient = module {
@@ -52,11 +51,11 @@ val provideWinePageViewModel = module {
 }
 
 val provideAuthPageViewModel = module {
-    viewModel { AuthPageViewModel(get()) }
+    single { AuthPageViewModel(get()) }
 }
 
 val provideHomePageViewModel = module {
-    viewModel { HomePageViewModel(get()) }
+    single { HomePageViewModel(get()) }
 }
 
 val provideBlogPageViewModel = module {
