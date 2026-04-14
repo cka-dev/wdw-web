@@ -198,7 +198,10 @@ fun BlogPage(
                 Box(modifier = Modifier.fillMaxSize()) {
                     LazyColumn(
                         state               = blogListState,
-                        contentPadding      = PaddingValues(padding),
+                        contentPadding      = PaddingValues(
+                            start = padding, end = padding,
+                            top = padding, bottom = padding + 100.dp
+                        ),
                         verticalArrangement = Arrangement.spacedBy(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier            = Modifier.fillMaxSize()

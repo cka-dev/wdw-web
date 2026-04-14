@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
@@ -153,8 +154,9 @@ fun LargeScreenPodcastPage(
                 val episodeListState = rememberLazyListState()
                 Box(modifier = Modifier.fillMaxSize()) {
                     LazyColumn(
-                        state    = episodeListState,
-                        modifier = Modifier.fillMaxSize()
+                        state          = episodeListState,
+                        modifier       = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = 120.dp)
                     ) {
                         filteredEpisodes?.let { episodes ->
                             if (episodes.isEmpty()) {
@@ -416,13 +418,15 @@ fun CompactPodcastsScreen(
         )
         val filteredEpisodes = episodes?.filter { it.matchesQuery(searchQuery) }
 
+        val compactListState = rememberLazyListState()
         Box(
             modifier = Modifier
                 .fillMaxSize()
         ) {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
+                state = compactListState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 120.dp)
             ) {
                 if (!filteredEpisodes.isNullOrEmpty()) {
                     itemsIndexed(filteredEpisodes) { index, episode ->
@@ -442,6 +446,15 @@ fun CompactPodcastsScreen(
                     }
                 }
             }
+
+            VerticalScrollbar(
+                adapter  = rememberScrollbarAdapter(compactListState),
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .fillMaxHeight()
+                    .padding(end = 2.dp),
+                style    = wdwScrollbarStyle()
+            )
 
             if (selectedEpisode != null) {
                 EpisodeVideoPopup(

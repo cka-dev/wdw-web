@@ -1,5 +1,6 @@
 package net.winedownwednesday.web.composables
 
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,9 +14,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -126,9 +130,13 @@ fun SettingsPage(
 
                 if (isCompactScreen) {
                     // Compact: stacked cards
+                    val settingsListState = rememberLazyListState()
+                    Box(modifier = Modifier.fillMaxSize()) {
                     LazyColumn(
+                        state = settingsListState,
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        contentPadding = PaddingValues(bottom = 120.dp)
                     ) {
                         item {
                             SecuritySection(
@@ -155,6 +163,15 @@ fun SettingsPage(
                                 onLogout = onLogout
                             )
                         }
+                    }
+                    VerticalScrollbar(
+                        adapter  = rememberScrollbarAdapter(settingsListState),
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .fillMaxHeight()
+                            .padding(end = 2.dp),
+                        style    = wdwScrollbarStyle()
+                    )
                     }
                 } else {
                     // Wide: sidebar + detail pane

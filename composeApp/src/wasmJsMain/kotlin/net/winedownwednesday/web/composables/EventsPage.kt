@@ -249,7 +249,10 @@ fun EventsPage(
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(minSize = colMinSize),
                 state = gridState,
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(
+                    start = 16.dp, end = 16.dp,
+                    top = 16.dp, bottom = 120.dp
+                ),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier
@@ -591,7 +594,7 @@ fun EventDetailContent(
     Box(modifier = modifier) {
         Column(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 120.dp)
                 .verticalScroll(scrollState)
                 .windowInsetsPadding(WindowInsets.systemBars)
         ) {

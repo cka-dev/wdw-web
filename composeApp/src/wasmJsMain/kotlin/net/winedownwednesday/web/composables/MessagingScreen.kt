@@ -8,6 +8,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -40,6 +41,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -799,7 +801,13 @@ fun ChannelSidebar(
                     )
                 }
 
-                LazyColumn(modifier = Modifier.padding(horizontal = 8.dp)) {
+                val channelListState = rememberLazyListState()
+                Box(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    state = channelListState,
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                    contentPadding = PaddingValues(bottom = 80.dp)
+                ) {
                     if (groupChats.isNotEmpty()) {
                         item {
                             Text(
@@ -989,6 +997,15 @@ fun ChannelSidebar(
                             }
                         }
                     }
+                }
+                VerticalScrollbar(
+                    adapter  = rememberScrollbarAdapter(channelListState),
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .fillMaxHeight()
+                        .padding(end = 2.dp),
+                    style    = wdwScrollbarStyle()
+                )
                 }
             }
         }
@@ -4341,46 +4358,57 @@ fun NewChatDialog(
                         }
                     }
                 } else {
-                    LazyColumn {
-                        items(searchResults) { user ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onSelectUser(user.id) }
-                                    .padding(vertical = 12.dp, horizontal = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                // Avatar with profile picture or fallback initial
-                                Box(
+                    val userListState = rememberLazyListState()
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        LazyColumn(state = userListState) {
+                            items(searchResults) { user ->
+                                Row(
                                     modifier = Modifier
-                                        .size(40.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFFFF7F33)),
-                                    contentAlignment = Alignment.Center
+                                        .fillMaxWidth()
+                                        .clickable { onSelectUser(user.id) }
+                                        .padding(vertical = 12.dp, horizontal = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    if (user.image.isNotEmpty()) {
-                                        AsyncImage(
-                                            model = user.image,
-                                            contentDescription = "${user.name} avatar",
-                                            modifier = Modifier.fillMaxSize().clip(CircleShape),
-                                            contentScale = ContentScale.Crop
-                                        )
-                                    } else {
-                                        Text(
-                                            text = user.name.take(1).uppercase(),
-                                            color = Color.White,
-                                            fontWeight = FontWeight.Bold
-                                        )
+                                    // Avatar with profile picture or fallback initial
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFFFF7F33)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (user.image.isNotEmpty()) {
+                                            AsyncImage(
+                                                model = user.image,
+                                                contentDescription = "${user.name} avatar",
+                                                modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                        } else {
+                                            Text(
+                                                text = user.name.take(1).uppercase(),
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
                                     }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        user.name,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontSize = 16.sp
+                                    )
                                 }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    user.name,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    fontSize = 16.sp
-                                )
                             }
                         }
+                        VerticalScrollbar(
+                            adapter  = rememberScrollbarAdapter(userListState),
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .fillMaxHeight()
+                                .padding(end = 2.dp),
+                            style    = wdwScrollbarStyle()
+                        )
                     }
                 }
             }
@@ -5369,33 +5397,44 @@ fun ForwardMessageDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
-                LazyColumn {
-                    items(filteredChannels) { channel ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onForward(message.text, channel.id) }
-                                .padding(vertical = 8.dp, horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (channel.image.isNotEmpty()) {
-                                AsyncImage(
-                                    model = channel.image,
-                                    contentDescription = channel.name,
-                                    modifier = Modifier.size(32.dp).clip(
-                                        CircleShape
-                                    ),
-                                    contentScale = ContentScale.Crop
+                val forwardListState = rememberLazyListState()
+                Box(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(state = forwardListState) {
+                        items(filteredChannels) { channel ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onForward(message.text, channel.id) }
+                                    .padding(vertical = 8.dp, horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (channel.image.isNotEmpty()) {
+                                    AsyncImage(
+                                        model = channel.image,
+                                        contentDescription = channel.name,
+                                        modifier = Modifier.size(32.dp).clip(
+                                            CircleShape
+                                        ),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                }
+                                Text(
+                                    channel.name,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 14.sp
                                 )
-                                Spacer(Modifier.width(8.dp))
                             }
-                            Text(
-                                channel.name,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontSize = 14.sp
-                            )
                         }
                     }
+                    VerticalScrollbar(
+                        adapter  = rememberScrollbarAdapter(forwardListState),
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .fillMaxHeight()
+                            .padding(end = 2.dp),
+                        style    = wdwScrollbarStyle()
+                    )
                 }
             }
         }
