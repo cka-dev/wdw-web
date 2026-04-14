@@ -1253,7 +1253,7 @@ fun ChatArea(
                     }
                     IconButton(onClick = {
                         isChannelInfoOpen = !isChannelInfoOpen
-                        if (isChannelInfoOpen && selectedChannelId != null) {
+                        if (isChannelInfoOpen) {
                             StreamBridge.getChannelMembers(selectedChannelId).then { members ->
                                 channelMembers = (0 until members.length)
                                     .mapNotNull { members[it] }
@@ -3262,7 +3262,7 @@ fun MessageInput(
     ) {
         Column {
             // Editing banner
-            if (isEditing && editingMessage != null) {
+            if (editingMessage != null) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -3591,7 +3591,7 @@ fun MessageInput(
                                     true
                                 } else {
                                     if (textFieldValue.text.isNotBlank() || selectedFile != null) {
-                                        if (isEditing && editingMessage != null) {
+                                        if (editingMessage != null) {
                                             onEditMessage(editingMessage.id, textFieldValue.text)
                                         } else {
                                             hapticVibrate(HapticDuration.LIGHT, HapticCategory.INTERACTIONS)
@@ -3720,7 +3720,7 @@ fun MessageInput(
                 IconButton(
                     onClick = {
                         if (textFieldValue.text.isNotBlank() || selectedFile != null) {
-                            if (isEditing && editingMessage != null) {
+                            if (editingMessage != null) {
                                 onEditMessage(editingMessage.id, textFieldValue.text)
                             } else {
                                 hapticVibrate(HapticDuration.LIGHT, HapticCategory.INTERACTIONS)

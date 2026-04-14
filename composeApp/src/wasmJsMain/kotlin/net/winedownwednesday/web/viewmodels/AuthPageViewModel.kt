@@ -340,6 +340,7 @@ class AuthPageViewModel(
         }
     }
 
+    @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
     private fun JsAny.toRegistrationResponse(): RegistrationResponse {
         val credential = this as? PublicKeyCredential ?: run {
             throw IllegalStateException(

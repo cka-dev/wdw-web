@@ -54,6 +54,7 @@ import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -333,7 +334,9 @@ fun ThemeTogglePill(
     modifier: Modifier = Modifier
 ) {
     TooltipBox(
-        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+            positioning = TooltipAnchorPosition.Above
+        ),
         tooltip = {
             PlainTooltip {
                 Text(if (isDarkTheme) "Switch to light mode" else "Switch to dark mode")
