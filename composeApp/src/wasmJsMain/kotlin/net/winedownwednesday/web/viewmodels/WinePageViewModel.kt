@@ -40,7 +40,11 @@ class WinePageViewModel(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
+    private val _recPanelExpanded = MutableStateFlow(false)
+    val recPanelExpanded: StateFlow<Boolean> = _recPanelExpanded.asStateFlow()
+
     fun setSearchQuery(query: String) { _searchQuery.value = query }
+    fun setRecPanelExpanded(expanded: Boolean) { _recPanelExpanded.value = expanded }
 
     fun setSelectedWine(wine: Wine?) {
         _selectedWine.value = wine

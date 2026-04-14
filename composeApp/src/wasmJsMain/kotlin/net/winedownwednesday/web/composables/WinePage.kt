@@ -80,6 +80,8 @@ fun WinePage(
     val isFetchingRecs by viewModel.isFetchingRecs.collectAsState()
     val isWinesLoaded = wines != null
 
+    val recPanelExpanded by viewModel.recPanelExpanded.collectAsState()
+
     val filteredWines = remember(wines, searchQuery) {
         wines?.filter { it.matchesQuery(searchQuery) } ?: emptyList()
     }
@@ -111,7 +113,9 @@ fun WinePage(
             userEmail = userEmail,
             recommendations = recommendations,
             isFetchingRecs = isFetchingRecs,
-            isLoaded = isWinesLoaded
+            isLoaded = isWinesLoaded,
+            recPanelExpanded = recPanelExpanded,
+            onRecPanelExpandedChange = { viewModel.setRecPanelExpanded(it) }
         )
     } else {
         val listFraction = when (sizeInfo.widthClass) {
@@ -128,7 +132,9 @@ fun WinePage(
             listFraction = listFraction,
             recommendations = recommendations,
             isFetchingRecs = isFetchingRecs,
-            isLoaded = isWinesLoaded
+            isLoaded = isWinesLoaded,
+            recPanelExpanded = recPanelExpanded,
+            onRecPanelExpandedChange = { viewModel.setRecPanelExpanded(it) }
         )
     }
 }
@@ -547,7 +553,9 @@ fun CompactScreenWinePage(
     modifier: Modifier = Modifier,
     recommendations: List<WineRecommendation> = emptyList(),
     isFetchingRecs: Boolean = false,
-    isLoaded: Boolean = false
+    isLoaded: Boolean = false,
+    recPanelExpanded: Boolean = false,
+    onRecPanelExpandedChange: (Boolean) -> Unit = {}
 ) {
     var showDialog by rememberSaveable { mutableStateOf(false) }
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -571,6 +579,8 @@ fun CompactScreenWinePage(
                 WineRecommendationPanel(
                     recommendations = recommendations,
                     isLoading = isFetchingRecs,
+                    expanded = recPanelExpanded,
+                    onExpandedChange = onRecPanelExpandedChange,
                     onWineClick = { name ->
                         val match = favoriteWines.firstOrNull {
                             it.name.equals(name, ignoreCase = true)
@@ -657,7 +667,9 @@ fun LargeScreenWinePage(
     listFraction: Float = 0.30f,
     recommendations: List<WineRecommendation> = emptyList(),
     isFetchingRecs: Boolean = false,
-    isLoaded: Boolean = false
+    isLoaded: Boolean = false,
+    recPanelExpanded: Boolean = false,
+    onRecPanelExpandedChange: (Boolean) -> Unit = {}
 ) {
     val searchQuery by viewModel.searchQuery.collectAsState()
 
@@ -745,6 +757,8 @@ fun LargeScreenWinePage(
                 WineRecommendationPanel(
                     recommendations = recommendations,
                     isLoading = isFetchingRecs,
+                    expanded = recPanelExpanded,
+                    onExpandedChange = onRecPanelExpandedChange,
                     onWineClick = { name ->
                         viewModel.setSelectedWine(
                             filteredWines.firstOrNull {
@@ -795,9 +809,10 @@ fun LargeScreenWinePage(
 fun WineRecommendationPanel(
     recommendations: List<WineRecommendation>,
     isLoading: Boolean,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
     onWineClick: (String) -> Unit = {}
 ) {
-    var expanded by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -807,7 +822,7 @@ fun WineRecommendationPanel(
         // ── Orange pill trigger ───────────────────────────────────────
         Card(
             modifier = Modifier
-                .clickable { expanded = !expanded },
+                .clickable { onExpandedChange(!expanded) },
             shape = RoundedCornerShape(50),
             colors = CardDefaults.cardColors(
                 containerColor = if (expanded) WdwOrange else WdwOrange.copy(alpha = 0.18f)

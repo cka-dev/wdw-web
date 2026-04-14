@@ -134,7 +134,10 @@ fun SettingsPage(
                             SecuritySection(
                                 hasPassword = userProfile?.hasPassword ?: false,
                                 hasPasskey = userProfile?.hasPasskey ?: false,
-                                viewModel = viewModel
+                                userEmail = userProfile?.email ?: "",
+                                onRegisterPasskey = { viewModel.registerPasskeyV2(it) },
+                                onLinkPassword = { pw, cb -> viewModel.linkPasswordToAccount(pw, cb) },
+                                onChangePassword = { cur, new, cb -> viewModel.changePassword(cur, new, cb) }
                             )
                         }
                         item {
@@ -237,7 +240,10 @@ fun SettingsPage(
                                         SettingsCategory.SECURITY -> SecuritySection(
                                             hasPassword = userProfile?.hasPassword ?: false,
                                             hasPasskey = userProfile?.hasPasskey ?: false,
-                                            viewModel = viewModel
+                                            userEmail = userProfile?.email ?: "",
+                                            onRegisterPasskey = { viewModel.registerPasskeyV2(it) },
+                                            onLinkPassword = { pw, cb -> viewModel.linkPasswordToAccount(pw, cb) },
+                                            onChangePassword = { cur, new, cb -> viewModel.changePassword(cur, new, cb) }
                                         )
                                         SettingsCategory.PRIVACY -> PrivacySection(
                                             blockedUsers = blockedUsers,
@@ -267,9 +273,11 @@ fun SettingsPage(
 private fun SecuritySection(
     hasPassword: Boolean,
     hasPasskey: Boolean,
-    viewModel: AuthPageViewModel
+    userEmail: String,
+    onRegisterPasskey: (String) -> Unit,
+    onLinkPassword: (String, (Boolean) -> Unit) -> Unit,
+    onChangePassword: (String, String, (Boolean) -> Unit) -> Unit
 ) {
-    val userProfile by viewModel.profileData.collectAsStateWithLifecycle()
     var showLinkPasswordDialog by remember { mutableStateOf(false) }
     var showChangePasswordDialog by remember { mutableStateOf(false) }
 
@@ -340,9 +348,7 @@ private fun SecuritySection(
                 }
                 if (!hasPasskey) {
                     TextButton(
-                        onClick = {
-                            viewModel.registerPasskeyV2(userProfile?.email ?: "")
-                        }
+                        onClick = { onRegisterPasskey(userEmail) }
                     ) {
                         Text("Add Passkey", color = Color(0xFFFF7F33))
                     }
@@ -354,7 +360,7 @@ private fun SecuritySection(
     // Link Password Dialog
     if (showLinkPasswordDialog) {
         LinkPasswordDialog(
-            viewModel = viewModel,
+            onLinkPassword = onLinkPassword,
             onDismiss = { showLinkPasswordDialog = false }
         )
     }
@@ -362,7 +368,7 @@ private fun SecuritySection(
     // Change Password Dialog
     if (showChangePasswordDialog) {
         ChangePasswordDialog(
-            viewModel = viewModel,
+            onChangePassword = onChangePassword,
             onDismiss = { showChangePasswordDialog = false }
         )
     }
@@ -370,7 +376,7 @@ private fun SecuritySection(
 
 @Composable
 private fun LinkPasswordDialog(
-    viewModel: AuthPageViewModel,
+    onLinkPassword: (String, (Boolean) -> Unit) -> Unit,
     onDismiss: () -> Unit
 ) {
     var password by remember { mutableStateOf("") }
@@ -406,7 +412,7 @@ private fun LinkPasswordDialog(
                 onClick = {
                     if (password == confirmPassword && password.isNotEmpty()) {
                         isLinking = true
-                        viewModel.linkPasswordToAccount(password) { success ->
+                        onLinkPassword(password) { success ->
                             isLinking = false
                             if (success) onDismiss()
                         }
@@ -436,7 +442,7 @@ private fun LinkPasswordDialog(
 
 @Composable
 private fun ChangePasswordDialog(
-    viewModel: AuthPageViewModel,
+    onChangePassword: (String, String, (Boolean) -> Unit) -> Unit,
     onDismiss: () -> Unit
 ) {
     var currentPassword by remember { mutableStateOf("") }
@@ -480,7 +486,7 @@ private fun ChangePasswordDialog(
                 onClick = {
                     if (newPassword == confirmNewPassword && newPassword.isNotEmpty()) {
                         isChanging = true
-                        viewModel.changePassword(currentPassword, newPassword) { success ->
+                        onChangePassword(currentPassword, newPassword) { success ->
                             isChanging = false
                             if (success) onDismiss()
                         }
