@@ -46,20 +46,20 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtime.compose)
             implementation(libs.navigation3.ui)
-            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
-            implementation("io.ktor:ktor-client-core:3.0.2")
-            implementation("io.ktor:ktor-client-json:3.0.2")
-            implementation("io.ktor:ktor-client-logging:3.0.2")
-            implementation("io.ktor:ktor-client-serialization:3.0.2")
-            implementation("io.ktor:ktor-client-content-negotiation:3.0.2")
-            implementation("io.ktor:ktor-serialization-kotlinx-json:3.0.2")
+            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+            implementation("io.ktor:ktor-client-core:3.4.2")
+            implementation("io.ktor:ktor-client-json:3.4.2")
+            implementation("io.ktor:ktor-client-logging:3.4.2")
+            implementation("io.ktor:ktor-client-serialization:3.4.2")
+            implementation("io.ktor:ktor-client-content-negotiation:3.4.2")
+            implementation("io.ktor:ktor-serialization-kotlinx-json:3.4.2")
             implementation(project.dependencies.platform(libs.koin.bom))
             implementation(libs.koin.core)
             implementation(libs.koin.viewModel)
             implementation(libs.koin.compose)
             // Koin Annotations
             api("io.insert-koin:koin-annotations:1.4.0")
-            implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0-beta01")
+            implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
 
             // Markdown rendering
             implementation("com.mikepenz:multiplatform-markdown-renderer:0.32.0")
@@ -95,10 +95,10 @@ kotlin {
 
 
             // Emoji support (Noto images for Wasm)
-            implementation("org.kodein.emoji:emoji-compose-m3:2.0.1")
+            implementation("org.kodein.emoji:emoji-compose-m3:2.3.0")
 
             // Icons Extension
-            implementation("org.jetbrains.compose.material:material-icons-extended:1.6.11")
+            implementation("org.jetbrains.compose.material:material-icons-extended:1.7.3")
         }
         wasmJsMain.dependencies {
             implementation("org.jetbrains.kotlinx:kotlinx-browser:0.3")
