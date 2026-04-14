@@ -13,6 +13,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.headers
+import net.winedownwednesday.web.data.network.CloudFunctionUrls.SERVER_URL
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.await
 import net.winedownwednesday.web.FirebaseBridge
@@ -40,9 +41,22 @@ import net.winedownwednesday.web.data.models.UserProfileRequest
 import net.winedownwednesday.web.data.models.VerifyAuthenticationRequest
 import net.winedownwednesday.web.data.models.VerifyRegistrationRequest
 
+@JsFun("(msg) => console.error(msg)")
+private external fun consoleError(msg: JsString)
+
 class RemoteDataSource (
     private val client: HttpClient
 ): ApiService {
+
+    private fun logError(endpoint: String, e: Exception) {
+        consoleError(
+            "$TAG $endpoint failed: ${e.message}".toJsString()
+        )
+    }
+
+    companion object {
+        private const val TAG = "[RemoteDataSource]"
+    }
 
     override suspend fun fetchInitialData(): InitialDataResponse? {
         return try {
@@ -53,6 +67,7 @@ class RemoteDataSource (
                 }
             }.body()
         } catch (e: Exception) {
+            logError("fetchInitialData", e)
             null
         }
     }
@@ -66,6 +81,7 @@ class RemoteDataSource (
                 }
             }.body()
         } catch (e: Exception) {
+            logError("fetchEpisodes", e)
             null
         }
     }
@@ -79,6 +95,7 @@ class RemoteDataSource (
                 }
             }.body()
         } catch (e: Exception) {
+            logError("fetchBlogPosts", e)
             null
         }
     }
@@ -92,6 +109,7 @@ class RemoteDataSource (
                 }
             }.body()
         } catch (e: Exception) {
+            logError("fetchAboutItems", e)
             listOf()
         }
     }
@@ -105,6 +123,7 @@ class RemoteDataSource (
                 }
             }.body()
         } catch (e: Exception) {
+            logError("fetchWines", e)
             null
         }
     }
@@ -118,6 +137,7 @@ class RemoteDataSource (
                 }
             }.body()
         } catch (e: Exception) {
+            logError("fetchFeaturedWines", e)
             null
         }
     }
@@ -131,6 +151,7 @@ class RemoteDataSource (
                 }
             }.body()
         } catch (e: Exception) {
+            logError("fetchMembers", e)
         }
         return listOf()
     }
@@ -144,6 +165,7 @@ class RemoteDataSource (
                 }
             }.body()
         } catch (e: Exception) {
+            logError("fetchEvents", e)
             null
         }
     }
@@ -157,6 +179,7 @@ class RemoteDataSource (
                 }
             }.body()
         } catch (e: Exception) {
+            logError("fetchMemberSpotlight", e)
             null
         }
     }
@@ -171,6 +194,7 @@ class RemoteDataSource (
             }
             response.status.isSuccess()
         } catch (e: Exception) {
+            logError("postRSVP", e)
             false
         }
     }
@@ -179,7 +203,7 @@ class RemoteDataSource (
             ApiResult<PublicKeyCredentialCreationOptions> {
         return try {
             val response: HttpResponse = client.post(
-                "https://generatepasskeyregistrationoptions-iktff5ztia-uc.a.run.app") {
+                CloudFunctionUrls.GENERATE_PASSKEY_REGISTRATION) {
                 contentType(ContentType.Application.Json)
                 setBody(RegistrationOptionsRequest(email))
             }
@@ -195,6 +219,7 @@ class RemoteDataSource (
                 ApiResult.Success(options)
             }
         } catch (e: Exception) {
+            logError("generatePasskeyRegistrationOptions", e)
             ApiResult.Error("Unknown error occurred")
         }
     }
@@ -203,12 +228,13 @@ class RemoteDataSource (
         credential: RegistrationResponse, email: String): Boolean {
         return try {
             val response: HttpResponse = client.post(
-                "https://verifypasskeyregistration-iktff5ztia-uc.a.run.app") {
+                CloudFunctionUrls.VERIFY_PASSKEY_REGISTRATION) {
                 contentType(ContentType.Application.Json)
                 setBody(VerifyRegistrationRequest(credential, email))
             }
             response.body<Map<String, Boolean>>()["verified"] ?: false
         } catch (e: Exception) {
+            logError("verifyPasskeyRegistration", e)
             false
         }
     }
@@ -218,7 +244,7 @@ class RemoteDataSource (
     ): ApiResult<PublicKeyCredentialRequestOptions> {
         return try {
             val response: HttpResponse = client.post(
-                "https://generatepasskeyauthenticationoptions-iktff5ztia-uc.a.run.app") {
+                CloudFunctionUrls.GENERATE_PASSKEY_AUTH) {
                 contentType(ContentType.Application.Json)
                 setBody(mapOf("email" to email))
             }
@@ -235,6 +261,7 @@ class RemoteDataSource (
                 ApiResult.Success(options)
             }
         } catch (e: Exception) {
+            logError("generatePasskeyAuthenticationOptions", e)
             ApiResult.Error("Unknown error occurred")
         }
     }
@@ -244,12 +271,13 @@ class RemoteDataSource (
         credential: AuthenticationResponse, email: String): Boolean {
         return try {
             val response: HttpResponse = client.post(
-                "https://verifypasskeyauthentication-iktff5ztia-uc.a.run.app") {
+                CloudFunctionUrls.VERIFY_PASSKEY_AUTH) {
                 contentType(ContentType.Application.Json)
                 setBody(VerifyAuthenticationRequest(credential, email))
             }
             response.body<Map<String, Boolean>>()["verified"] ?: false
         } catch (e: Exception) {
+            logError("verifyPasskeyAuthentication", e)
             false
         }
     }
@@ -268,12 +296,14 @@ class RemoteDataSource (
                     val profile = JsonInstanceProvider.json.decodeFromString<UserProfileData>(jsonString)
                     profile
                 } catch (parseError: Exception) {
+                    logError("fetchUserProfile", parseError)
                     null
                 }
             } else {
                 null
             }
         } catch (e: Exception) {
+            logError("fetchUserProfile", e)
             null
         }
     }
@@ -286,6 +316,7 @@ class RemoteDataSource (
             }
             response.status.isSuccess()
         } catch (e: Exception) {
+            logError("updateProfile", e)
             false
         }
     }
@@ -298,6 +329,7 @@ class RemoteDataSource (
             }
             response.status.isSuccess()
         } catch (e: Exception) {
+            logError("addRsvpToEvent", e)
             false
         }
     }
@@ -313,6 +345,7 @@ class RemoteDataSource (
                 return true
             }
         } catch (e: Exception) {
+            logError("registerFcmInstanceId", e)
         }
         return false
     }
@@ -328,6 +361,7 @@ class RemoteDataSource (
                 return true
             }
         } catch (e: Exception) {
+            logError("unRegisterFcmInstanceId", e)
         }
         return false
     }
@@ -342,6 +376,7 @@ class RemoteDataSource (
                 return true
             }
         } catch (e: Exception) {
+            logError("sendEmailVerification", e)
         }
         return false
     }
@@ -362,6 +397,7 @@ class RemoteDataSource (
                 ApiResult.Error("Passkey registration failed")
             }
         } catch (e: Exception) {
+            logError("verifyPasskeyRegistrationWithToken", e)
             ApiResult.Error("Unknown error during registration verification")
         }
     }
@@ -386,6 +422,7 @@ class RemoteDataSource (
             }
 
         } catch (e: Exception) {
+            logError("verifyPasskeyAuthenticationWithToken", e)
             ApiResult.Error("Unknown error during authentication verification")
         }
     }
@@ -406,6 +443,7 @@ class RemoteDataSource (
                 ApiResult.Error("Registration failed")
             }
         } catch (e: Exception) {
+            logError("registerWithEmailPassword", e)
             ApiResult.Error("Registration failed")
         }
     }
@@ -425,6 +463,7 @@ class RemoteDataSource (
                 ApiResult.Error("Sign in failed")
             }
         } catch (e: Exception) {
+            logError("signInWithEmailPassword", e)
             ApiResult.Error("Sign in failed")
         }
     }
@@ -438,6 +477,7 @@ class RemoteDataSource (
             }
             response.status.isSuccess()
         } catch (e: Exception) {
+            logError("linkPasswordToAccount", e)
             false
         }
     }
@@ -450,6 +490,7 @@ class RemoteDataSource (
             }
             response.status.isSuccess()
         } catch (e: Exception) {
+            logError("changePassword", e)
             false
         }
     }
@@ -463,6 +504,7 @@ class RemoteDataSource (
             }
             response.status.isSuccess()
         } catch (e: Exception) {
+            logError("sendPasswordResetEmail", e)
             false
         }
     }
@@ -481,6 +523,7 @@ class RemoteDataSource (
                 null
             }
         } catch (e: Exception) {
+            logError("fetchStreamToken", e)
             null
         }
     }
@@ -499,6 +542,7 @@ class RemoteDataSource (
             }
             response.status.isSuccess()
         } catch (e: Exception) {
+            logError("blockUser", e)
             false
         }
     }
@@ -515,6 +559,7 @@ class RemoteDataSource (
             }
             response.status.isSuccess()
         } catch (e: Exception) {
+            logError("unblockUser", e)
             false
         }
     }
@@ -539,6 +584,7 @@ class RemoteDataSource (
             }
             response.status.isSuccess()
         } catch (e: Exception) {
+            logError("flagUser", e)
             false
         }
     }
@@ -563,6 +609,7 @@ class RemoteDataSource (
             }
             response.status.isSuccess()
         } catch (e: Exception) {
+            logError("flagMessage", e)
             false
         }
     }
@@ -587,6 +634,7 @@ class RemoteDataSource (
                 emptyList()
             }
         } catch (e: Exception) {
+            logError("getBlockedUsers", e)
             emptyList()
         }
     }
@@ -614,6 +662,7 @@ class RemoteDataSource (
             }
             response.status.isSuccess()
         } catch (e: Exception) {
+            logError("deleteAccount", e)
             false
         }
     }
@@ -630,6 +679,7 @@ class RemoteDataSource (
                 response.body()
             } else null
         } catch (e: Exception) {
+            logError("getWineReviews", e)
             null
         }
     }
@@ -649,6 +699,7 @@ class RemoteDataSource (
                 else kotlinx.serialization.json.Json.decodeFromString(text)
             } else null
         } catch (e: Exception) {
+            logError("getMyWineReview", e)
             null
         }
     }
@@ -667,6 +718,7 @@ class RemoteDataSource (
             }
             response.status.isSuccess()
         } catch (e: Exception) {
+            logError("submitWineReview", e)
             false
         }
     }
@@ -683,6 +735,7 @@ class RemoteDataSource (
             }
             response.status.isSuccess()
         } catch (e: Exception) {
+            logError("deleteMyWineReview", e)
             false
         }
     }
@@ -703,16 +756,15 @@ class RemoteDataSource (
             // Try to extract the error message from JSON
             val msg = try {
                 kotlinx.serialization.json.Json.decodeFromString<Map<String, String>>(body)["error"]
-            } catch (_: Exception) { null }
+            } catch (e: Exception) {
+                logError("flagWineReview/parse", e)
+                null
+            }
             throw Exception(msg ?: "Failed to flag review (${response.status.value})")
         }
         return true
     }
 
-    companion object{
-        private const val SERVER_URL =
-            "https://us-central1-wdw-app-52a3c.cloudfunctions.net"
-    }
 }
 
 sealed class ApiResult<out T> {

@@ -8,6 +8,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -18,6 +19,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import net.winedownwednesday.web.AiBridge
 import net.winedownwednesday.web.JsChatChannel
+import net.winedownwednesday.web.data.network.CloudFunctionUrls
 import net.winedownwednesday.web.JsChatMessage
 import net.winedownwednesday.web.JsStreamUser
 import net.winedownwednesday.web.StreamBridge
@@ -445,7 +447,7 @@ class MessagingViewModel(
                     StreamBridge.sendMessage(channelId, text).await<JsChatMessage?>()
                 }
                 if (newMessage != null) {
-                    _messages.value = _messages.value + newMessage
+                    _messages.update { it + newMessage }
                     // Trigger Vino if @mentioned, OR if this is a Vino DM (always respond)
                     if (isVinoMention(text) || isVinoDmChannel()) {
                         // Client-side cooldown: prevent rapid-fire @Vino messages
@@ -574,7 +576,7 @@ class MessagingViewModel(
                             chatWithVino(gifTitle, parentId)
                         }
                     } else {
-                        _messages.value = _messages.value + newMessage
+                        _messages.update { it + newMessage }
                     }
                 }
             } catch (e: Exception) {
@@ -868,7 +870,7 @@ class MessagingViewModel(
             _moderationLoading.value = true
             val success = appRepository.blockUser(targetUserId)
             if (success) {
-                _blockedEmails.value = _blockedEmails.value + targetUserId
+                _blockedEmails.update { it + targetUserId }
                 kotlinx.coroutines.delay(500)
                 _selectedChannelId.value?.let { loadMessages(it) }
                 showModerationFeedback("User blocked successfully.")
@@ -885,7 +887,7 @@ class MessagingViewModel(
             _moderationLoading.value = true
             val success = appRepository.unblockUser(targetUserId)
             if (success) {
-                _blockedEmails.value = _blockedEmails.value - targetUserId
+                _blockedEmails.update { it - targetUserId }
                 kotlinx.coroutines.delay(500)
                 _selectedChannelId.value?.let { loadMessages(it) }
                 showModerationFeedback("User unblocked.")
@@ -924,12 +926,6 @@ class MessagingViewModel(
     // Cloud Function URLs for Vino bot (v2 functions use Cloud Run URLs)
     // These will be set after deployment; using cloudfunctions.net pattern for now
     companion object {
-        const val CHAT_WITH_BOT_URL =
-            "https://us-central1-wdw-app-52a3c.cloudfunctions.net/chatWithBot"
-        const val AI_INFER_URL =
-            "https://us-central1-wdw-app-52a3c.cloudfunctions.net/aiInfer"
-        const val SUMMARIZE_THREAD_URL =
-            "https://us-central1-wdw-app-52a3c.cloudfunctions.net/summarizeThread"
         const val VINO_BOT_ID = "vino-bot"
     }
 
@@ -1024,7 +1020,7 @@ class MessagingViewModel(
         guestsCount: Int
     ) {
         viewModelScope.launch {
-            _vinoRsvpLoading.value = _vinoRsvpLoading.value + messageId
+            _vinoRsvpLoading.update { it + messageId }
             try {
                 // Resolve the user's email from Firebase Auth
                 val userEmail = net.winedownwednesday.web.FirebaseBridge
@@ -1080,7 +1076,7 @@ class MessagingViewModel(
                         )
                 }
             } finally {
-                _vinoRsvpLoading.value = _vinoRsvpLoading.value - messageId
+                _vinoRsvpLoading.update { it - messageId }
             }
         }
     }
@@ -1138,7 +1134,7 @@ class MessagingViewModel(
                         messageText = messageText,
                         parentMessageId = parentMessageId,
                         idToken = idToken,
-                        functionUrl = CHAT_WITH_BOT_URL,
+                        functionUrl = CloudFunctionUrls.CHAT_WITH_BOT,
                         recentHistory = recentHistoryJson
                     ).await<JsString>().toString()
 
@@ -1294,7 +1290,7 @@ class MessagingViewModel(
                 val result = AiBridge.generateSmartReplies(
                     contextJson = contextJson,
                     idToken = idToken,
-                    functionUrl = AI_INFER_URL
+                    functionUrl = CloudFunctionUrls.AI_INFER
                 ).await<JsString>().toString()
 
                 // Parse JSON array: ["reply1", "reply2", "reply3"]
@@ -1347,7 +1343,7 @@ class MessagingViewModel(
                 val result = AiBridge.generateSmartReplies(
                     contextJson = contextJson,
                     idToken = idToken,
-                    functionUrl = AI_INFER_URL
+                    functionUrl = CloudFunctionUrls.AI_INFER
                 ).await<JsString>().toString()
 
                 val cleaned = result.trim()
@@ -1404,7 +1400,7 @@ class MessagingViewModel(
                     text = text,
                     instruction = instruction,
                     idToken = idToken,
-                    functionUrl = AI_INFER_URL
+                    functionUrl = CloudFunctionUrls.AI_INFER
                 ).await<JsString>().toString()
 
                 _aiRewriteState.value = AiRewriteState.Done(
@@ -1469,7 +1465,7 @@ class MessagingViewModel(
                     channelId = channelId,
                     since = null,
                     idToken = idToken,
-                    functionUrl = SUMMARIZE_THREAD_URL
+                    functionUrl = CloudFunctionUrls.SUMMARIZE_THREAD
                 ).await<JsString>().toString()
 
                 val parsed = JsonInstanceProvider.json.decodeFromString<CatchUpSummary>(result)
@@ -1517,7 +1513,7 @@ class MessagingViewModel(
                     sourceLang = sourceLang,
                     targetLang = "en",
                     idToken = idToken,
-                    functionUrl = AI_INFER_URL
+                    functionUrl = CloudFunctionUrls.AI_INFER
                 ).await<JsString>().toString()
 
                 val langName = when (sourceLang) {

@@ -6,6 +6,7 @@ import kotlinx.coroutines.await
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
@@ -13,6 +14,7 @@ import kotlinx.serialization.json.put
 import net.winedownwednesday.web.AiBridgeExt
 import net.winedownwednesday.web.FirebaseBridge
 import net.winedownwednesday.web.data.models.BlogPost
+import net.winedownwednesday.web.data.network.CloudFunctionUrls
 import net.winedownwednesday.web.data.repositories.AppRepository
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.SharingStarted
@@ -55,7 +57,7 @@ class BlogPageViewModel(
 
 
         viewModelScope.launch {
-            _summarizing.value = _summarizing.value + postId
+            _summarizing.update { it + postId }
             try {
                 val idToken = FirebaseBridge
                     .getIdToken()
@@ -70,7 +72,7 @@ class BlogPageViewModel(
                     })
                 }.toString()
 
-                val url = "https://us-central1-wdw-app-52a3c.cloudfunctions.net/aiInfer"
+                val url = CloudFunctionUrls.AI_INFER
                 val raw = AiBridgeExt
                     .callAuthenticatedApi(url, bodyJson, idToken)
                     .await<JsString>()
@@ -86,16 +88,16 @@ class BlogPageViewModel(
                         ).content
                     } ?: return@launch
 
-                _summaries.value = _summaries.value + (postId to result)
+                _summaries.update { it + (postId to result) }
             } catch (_: Exception) {
                 // Silent fail — TL;DR is non-critical
             } finally {
-                _summarizing.value = _summarizing.value - postId
+                _summarizing.update { it - postId }
             }
         }
     }
 
     fun clearSummary(postId: String) {
-        _summaries.value = _summaries.value - postId
+        _summaries.update { it - postId }
     }
 }

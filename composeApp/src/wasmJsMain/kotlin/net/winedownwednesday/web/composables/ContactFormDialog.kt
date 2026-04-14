@@ -45,8 +45,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import net.winedownwednesday.web.vibrate
 
-private const val CONTACT_ENDPOINT =
-    "https://sendcontactemail-iktff5ztia-uc.a.run.app"
+import net.winedownwednesday.web.data.network.CloudFunctionUrls
 
 private val AccentOrange = Color(0xFFFF7F33)
 private val ErrorRed     = Color(0xFFFF5252)
@@ -135,7 +134,7 @@ fun ContactFormDialog(onDismiss: () -> Unit) {
                     .replace("\"", "\\\"")
                     .replace("\n", "\\n")
                 val json = """{"name":"$nameEsc","email":"$emailEsc","message":"$msgEsc"}"""
-                postContactForm(CONTACT_ENDPOINT, json)
+                postContactForm(CloudFunctionUrls.SEND_CONTACT_EMAIL, json)
                 success = true
                 hapticVibrate(HapticDuration.MEDIUM, HapticCategory.ALERTS)
             } catch (e: Exception) {

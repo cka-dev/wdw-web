@@ -1466,7 +1466,6 @@ fun ChatArea(
                                 )
                             }
                         }
-                        else -> {}
                     }
                     }
                 }

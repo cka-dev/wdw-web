@@ -1108,7 +1108,7 @@ private fun isBirthdayInCurrentMonth(birthday: String): Boolean {
     )
     val currentMonth = Clock.System.now()
         .toLocalDateTime(TimeZone.currentSystemDefault())
-        .monthNumber
+        .date.month.ordinal + 1
 
     val trimmed = birthday.trim()
     // Try "MM/DD" format

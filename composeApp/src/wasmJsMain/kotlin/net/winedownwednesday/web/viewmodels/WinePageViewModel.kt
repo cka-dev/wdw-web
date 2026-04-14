@@ -14,6 +14,7 @@ import net.winedownwednesday.web.data.models.FlagReviewRequest
 import net.winedownwednesday.web.data.models.SubmitReviewRequest
 import net.winedownwednesday.web.data.models.WineReview
 import net.winedownwednesday.web.data.repositories.AppRepository
+import net.winedownwednesday.web.data.network.CloudFunctionUrls
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -225,7 +226,7 @@ class WinePageViewModel(
                     .getIdToken()
                     .await<JsString?>()?.toString()
                     ?: return@launch
-                val url = "https://us-central1-wdw-app-52a3c.cloudfunctions.net/recommendWines"
+                val url = CloudFunctionUrls.RECOMMEND_WINES
                 val raw = AiBridgeExt
                     .callAuthenticatedApi(url, "{}", idToken)
                     .await<JsString>()

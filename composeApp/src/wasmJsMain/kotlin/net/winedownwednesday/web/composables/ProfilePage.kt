@@ -753,12 +753,13 @@ fun BirthDateField(
 private fun convertMillisToDate(millis: Long): String {
     val instant = Instant.fromEpochMilliseconds(millis)
     val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+    val date = localDateTime.date
     return buildString {
-        append(localDateTime.monthNumber.toString().padStart(2, '0'))
+        append((date.month.ordinal + 1).toString().padStart(2, '0'))
         append("/")
-        append(localDateTime.dayOfMonth.toString().padStart(2, '0'))
+        append(date.day.toString().padStart(2, '0'))
         append("/")
-        append(localDateTime.year)
+        append(date.year)
     }
 }
 

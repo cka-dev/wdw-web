@@ -71,7 +71,7 @@ kotlin {
             implementation(libs.coil.network.ktor)
 
             //Kotlinx DateTime
-            implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.7.1-0.6.x-compat")
+            implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.7.1")
 
             //Video Player
 //            implementation("io.github.khubaibkhan4:mediaplayer-kmp:2.0.4")

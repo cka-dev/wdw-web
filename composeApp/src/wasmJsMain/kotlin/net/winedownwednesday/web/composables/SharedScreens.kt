@@ -333,7 +333,7 @@ fun ThemeTogglePill(
     modifier: Modifier = Modifier
 ) {
     TooltipBox(
-        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
         tooltip = {
             PlainTooltip {
                 Text(if (isDarkTheme) "Switch to light mode" else "Switch to dark mode")

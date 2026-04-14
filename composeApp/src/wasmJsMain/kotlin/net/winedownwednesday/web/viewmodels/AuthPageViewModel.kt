@@ -6,6 +6,7 @@ import kotlinx.coroutines.await
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import net.winedownwednesday.web.FirebaseBridge
@@ -584,7 +585,7 @@ class AuthPageViewModel(
             try {
                 val success = repository.unblockUser(targetId)
                 if (success) {
-                    _blockedUsers.value = _blockedUsers.value.filter { it.id != targetId }
+                    _blockedUsers.update { list -> list.filter { it.id != targetId } }
                 }
                 onResult(success)
             } catch (_: Exception) {

@@ -44,12 +44,12 @@ fun String.toEventLocalDate(): LocalDate? {
  * Example: LocalDate(2025, 3, 19) -> "Mar 19, 2025"
  */
 fun LocalDate.toDisplayString(): String {
-    val month = when (monthNumber) {
+    val monthStr = when (month.ordinal + 1) {
         1  -> "Jan";  2  -> "Feb";  3  -> "Mar";  4  -> "Apr"
         5  -> "May";  6  -> "Jun";  7  -> "Jul";  8  -> "Aug"
         9  -> "Sep";  10 -> "Oct";  11 -> "Nov";  else -> "Dec"
     }
-    return "$month $dayOfMonth, $year"
+    return "$monthStr $day, $year"
 }
 
 /**

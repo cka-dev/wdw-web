@@ -18,6 +18,7 @@ import net.winedownwednesday.web.FirebaseBridge
 import net.winedownwednesday.web.data.Event
 import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.data.repositories.AppRepository
+import net.winedownwednesday.web.data.network.CloudFunctionUrls
 import net.winedownwednesday.web.utils.toEventLocalDate
 
 class EventsPageViewModel(
@@ -132,7 +133,7 @@ class EventsPageViewModel(
                     .getIdToken()
                     .await<JsString?>()?.toString()
                     ?: return@launch
-                val url = "https://us-central1-wdw-app-52a3c.cloudfunctions.net/recommendEvents"
+                val url = CloudFunctionUrls.RECOMMEND_EVENTS
                 val raw = AiBridgeExt
                     .callAuthenticatedApi(url, "{}", idToken)
                     .await<JsString>()
