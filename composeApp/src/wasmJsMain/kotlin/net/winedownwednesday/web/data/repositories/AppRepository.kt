@@ -37,7 +37,7 @@ class AppRepository (
     private val _events = MutableStateFlow<List<Event>?>(null)
     val events = _events.asStateFlow()
 
-    private val _blogPosts = MutableStateFlow<List<BlogPost>?>(listOf())
+    private val _blogPosts = MutableStateFlow<List<BlogPost>?>(null)
     val blogPosts = _blogPosts.asStateFlow()
 
     private val _episodes = MutableStateFlow<List<Episode>?>(listOf())

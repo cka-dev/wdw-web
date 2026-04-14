@@ -8,10 +8,10 @@ This document provides a detailed overview of the architecture, features, and te
 ## 2. Architecture
 
 ### Technology Stack
-- **Language**: Kotlin 2.2.20
-- **UI Framework**: Compose Multiplatform 1.10.2 (WasmJs target)
-- **Navigation**: Jetpack Navigation 3 (`org.jetbrains.androidx.navigation3:navigation3-ui:1.0.0-alpha06`) — Alpha multiplatform support via CMP 1.10.2
-- **Dependency Injection**: Koin (with KSP 2.2.20-2.0.4)
+- **Language**: Kotlin 2.3.20
+- **UI Framework**: Compose Multiplatform 1.10.3 (WasmJs target)
+- **Navigation**: Jetpack Navigation 3 (`org.jetbrains.androidx.navigation3:navigation3-ui:1.0.0-alpha06`) — Alpha multiplatform support via CMP 1.10.3
+- **Dependency Injection**: Koin (manual wiring in `KoinModules.kt`; KSP annotations are not used)
 - **Networking**: Ktor Client
 - **Authentication**: Hybrid Model (Passkeys/WebAuthn + Server-Side Password Validation)
 - **Messaging**: Stream Chat SDK (with custom Cloud Function token generation)

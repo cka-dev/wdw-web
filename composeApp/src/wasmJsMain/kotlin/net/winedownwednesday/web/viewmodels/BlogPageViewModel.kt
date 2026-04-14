@@ -13,16 +13,20 @@ import kotlinx.serialization.json.put
 import net.winedownwednesday.web.AiBridgeExt
 import net.winedownwednesday.web.FirebaseBridge
 import net.winedownwednesday.web.data.models.BlogPost
-import net.winedownwednesday.web.data.network.RemoteDataSource
 import net.winedownwednesday.web.data.repositories.AppRepository
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 
 class BlogPageViewModel(
     private val appRepository: AppRepository,
-    private val remoteDataSource: RemoteDataSource
 ) : ViewModel() {
     val blogPosts: StateFlow<List<BlogPost>?> = appRepository.blogPosts
-    val isLoading: StateFlow<Boolean> = remoteDataSource.isLoading
-    val error: StateFlow<String?> = remoteDataSource.error
+
+    /** Derived: true while blogPosts has not been populated yet. */
+    val isLoading: StateFlow<Boolean> = appRepository.blogPosts
+        .map { it == null }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
     // ─── TL;DR Summarization ───────────────────────────────────────────────────
 

@@ -60,7 +60,7 @@ val provideHomePageViewModel = module {
 }
 
 val provideBlogPageViewModel = module {
-    viewModel { BlogPageViewModel(get(), get()) }
+    viewModel { BlogPageViewModel(get()) }
 }
 
 val provideMessagingViewModel = module {

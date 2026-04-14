@@ -15,8 +15,6 @@ import io.ktor.http.contentType
 import io.ktor.http.headers
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.await
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import net.winedownwednesday.web.FirebaseBridge
 import net.winedownwednesday.web.data.AboutItem
 import net.winedownwednesday.web.data.Episode
@@ -46,12 +44,6 @@ class RemoteDataSource (
     private val client: HttpClient
 ): ApiService {
 
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading = _isLoading.asStateFlow()
-
-    private val _error = MutableStateFlow<String?>(null)
-    val error = _error.asStateFlow()
-
     override suspend fun fetchInitialData(): InitialDataResponse? {
         return try {
             client.get("$SERVER_URL/getInitialData"){
@@ -61,13 +53,11 @@ class RemoteDataSource (
                 }
             }.body()
         } catch (e: Exception) {
-            _error.value = e.message ?: "Unknown error occurred"
             null
         }
     }
 
     override suspend fun fetchEpisodes(): List<Episode>? {
-        _isLoading.value = true
         return try {
             client.get("$SERVER_URL/getEpisodes"){
                 headers {
@@ -76,15 +66,11 @@ class RemoteDataSource (
                 }
             }.body()
         } catch (e: Exception) {
-            _error.value = e.message ?: "Unknown error occurred"
             null
-        } finally {
-            _isLoading.value = false
         }
     }
 
     override suspend fun fetchBlogPosts(): BlogPostsResponse? {
-        _isLoading.value = true
         return try {
             client.get("$SERVER_URL/getBlogPosts"){
                 headers {
@@ -93,15 +79,11 @@ class RemoteDataSource (
                 }
             }.body()
         } catch (e: Exception) {
-            _error.value = e.message ?: "Unknown error occurred"
             null
-        } finally {
-            _isLoading.value = false
         }
     }
 
     override suspend fun fetchAboutItems(): List<AboutItem> {
-        _isLoading.value = true
         return try {
             client.get("$SERVER_URL/getAboutItems"){
                 headers {
@@ -110,15 +92,11 @@ class RemoteDataSource (
                 }
             }.body()
         } catch (e: Exception) {
-            _error.value = e.message ?: "Unknown error occurred"
             listOf()
-        } finally {
-            _isLoading.value = false
         }
     }
 
     override suspend fun fetchWines(): List<Wine>? {
-        _isLoading.value = true
         return try {
             client.get("$SERVER_URL/getWines"){
                 headers {
@@ -127,15 +105,11 @@ class RemoteDataSource (
                 }
             }.body()
         } catch (e: Exception) {
-            _error.value = e.message ?: "Unknown error occurred"
             null
-        } finally {
-            _isLoading.value = false
         }
     }
 
     override suspend fun fetchFeaturedWines(): FeaturedWinesResponse? {
-        _isLoading.value = true
         return try {
             client.get("$SERVER_URL/getFeaturedWines"){
                 headers {
@@ -144,15 +118,11 @@ class RemoteDataSource (
                 }
             }.body()
         } catch (e: Exception) {
-            _error.value = e.message ?: "Unknown error occurred"
             null
-        } finally {
-            _isLoading.value = false
         }
     }
 
     override suspend fun fetchMembers(): List<Member>? {
-        _isLoading.value = true
         try {
             return client.get("$SERVER_URL/getMembers"){
                 headers {
@@ -161,15 +131,11 @@ class RemoteDataSource (
                 }
             }.body()
         } catch (e: Exception) {
-            _error.value = e.message ?: "Unknown error occurred"
-        } finally {
-            _isLoading.value = false
         }
         return listOf()
     }
 
     override suspend fun fetchEvents(): List<Event>? {
-        _isLoading.value = true
         return try {
             client.get("$SERVER_URL/getEvents"){
                 headers {
@@ -178,15 +144,11 @@ class RemoteDataSource (
                 }
             }.body()
         } catch (e: Exception) {
-            _error.value = e.message ?: "Unknown error occurred"
             null
-        } finally {
-            _isLoading.value = false
         }
     }
 
     override suspend fun fetchMemberSpotlight(): Member? {
-        _isLoading.value = true
         return try {
             client.get("$SERVER_URL/getMemberSpotlight"){
                 headers {
@@ -195,15 +157,11 @@ class RemoteDataSource (
                 }
             }.body()
         } catch (e: Exception) {
-            _error.value = e.message ?: "Unknown error occurred"
             null
-        } finally {
-            _isLoading.value = false
         }
     }
 
     override suspend fun postRSVP(rsvp: RSVPRequest): Boolean {
-        _isLoading.value = true
         return try {
             val response: HttpResponse = client.post("$SERVER_URL/postRsvp") {
                 headers {
@@ -213,10 +171,7 @@ class RemoteDataSource (
             }
             response.status.isSuccess()
         } catch (e: Exception) {
-            _error.value = e.message
             false
-        } finally {
-            _isLoading.value = false
         }
     }
 
@@ -246,7 +201,6 @@ class RemoteDataSource (
 
     override suspend fun verifyPasskeyRegistration(
         credential: RegistrationResponse, email: String): Boolean {
-        _isLoading.value = true
         return try {
             val response: HttpResponse = client.post(
                 "https://verifypasskeyregistration-iktff5ztia-uc.a.run.app") {
@@ -255,10 +209,7 @@ class RemoteDataSource (
             }
             response.body<Map<String, Boolean>>()["verified"] ?: false
         } catch (e: Exception) {
-            _error.value = e.message
             false
-        } finally {
-            _isLoading.value = false
         }
     }
 
@@ -291,7 +242,6 @@ class RemoteDataSource (
 
     override suspend fun verifyPasskeyAuthentication(
         credential: AuthenticationResponse, email: String): Boolean {
-        _isLoading.value = true
         return try {
             val response: HttpResponse = client.post(
                 "https://verifypasskeyauthentication-iktff5ztia-uc.a.run.app") {
@@ -300,10 +250,7 @@ class RemoteDataSource (
             }
             response.body<Map<String, Boolean>>()["verified"] ?: false
         } catch (e: Exception) {
-            _error.value = e.message
             false
-        } finally {
-            _isLoading.value = false
         }
     }
 
@@ -401,7 +348,6 @@ class RemoteDataSource (
 
     override suspend fun verifyPasskeyRegistrationWithToken(
         credential: RegistrationResponse, email: String): ApiResult<FirebaseAuthResponse> {
-        _isLoading.value = true
         return try {
             val response: HttpResponse = client.post(
                 "https://verifypasskeyregistrationwithfirebaseauth-iktff5ztia-uc.a.run.app"
@@ -416,17 +362,13 @@ class RemoteDataSource (
                 ApiResult.Error("Passkey registration failed")
             }
         } catch (e: Exception) {
-            _error.value = e.message
             ApiResult.Error("Unknown error during registration verification")
-        } finally {
-            _isLoading.value = false
         }
     }
 
 
     override suspend fun verifyPasskeyAuthenticationWithToken(
         credential: AuthenticationResponse, email: String): ApiResult<FirebaseAuthResponse> {
-        _isLoading.value = true
         return try {
             val response: HttpResponse = client.post(
                 "https://verifypasskeyauthenticationwithfirebaseauth-iktff5ztia-uc.a.run.app"
@@ -444,10 +386,7 @@ class RemoteDataSource (
             }
 
         } catch (e: Exception) {
-            _error.value = e.message
             ApiResult.Error("Unknown error during authentication verification")
-        } finally {
-            _isLoading.value = false
         }
     }
 
@@ -529,7 +468,6 @@ class RemoteDataSource (
     }
 
     override suspend fun fetchStreamToken(): StreamTokenResponse? {
-        _isLoading.value = true
         return try {
             val idToken = FirebaseBridge.getIdToken().await<JsAny?>().toString()
             val response: HttpResponse = client
@@ -543,10 +481,7 @@ class RemoteDataSource (
                 null
             }
         } catch (e: Exception) {
-            _error.value = e.message
             null
-        } finally {
-            _isLoading.value = false
         }
     }
 
@@ -564,7 +499,6 @@ class RemoteDataSource (
             }
             response.status.isSuccess()
         } catch (e: Exception) {
-            _error.value = e.message
             false
         }
     }
@@ -581,7 +515,6 @@ class RemoteDataSource (
             }
             response.status.isSuccess()
         } catch (e: Exception) {
-            _error.value = e.message
             false
         }
     }
@@ -606,7 +539,6 @@ class RemoteDataSource (
             }
             response.status.isSuccess()
         } catch (e: Exception) {
-            _error.value = e.message
             false
         }
     }
@@ -631,7 +563,6 @@ class RemoteDataSource (
             }
             response.status.isSuccess()
         } catch (e: Exception) {
-            _error.value = e.message
             false
         }
     }
@@ -656,7 +587,6 @@ class RemoteDataSource (
                 emptyList()
             }
         } catch (e: Exception) {
-            _error.value = e.message
             emptyList()
         }
     }
@@ -684,7 +614,6 @@ class RemoteDataSource (
             }
             response.status.isSuccess()
         } catch (e: Exception) {
-            _error.value = e.message
             false
         }
     }
@@ -701,7 +630,6 @@ class RemoteDataSource (
                 response.body()
             } else null
         } catch (e: Exception) {
-            _error.value = e.message
             null
         }
     }
@@ -721,7 +649,6 @@ class RemoteDataSource (
                 else kotlinx.serialization.json.Json.decodeFromString(text)
             } else null
         } catch (e: Exception) {
-            _error.value = e.message
             null
         }
     }
@@ -740,7 +667,6 @@ class RemoteDataSource (
             }
             response.status.isSuccess()
         } catch (e: Exception) {
-            _error.value = e.message
             false
         }
     }
@@ -757,7 +683,6 @@ class RemoteDataSource (
             }
             response.status.isSuccess()
         } catch (e: Exception) {
-            _error.value = e.message
             false
         }
     }
