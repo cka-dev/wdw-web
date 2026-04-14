@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /#login
+Disallow: /#profile
+Disallow: /#settings
+Disallow: /#messaging
+
+Sitemap: https://winedown.app/sitemap.xml

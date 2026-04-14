@@ -410,3 +410,55 @@ The `WdwTheme` composable wraps the entire app via `AppNavigation.kt` and provid
 - **`LocalIsDarkTheme` for exceptions**: Used sparingly when a color must diverge from its semantic token (e.g., birthday badge text: gold in dark, `WdwOrange` in light for contrast).
 - **Brand colors are always WdwOrange** regardless of mode (message bubbles, avatars, CTA buttons).
 - **Non-negotiable dark elements** (video player backgrounds, image overlay gradients) intentionally use hardcoded `Color.Black` — they are not mode-dependent.
+
+---
+
+## 9. SEO & Domain Strategy
+
+### Canvas-Rendered SPA Constraints
+Compose Multiplatform for Wasm renders to a `<canvas>` element — search engine crawlers cannot index in-canvas content. All SEO optimization is therefore applied at the **HTML shell level** (`index.html`) and via **static assets**.
+
+### Canonical Domain
+- **Primary**: `https://winedown.app` — all SEO signals (canonical, OG tags, structured data, sitemap) point here.
+- **Redirected domains**: `winedownwednesday.net` and `wdwclub.com` redirect to the canonical domain via a three-layer strategy:
+  1. `<link rel="canonical">` — tells crawlers the authoritative URL
+  2. JS `location.replace()` — instant redirect for browsers (also executed by Googlebot)
+  3. `<noscript>` content with canonical links — fallback for crawlers that don't run JS
+
+### Meta Tags & Social Previews
+- **Open Graph** tags (`og:title`, `og:description`, `og:image`, `og:url`, `og:type`, `og:site_name`) for Facebook, LinkedIn, iMessage, Slack, Discord previews.
+- **Twitter Card** tags (`twitter:card`, `twitter:title`, `twitter:description`, `twitter:image`) for X/Twitter previews.
+- **OG Image**: Landscape (1200×630) version of the WDW logo at `og-image.png`.
+- **Theme color**: `#FF7F33` (WdwOrange) for browser chrome theming.
+
+### Structured Data (JSON-LD)
+Three schemas in the `<head>`:
+- `Organization` — name, url, logo, social profiles (2× Instagram, 1× YouTube)
+- `WebSite` — name, url
+- `WebApplication` — name, url, operatingSystem, app store install URLs (Google Play + App Store)
+
+### Static SEO Assets
+| File | Purpose |
+|------|---------|
+| `robots.txt` | Allows all public pages; disallows `#login`, `#profile`, `#settings`, `#messaging` |
+| `sitemap.xml` | Declares public URLs with priorities and change frequencies |
+| `manifest.json` | Web App Manifest for PWA signals (install prompts, theme, icons) |
+| `og-image.png` | 1200×630 social sharing preview image |
+
+### Noscript Fallback
+A `<noscript>` block in `index.html` provides visible text content for crawlers that cannot run WebAssembly:
+- Brand name and description
+- Page summaries (Gatherings, The Cellar, Uncorked Conversations, Tasting Notes, etc.)
+- App Store download links
+- Social media profile links
+This is the most critical SEO lever for a canvas-rendered app.
+
+### Security Headers
+Firebase Hosting serves all responses with:
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+
+### Preconnect Hints
+`<link rel="preconnect">` for Firebase, Cloud Storage, and Cloud Functions domains to reduce connection latency.
