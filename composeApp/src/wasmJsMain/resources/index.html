@@ -3,14 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content, viewport-fit=cover">
-    <title>Wine Down Wednesday</title>
+
+    <!-- ===== Domain Redirect (must run first) ===== -->
+    <script>
+    (function() {
+        var h = location.hostname;
+        if (h !== "winedown.app" && h !== "localhost" && h !== "127.0.0.1") {
+            location.replace("https://winedown.app" + location.pathname + location.hash);
+        }
+    })();
+    </script>
+
+    <!-- ===== Primary Meta Tags ===== -->
+    <title>Wine Down Wednesday — Your Wine Community, Uncorked</title>
+    <meta name="description" content="Wine Down Wednesday is a vibrant community for wine lovers. Explore events, discover wines, listen to our Uncorked Conversations podcast, connect with fellow enthusiasts, and more.">
+    <meta name="keywords" content="wine, wine club, wine community, wine tasting, wine events, wine down wednesday, uncorked conversations, podcast, wine lovers">
+    <meta name="author" content="Wine Down Wednesday">
+    <meta name="theme-color" content="#FF7F33">
+
+    <!-- ===== Canonical URL ===== -->
+    <link rel="canonical" href="https://winedown.app/">
+
+    <!-- ===== Open Graph (Facebook, LinkedIn, iMessage, Slack, Discord) ===== -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Wine Down Wednesday">
+    <meta property="og:title" content="Wine Down Wednesday — Your Wine Community, Uncorked">
+    <meta property="og:description" content="A vibrant community for wine lovers. Explore events, discover wines, listen to our Uncorked Conversations podcast, and connect with fellow enthusiasts.">
+    <meta property="og:url" content="https://winedown.app/">
+    <meta property="og:image" content="https://winedown.app/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Wine Down Wednesday logo">
+    <meta property="og:locale" content="en_US">
+
+    <!-- ===== Twitter Card ===== -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Wine Down Wednesday — Your Wine Community, Uncorked">
+    <meta name="twitter:description" content="A vibrant community for wine lovers. Explore events, discover wines, listen to our Uncorked Conversations podcast, and connect with fellow enthusiasts.">
+    <meta name="twitter:image" content="https://winedown.app/og-image.png">
+    <meta name="twitter:image:alt" content="Wine Down Wednesday logo">
+
+    <!-- ===== Structured Data (JSON-LD) ===== -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "Organization",
+                "name": "Wine Down Wednesday",
+                "url": "https://winedown.app",
+                "logo": "https://winedown.app/wdw_new_logo.png",
+                "sameAs": [
+                    "https://www.instagram.com/thewinedownwednesday/",
+                    "https://www.instagram.com/uncorked.conversations/",
+                    "https://www.youtube.com/@uncorked.conversations"
+                ]
+            },
+            {
+                "@type": "WebSite",
+                "name": "Wine Down Wednesday",
+                "url": "https://winedown.app"
+            },
+            {
+                "@type": "WebApplication",
+                "name": "Wine Down Wednesday",
+                "url": "https://winedown.app",
+                "operatingSystem": "Web, Android, iOS",
+                "applicationCategory": "LifestyleApplication",
+                "installUrl": [
+                    "https://play.google.com/store/apps/details?id=net.winedownwednesday.android",
+                    "https://apps.apple.com/us/app/wine-down-wednesday/id6760641629"
+                ],
+                "offers": {
+                    "@type": "Offer",
+                    "price": "0",
+                    "priceCurrency": "USD"
+                }
+            }
+        ]
+    }
+    </script>
+
+    <!-- ===== Icons & Manifest ===== -->
+    <link rel="icon" type="image/png" href="wdw_new_logo.png">
+    <link rel="apple-touch-icon" href="wdw_new_logo.png">
+    <link rel="manifest" href="manifest.json">
+
+    <!-- ===== Preconnect Hints (performance) ===== -->
+    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://storage.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://us-central1-wdw-app-52a3c.cloudfunctions.net" crossorigin>
+
+    <!-- ===== Stylesheets ===== -->
     <link type="text/css" rel="stylesheet" href="styles.css">
+
+    <!-- ===== Scripts ===== -->
     <script type="application/javascript" src="webauthn-bridge.js"></script>
     <script type="module" src="firebase-bridge.js"></script>
     <script type="module" src="stream-bridge.js"></script>
     <script type="application/javascript" src="youtube-bridge.js"></script>
     <script type="application/javascript" src="ai-bridge.js"></script>
-    <link rel="icon" type="image/png" href="wdw_new_logo.png">
     <script type="application/javascript" src="composeApp.js?v=2"></script>
 </head>
 <body>
@@ -21,5 +113,39 @@
     <input id="wdw-haptic-switch" type="checkbox" switch
            style="all:initial;appearance:auto;display:none;">
 </label>
+
+<!-- ===== Noscript Fallback (visible to crawlers & users without JS) ===== -->
+<noscript>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px 20px; color: #333; line-height: 1.6;">
+        <h1 style="color: #FF7F33; font-size: 2em;">Wine Down Wednesday</h1>
+        <p style="font-size: 1.2em;">Your Wine Community, Uncorked.</p>
+        <p>Wine Down Wednesday is a vibrant community for wine lovers. We bring people together through curated wine tastings, engaging events, and meaningful conversations about the wines we love.</p>
+
+        <h2>What We Offer</h2>
+        <ul>
+            <li><strong>Gatherings</strong> — Curated wine tasting events and community meetups</li>
+            <li><strong>The Cellar</strong> — A catalog of featured wines with community ratings and reviews</li>
+            <li><strong>Uncorked Conversations</strong> — Our podcast exploring stories behind the wines</li>
+            <li><strong>Tasting Notes</strong> — Our blog with articles about wine culture and community</li>
+            <li><strong>Members</strong> — A thriving community of wine enthusiasts</li>
+            <li><strong>Bubbly Chat</strong> — Real-time messaging for members, powered by Vino, our AI sommelier</li>
+        </ul>
+
+        <h2>Get the App</h2>
+        <p>
+            <a href="https://play.google.com/store/apps/details?id=net.winedownwednesday.android">Download on Google Play</a> |
+            <a href="https://apps.apple.com/us/app/wine-down-wednesday/id6760641629">Download on the App Store</a>
+        </p>
+
+        <h2>Follow Us</h2>
+        <p>
+            <a href="https://www.instagram.com/thewinedownwednesday/">Instagram — @thewinedownwednesday</a><br>
+            <a href="https://www.instagram.com/uncorked.conversations/">Instagram — @uncorked.conversations</a><br>
+            <a href="https://www.youtube.com/@uncorked.conversations">YouTube — Uncorked Conversations</a>
+        </p>
+
+        <p style="margin-top: 2em; color: #999; font-size: 0.9em;">This application requires JavaScript and WebAssembly to run. Please enable JavaScript in your browser.</p>
+    </div>
+</noscript>
 </body>
 </html>
