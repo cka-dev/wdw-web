@@ -79,6 +79,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
 import net.winedownwednesday.web.getSafeAreaInsetBottom
+import net.winedownwednesday.web.isIOS
 import net.winedownwednesday.web.viewmodels.LoginUIState
 import org.jetbrains.compose.resources.painterResource
 import wdw_web.composeapp.generated.resources.Res
@@ -392,7 +393,10 @@ fun MobileBottomNavBar(
     ) {
         var safeAreaBottom by remember { mutableStateOf(0) }
         LaunchedEffect(Unit) {
-            safeAreaBottom = getSafeAreaInsetBottom()
+            val inset = getSafeAreaInsetBottom()
+            // Chrome on iOS may report 0 even when a home indicator
+            // or browser toolbar is present. Use a sensible fallback.
+            safeAreaBottom = if (inset == 0 && isIOS()) 20 else inset
         }
         Row(
             modifier = Modifier

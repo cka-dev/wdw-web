@@ -6,3 +6,15 @@ html, body {
     padding: 0;
     overflow: hidden;
 }
+
+/*
+ * iOS Chrome workaround: Chrome on iOS doesn't always expose
+ * env(safe-area-inset-bottom) to JavaScript, so the Compose
+ * bottom nav can get hidden by the browser/system bar.
+ * Applying the inset at the CSS level on the canvas ensures
+ * all browsers that support viewport-fit=cover get the padding.
+ */
+canvas {
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    box-sizing: border-box;
+}
