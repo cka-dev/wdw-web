@@ -55,10 +55,10 @@ import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
@@ -927,7 +927,7 @@ fun ChannelSidebar(
                                 Icon(
                                     if (blockedExpanded)
                                         Icons.Default.KeyboardArrowDown
-                                    else Icons.Default.KeyboardArrowRight,
+                                    else Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                     contentDescription = "Toggle",
                                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                     modifier = Modifier.size(16.dp)
@@ -3735,7 +3735,7 @@ fun MessageInput(
                     enabled = textFieldValue.text.isNotBlank() || selectedFile != null
                 ) {
                     Icon(
-                        if (isEditing) Icons.Default.Done else Icons.Default.Send,
+                        if (isEditing) Icons.Default.Done else Icons.AutoMirrored.Filled.Send,
                         contentDescription = if (isEditing) "Save" else "Send",
                         tint = if (textFieldValue.text.isNotBlank() || selectedFile != null) {
                             if (isEditing) Color(0xFF4ea4e8) else Color(0xFFFF7F33)
@@ -4278,7 +4278,6 @@ private fun parseAttachments(jsonString: String): List<ChatAttachment> {
             }
         }
     } catch (e: Exception) {
-        // println("Error parsing attachments JSON: ${e.message}")
     }
 
     return attachments

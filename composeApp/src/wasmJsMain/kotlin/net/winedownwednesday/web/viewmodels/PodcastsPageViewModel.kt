@@ -33,9 +33,7 @@ class PodcastsPageViewModel(
             repository.episodes.collect { fetchedEpisodes ->
                 _episodes.value = fetchedEpisodes
             }
-        } catch (e: Exception) {
-            // println("Error loading episodes: ${e.message}")
-        }
+        } catch (_: Exception) { }
     }
 
     fun setSearchQuery(query: String) {

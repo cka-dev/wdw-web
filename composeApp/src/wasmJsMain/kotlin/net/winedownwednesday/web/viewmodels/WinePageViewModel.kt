@@ -1,15 +1,12 @@
 package net.winedownwednesday.web.viewmodels
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.await
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
+import net.winedownwednesday.web.data.network.JsonInstanceProvider
 import net.winedownwednesday.web.AiBridgeExt
 import net.winedownwednesday.web.FirebaseBridge
 import net.winedownwednesday.web.data.Wine
@@ -17,16 +14,13 @@ import net.winedownwednesday.web.data.models.FlagReviewRequest
 import net.winedownwednesday.web.data.models.SubmitReviewRequest
 import net.winedownwednesday.web.data.models.WineReview
 import net.winedownwednesday.web.data.repositories.AppRepository
-import org.koin.core.annotation.InjectedParam
-import org.koin.core.annotation.Single
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 
-@Single
 class WinePageViewModel(
-    @InjectedParam private val repository: AppRepository
+    private val repository: AppRepository
 ) : ViewModel() {
-    private val viewModelScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     // ─── Wine list state ──────────────────────────────────────────────────────
 
@@ -236,10 +230,10 @@ class WinePageViewModel(
                     .callAuthenticatedApi(url, "{}", idToken)
                     .await<JsString>()
                     .toString()
-                val decoded = Json { ignoreUnknownKeys = true }
+                val decoded = JsonInstanceProvider.json
                     .decodeFromString<Map<String, kotlinx.serialization.json.JsonElement>>(raw)
                 val recsJson = decoded["recommendations"]?.toString() ?: "[]"
-                _vinoRecommendations.value = Json { ignoreUnknownKeys = true }
+                _vinoRecommendations.value = JsonInstanceProvider.json
                     .decodeFromString(recsJson)
             } catch (_: Exception) {
                 // Silent fail — recommendations are non-critical

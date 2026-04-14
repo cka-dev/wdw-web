@@ -63,20 +63,17 @@ class AuthPageViewModel(
     private val _isUnblocking = MutableStateFlow(false)
     val isUnblocking: StateFlow<Boolean> = _isUnblocking.asStateFlow()
 
-//    private val userName
 
     init {
         viewModelScope.launch {
             try {
                 FirebaseBridge.waitUntilInitialized().await<JsAny?>()
             } catch (e: Exception) {
-//                println("Error initializing Firebase: ${e.message}")
             }
 
             try {
                 observeAuthState()
             } catch (e: Exception) {
-//                println("Error observing auth state: ${e.message}")
             }
 
             try {
@@ -91,7 +88,6 @@ class AuthPageViewModel(
                     }
                 }
             } catch (e: Exception) {
-//                println("AuthStateChanged: Error getting current user: ${e.message}")
             }
         }
     }
@@ -127,7 +123,6 @@ class AuthPageViewModel(
                 val profile = repository.fetchProfileFromServer(userEmail)
                 _profileData.value = profile
             } catch (e: Exception) {
-                // println("$TAG: fetchProfile EXCEPTION: ${e.message}")
             } finally {
                 _isFetchingProfile.value = false
             }
@@ -385,7 +380,6 @@ class AuthPageViewModel(
                     ),
                 )
             } catch (e: Exception) {
-//                println("$TAG: Caught exception: $e")
                 throw e
             }
 
@@ -411,14 +405,11 @@ class AuthPageViewModel(
                     )
                 }
             } catch (e: Exception) {
-//                println("Error unregistering FCM instance ID: $e")
             }
 
             try {
                 firebaseSignOut()
-//                println("User signed out successfully.")
             } catch (e: Exception) {
-//                println("Error signing out: $e")
             }
 
             _uiState.value = LoginUIState.Idle
@@ -458,7 +449,6 @@ class AuthPageViewModel(
             }
             onResult(true)
         } catch (e: Exception) {
-//            println("$TAG: Error saving RSVP: ${e.message}")
             onResult(false)
         }
     }
@@ -473,10 +463,8 @@ class AuthPageViewModel(
                 if (permissionResult.toString() == "granted") {
                     getAndRegisterFcmToken()
                 } else {
-//                    println("Notifications not granted, permissionResult=$permissionResult")
                 }
             } catch (e: Exception) {
-//                println("Error while requesting permission or getting token: $e")
             }
         }
     }
@@ -494,7 +482,6 @@ class AuthPageViewModel(
                         registerFcmInstanceId(tokenStr, currentEmail)
                     }
                 } catch (e: Exception) {
-//                    println("Error registering FCM instance ID: $e")
                 }
             }
         }
@@ -508,7 +495,6 @@ class AuthPageViewModel(
             )
             val request= repository.registerFcmInstanceId(requestBody)
             if (!request) {
-                // println("$TAG: Error registering FCM instance ID")
             }
         }
     }
@@ -521,7 +507,6 @@ class AuthPageViewModel(
         )
         val request = repository.unRegisterFcmInstanceId(requestBody)
         if (!request) {
-            // println("$TAG: Error unregistering FCM instance ID")
         }
     }
 
@@ -543,7 +528,6 @@ class AuthPageViewModel(
         }
 
         continuation.invokeOnCancellation {
-//            println("Sign out coroutine cancelled")
         }
     }
 
@@ -631,10 +615,6 @@ class AuthPageViewModel(
             }
             onComplete(success)
         }
-    }
-
-    companion object {
-        private const val TAG = "AuthPageViewModel"
     }
 
 }

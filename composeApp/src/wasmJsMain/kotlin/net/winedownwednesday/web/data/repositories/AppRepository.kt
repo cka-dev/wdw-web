@@ -26,12 +26,8 @@ import net.winedownwednesday.web.data.models.RegistrationResponse
 import net.winedownwednesday.web.data.models.UserProfileData
 import net.winedownwednesday.web.data.network.ApiResult
 import net.winedownwednesday.web.data.network.RemoteDataSource
-import org.koin.core.annotation.InjectedParam
-import org.koin.core.annotation.Single
 
-@Single
 class AppRepository (
-    @InjectedParam
     private val remoteDataSource: RemoteDataSource
 ) {
 
@@ -102,9 +98,7 @@ class AppRepository (
             if (!remoteMemberList.isNullOrEmpty()) {
                 _members.value = remoteMemberList
             }
-        } catch (e: Exception) {
-            // println("$TAG: Error fetching members.")
-        }
+        } catch (_: Exception) { }
     }
 
     private suspend fun fetchEvents() {
@@ -115,8 +109,7 @@ class AppRepository (
             } else {
                 _events.value = emptyList()
             }
-        } catch (e: Exception) {
-            // println("$TAG: Error fetching events.")
+        } catch (_: Exception) {
             _events.value = emptyList()
         }
     }
@@ -127,9 +120,7 @@ class AppRepository (
             if (remoteBlogPostsResponse != null && remoteBlogPostsResponse.posts.isNotEmpty()) {
                 _blogPosts.value = remoteBlogPostsResponse.posts
             }
-        } catch (e: Exception) {
-            // println("$TAG: Error fetching blog posts: ${e.message}")
-        }
+        } catch (_: Exception) { }
     }
 
     private suspend fun fetchEpisodes() {
@@ -138,9 +129,7 @@ class AppRepository (
             if (!remoteEpisodeList.isNullOrEmpty()) {
                 _episodes.value = remoteEpisodeList
             }
-        } catch (e: Exception) {
-            // println("$TAG: Error fetching episodes.")
-        }
+        } catch (_: Exception) { }
     }
 
     private suspend fun fetchAboutItems() {
@@ -149,9 +138,7 @@ class AppRepository (
             if (remoteAboutItemList.isNotEmpty()) {
                 _aboutItems.value = remoteAboutItemList
             }
-        } catch (e: Exception) {
-            // println("$TAG: Error fetching about items.")
-        }
+        } catch (_: Exception) { }
     }
 
     suspend fun fetchWines() {
@@ -160,32 +147,23 @@ class AppRepository (
             if (!remoteWineList.isNullOrEmpty()){
                 _wineList.value = remoteWineList
             }
-        } catch (e: Exception) {
-            // println("$TAG: Error fetching wine list with message: ${e.message}")
-        }
+        } catch (_: Exception) { }
     }
 
     private suspend fun fetchMemberSpotlight() {
         try {
             val member = remoteDataSource.fetchMemberSpotlight()
             _memberSpotlight.value = member
-        } catch (e: Exception) {
-            // println("$TAG: Error fetching member spotlight.")
-        }
+        } catch (_: Exception) { }
     }
 
     private suspend fun fetchFeaturedWinesResponse() {
         try {
             val featuredWines = remoteDataSource.fetchFeaturedWines()
             _featuredWinesResponse.value = featuredWines
-        } catch (e: Exception) {
-            // println("$TAG: Error fetching featured wines.")
-        }
+        } catch (_: Exception) { }
     }
 
-    suspend fun sendRSVP(rsvp: RSVPRequest): Boolean {
-        return remoteDataSource.postRSVP(rsvp)
-    }
 
     suspend fun generatePasskeyRegistrationOptions(email: String):
             ApiResult<PublicKeyCredentialCreationOptions> {
@@ -328,7 +306,4 @@ class AppRepository (
         return remoteDataSource.flagWineReview(request)
     }
 
-    companion object{
-        private const val TAG = "AppRepository"
-    }
 }

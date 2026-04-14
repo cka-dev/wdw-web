@@ -7,12 +7,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
+import net.winedownwednesday.web.data.network.JsonInstanceProvider
 import net.winedownwednesday.web.AiBridgeExt
 import net.winedownwednesday.web.FirebaseBridge
 import net.winedownwednesday.web.data.Event
@@ -42,8 +42,6 @@ class EventsPageViewModel(
     private val _pendingEventName = MutableStateFlow<String?>(null)
     val pendingEventName = _pendingEventName.asStateFlow()
 
-    private val today: LocalDate =
-        Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
 
     init {
         loadEvents()
@@ -56,13 +54,14 @@ class EventsPageViewModel(
                     _allEvents.value = fetchedEvents
                     fetchedEvents?.let { updateUpcomingPastEvents(it) }
                 }
-            } catch (e: Exception) {
-                // println("$TAG: Error loading events: ${e.message}")
-            }
+            } catch (_: Exception) { }
         }
     }
 
     private fun updateUpcomingPastEvents(eventsToProcess: List<Event>) {
+        val today = Clock.System.now()
+            .toLocalDateTime(TimeZone.currentSystemDefault()).date
+
         _upcomingEvents.value = eventsToProcess.filter {
             val eventDate = it.date.toEventLocalDate() ?: return@filter false
             eventDate >= today
@@ -83,9 +82,7 @@ class EventsPageViewModel(
         _selectedEvent.value = event
     }
 
-    fun clearSelectedEvent() {
-        _selectedEvent.value = null
-    }
+
 
     fun setPendingEventName(name: String) {
         _pendingEventName.value = name
@@ -95,54 +92,18 @@ class EventsPageViewModel(
         _pendingEventName.value = null
     }
 
-    fun submitRSVP(rsvp: RSVPRequest, onResult: (Boolean) -> Unit) {
-        viewModelScope.launch {
-            val success = repository.sendRSVP(rsvp)
-            onResult(success)
-        }
-    }
-
-    fun mimicSubmitRSVP(rsvp: RSVPRequest, onResult: (Boolean) -> Unit){
-        onResult(false)
-    }
-
-    fun validateAndSubmitRSVP(
-        rsvp: RSVPRequest,
-        onResult: (Boolean, Map<RSVPField, String>) -> Unit
-    ) {
-        viewModelScope.launch {
-            val validation = RsvpValidator.validate(rsvp)
-            if (!validation.isValid) {
-                onResult(false, validation.errors)
-            } else {
-                val success = repository.sendRSVP(rsvp)
-                onResult(success, emptyMap())
-            }
-        }
-    }
-
-    fun mimicValidateAndSubmitRSVP(
-        rsvp: RSVPRequest,
-        onResult: (Boolean, Map<RSVPField, String>) -> Unit
-    ) {
-        onResult(true, emptyMap())
-    }
-
     fun addRsvpToEvent(rsvp: RSVPRequest, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
             try {
                 val success = repository.addRsvpToEvent(rsvp)
                 onResult(success)
-            } catch (e: Exception) {
-                // println("$TAG: Error adding RSVP to event: ${e.message}")
+            } catch (_: Exception) {
                 onResult(false)
             }
         }
     }
 
-    companion object {
-        private const val TAG = "EventsPageViewModel"
-    }
+
 
     // ─── Vino Event Suggestions ───────────────────────────────────────────────
 
@@ -169,11 +130,11 @@ class EventsPageViewModel(
                     .callAuthenticatedApi(url, "{}", idToken)
                     .await<JsString>()
                     .toString()
-                val decoded = Json { ignoreUnknownKeys = true }
+                val decoded = JsonInstanceProvider.json
                     .decodeFromString<Map<String, kotlinx.serialization.json.JsonElement>>(raw)
                 val suggestionsJson = decoded["suggestions"]?.toString() ?: "[]"
                 _vinoEventSuggestions.value =
-                    Json { ignoreUnknownKeys = true }.decodeFromString(suggestionsJson)
+                    JsonInstanceProvider.json.decodeFromString(suggestionsJson)
             } catch (_: Exception) {
                 // Silent fail
             } finally {
@@ -183,53 +144,6 @@ class EventsPageViewModel(
     }
 }
 
-object RsvpValidator {
-
-    private val EMAIL_REGEX = Regex(
-        "[a-zA-Z0-9+._%\\-]{1,256}@" +
-                "[a-zA-Z0-9][a-zA-Z0-9\\-]{0,64}" +
-                "(" +
-                "\\.[a-zA-Z0-9][a-zA-Z0-9\\-]{0,25}" +
-                ")+"
-    )
-
-    fun validate(rsvp: RSVPRequest): RsvpValidationResult {
-        val errors = mutableMapOf<RSVPField, String>()
-
-        if (rsvp.firstName.isBlank()) {
-            errors[RSVPField.FIRST_NAME] = "First name is required"
-        }
-        if (rsvp.lastName.isBlank()) {
-            errors[RSVPField.LAST_NAME] = "Last name is required"
-        }
-        if (rsvp.email.isBlank()) {
-            errors[RSVPField.EMAIL] = "Email is required"
-        } else if (!rsvp.email.matches(EMAIL_REGEX)) {
-            errors[RSVPField.EMAIL] = "Invalid email format"
-        }
-        if (rsvp.phoneNumber.isBlank()) {
-            errors[RSVPField.PHONE] = "Phone number is required"
-        }
-        if (rsvp.guestsCount < 1 || rsvp.guestsCount > 10) {
-            errors[RSVPField.GUESTS] = "Number of guests must be between 1 and 10"
-        }
-
-        return if (errors.isEmpty()) {
-            RsvpValidationResult(true, emptyMap())
-        } else {
-            RsvpValidationResult(false, errors)
-        }
-    }
-}
-
-enum class RSVPField {
-    FIRST_NAME, LAST_NAME, EMAIL, PHONE, GUESTS
-}
-
-data class RsvpValidationResult(
-    val isValid: Boolean,
-    val errors: Map<RSVPField, String>
-)
 @Serializable
 data class EventSuggestion(
     val name: String = "",

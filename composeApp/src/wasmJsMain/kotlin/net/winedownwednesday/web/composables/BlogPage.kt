@@ -25,7 +25,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import coil3.compose.AsyncImage
 import net.winedownwednesday.web.data.models.BlogPost
 import net.winedownwednesday.web.data.models.ContentBlock
@@ -92,7 +92,7 @@ fun BlogPage(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 androidx.compose.material3.Icon(
-                                    imageVector = Icons.Default.ArrowBack, 
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack, 
                                     contentDescription = "Back",
                                     tint = WdwOrange,
                                     modifier = Modifier.padding(end = 8.dp)

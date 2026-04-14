@@ -43,9 +43,7 @@ class AboutPageViewModel(
                 val mappedSections = mapAboutItemsToSections(fetchedAboutItems)
                 _aboutSections.value = mappedSections
             }
-        } catch (e: Exception) {
-            // println("Error loading about items: ${e.message}")
-        }
+        } catch (_: Exception) { }
     }
 
     private fun mapAboutItemsToSections(items: List<AboutItem>?): List<AboutSection> {

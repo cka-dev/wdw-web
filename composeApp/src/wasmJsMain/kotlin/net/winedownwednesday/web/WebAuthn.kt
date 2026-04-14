@@ -7,8 +7,6 @@ import org.khronos.webgl.get
 import org.khronos.webgl.set
 import kotlin.js.Promise
 
-external fun btoa(input: String): String
-external fun atob(input: String): String
 
 external object myWebAuthnBridge {
     fun startRegistration(
@@ -36,7 +34,6 @@ external object myWebAuthnBridge {
 
     fun isSecureContext(): Boolean
 
-//    fun isLocalhost(): Boolean
 
     fun encodeBase64(bytes: Uint8Array): String
     fun decodeBase64(encoded: String): Uint8Array
@@ -63,22 +60,11 @@ fun ArrayBuffer.toBase64Url(): String {
     try {
         return myWebAuthnBridge.arrayBufferToBase64Url(this)
     } catch (e: Throwable) {
-        // println("Error converting ArrayBuffer to base64url: ${e.message}")
         throw e
     }
 }
 
-private fun b64encode(bytes: Uint8Array): String {
-    val stringBuilder = StringBuilder()
-    for (i in 0 until bytes.length) {
-        stringBuilder.append(bytes[i].toInt().toChar())
-    }
 
-    return btoa(stringBuilder.toString())
-        .replace('+', '-')
-        .replace('/', '_')
-        .replace("=", "")
-}
 
 fun ByteArray.toBase64Url(): String {
     return myWebAuthnBridge.encodeBase64(this.toUint8Array())

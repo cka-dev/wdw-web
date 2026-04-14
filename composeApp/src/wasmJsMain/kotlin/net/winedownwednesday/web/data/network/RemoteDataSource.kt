@@ -41,12 +41,9 @@ import net.winedownwednesday.web.data.models.UserProfileData
 import net.winedownwednesday.web.data.models.UserProfileRequest
 import net.winedownwednesday.web.data.models.VerifyAuthenticationRequest
 import net.winedownwednesday.web.data.models.VerifyRegistrationRequest
-import org.koin.core.annotation.InjectedParam
-import org.koin.core.annotation.Single
 
-@Single
 class RemoteDataSource (
-    @InjectedParam private val client: HttpClient
+    private val client: HttpClient
 ): ApiService {
 
     private val _isLoading = MutableStateFlow(false)
@@ -790,8 +787,6 @@ class RemoteDataSource (
     companion object{
         private const val SERVER_URL =
             "https://us-central1-wdw-app-52a3c.cloudfunctions.net"
-
-        private const val TAG = "RemoteDataSource"
     }
 }
 

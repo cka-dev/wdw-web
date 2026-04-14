@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
+import net.winedownwednesday.web.data.network.JsonInstanceProvider
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -23,9 +23,7 @@ import net.winedownwednesday.web.JsStreamUser
 import net.winedownwednesday.web.StreamBridge
 import net.winedownwednesday.web.data.models.StreamTokenResponse
 import net.winedownwednesday.web.data.repositories.AppRepository
-import org.koin.core.annotation.Single
 
-@Single
 class MessagingViewModel(
     private val appRepository: AppRepository
 ) : ViewModel() {
@@ -187,7 +185,6 @@ class MessagingViewModel(
                 }
                 _channels.value = list
             } catch (e: Exception) {
-                // println("MessagingViewModel: Error loading channels: ${e.message}")
             }
         }
     }
@@ -225,13 +222,10 @@ class MessagingViewModel(
                         .await<JsBoolean>()
                     _fcmToken = fcmToken
                     _notificationsEnabled.value = true
-                    // println("MessagingViewModel: Auto-registered device with Stream push")
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Permission not granted yet or token unavailable — that's OK.
                 // User can enable via the bell icon.
-                // println("MessagingViewModel: Could not auto-register push " +
-                        //"(permission may not be granted): ${e.message}")
             }
         }
     }
@@ -254,14 +248,11 @@ class MessagingViewModel(
                             .await<JsBoolean>()
                         _fcmToken = fcmToken
                         _notificationsEnabled.value = true
-                        // println("MessagingViewModel: Enabled push notifications")
                     }
                 } else {
-                    // println("MessagingViewModel: Notification permission not granted" +
                             //"($permission)")
                 }
             } catch (e: Exception) {
-                // println("MessagingViewModel: Error enabling notifications: ${e.message}")
             }
         }
     }
@@ -274,10 +265,8 @@ class MessagingViewModel(
                     StreamBridge.removeDevice(token).await<JsBoolean>()
                     _notificationsEnabled.value = false
                     _fcmToken = null
-                    // println("MessagingViewModel: Disabled push notifications")
                 }
             } catch (e: Exception) {
-                // println("MessagingViewModel: Error disabling notifications: ${e.message}")
             }
         }
     }
@@ -304,7 +293,6 @@ class MessagingViewModel(
                 }
                 _searchResults.value = list
             } catch (e: Exception) {
-                // println("MessagingViewModel: Error searching users: ${e.message}")
             }
         }
     }
@@ -389,7 +377,6 @@ class MessagingViewModel(
                     selectChannel(channel.id)
                 }
             } catch (e: Exception) {
-                // println("MessagingViewModel: Error starting direct message: ${e.message}")
             }
         }
     }
@@ -428,7 +415,6 @@ class MessagingViewModel(
                 // Ignore silent read receipt errors
             }
         } catch (e: Exception) {
-            // println("MessagingViewModel: Error loading messages: ${e.message}")
         }
     }
 
@@ -463,7 +449,7 @@ class MessagingViewModel(
                     // Trigger Vino if @mentioned, OR if this is a Vino DM (always respond)
                     if (isVinoMention(text) || isVinoDmChannel()) {
                         // Client-side cooldown: prevent rapid-fire @Vino messages
-                        val now = kotlinx.datetime.Clock.System
+                        val now = kotlin.time.Clock.System
                             .now().toEpochMilliseconds()
                         if (now - _lastVinoSentAt < 3_000L) {
                             showModerationFeedback(
@@ -486,7 +472,6 @@ class MessagingViewModel(
                     }
                 }
             } catch (e: Exception) {
-                // println("MessagingViewModel: Error sending message: ${e.message}")
             }
         }
     }
@@ -498,14 +483,11 @@ class MessagingViewModel(
     fun addReaction(messageId: String, reactionType: String) {
         viewModelScope.launch {
             try {
-                // println("MessagingViewModel: Adding reaction '$reactionType' to message '$messageId'")
                 StreamBridge.addReaction(messageId, reactionType).await<JsBoolean>()
-                // println("MessagingViewModel: Reaction sent, waiting for consistency...")
                 // Small delay to let Stream's backend process the reaction
                 kotlinx.coroutines.delay(500)
                 _selectedChannelId.value?.let { loadMessages(it) }
             } catch (e: Exception) {
-                // println("MessagingViewModel: Error adding reaction: ${e.message}")
             }
         }
     }
@@ -513,12 +495,10 @@ class MessagingViewModel(
     fun removeReaction(messageId: String, reactionType: String) {
         viewModelScope.launch {
             try {
-                // println("MessagingViewModel: Removing reaction '$reactionType' from message '$messageId'")
                 StreamBridge.removeReaction(messageId, reactionType).await<JsBoolean>()
                 kotlinx.coroutines.delay(500)
                 _selectedChannelId.value?.let { loadMessages(it) }
             } catch (e: Exception) {
-                // println("MessagingViewModel: Error removing reaction: ${e.message}")
             }
         }
     }
@@ -529,7 +509,6 @@ class MessagingViewModel(
                 StreamBridge.deleteMessage(messageId).await<JsBoolean>()
                 _selectedChannelId.value?.let { loadMessages(it) }
             } catch (e: Exception) {
-                // println("MessagingViewModel: Error deleting message: ${e.message}")
             }
         }
     }
@@ -540,7 +519,6 @@ class MessagingViewModel(
                 StreamBridge.pinMessage(messageId).await<JsBoolean>()
                 _selectedChannelId.value?.let { loadMessages(it) }
             } catch (e: Exception) {
-                // println("MessagingViewModel: Error pinning message: ${e.message}")
             }
         }
     }
@@ -551,7 +529,6 @@ class MessagingViewModel(
                 StreamBridge.unpinMessage(messageId).await<JsBoolean>()
                 _selectedChannelId.value?.let { loadMessages(it) }
             } catch (e: Exception) {
-                // println("MessagingViewModel: Error unpinning message: ${e.message}")
             }
         }
     }
@@ -573,7 +550,6 @@ class MessagingViewModel(
                 _editingMessage.value = null
                 _selectedChannelId.value?.let { loadMessages(it) }
             } catch (e: Exception) {
-                // println("MessagingViewModel: Error editing message: ${e.message}")
             }
         }
     }
@@ -602,7 +578,6 @@ class MessagingViewModel(
                     }
                 }
             } catch (e: Exception) {
-                // println("MessagingViewModel: Error sending GIF: ${e.message}")
             }
         }
     }
@@ -613,7 +588,6 @@ class MessagingViewModel(
                 val forwardedText = "↪️ Forwarded:\n$messageText"
                 StreamBridge.sendMessage(targetChannelId, forwardedText).await<JsChatMessage?>()
             } catch (e: Exception) {
-                // println("MessagingViewModel: Error forwarding message: ${e.message}")
             }
         }
     }
@@ -662,7 +636,6 @@ class MessagingViewModel(
                     .await<JsArray<JsChatMessage>>()
                 _threadReplies.value = (0 until replies.length).map { replies[it]!! }
             } catch (e: Exception) {
-                // println("Error loading thread replies: ${e.message}")
             }
         }
     }
@@ -705,7 +678,6 @@ class MessagingViewModel(
                 // Also reload main messages to update reply count
                 loadMessages(channelId)
             } catch (e: Exception) {
-                // println("Error sending thread reply: ${e.message}")
             }
         }
     }
@@ -786,7 +758,7 @@ class MessagingViewModel(
     }
 
     private fun throttledRefresh(refreshMessages: Boolean) {
-        val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+        val now = kotlin.time.Clock.System.now().toEpochMilliseconds()
         val withinThrottle = now - _lastRefreshTime < REFRESH_THROTTLE_MS
 
         // Always refresh thread replies on a dedicated job — never throttled, never canceled
@@ -1172,7 +1144,7 @@ class MessagingViewModel(
 
                     // Parse response and extract Vino Cards + detectedTopic
                     try {
-                        val jsonEl = Json.parseToJsonElement(rawResponse)
+                        val jsonEl = JsonInstanceProvider.json.parseToJsonElement(rawResponse)
                         val obj = jsonEl.jsonObject
 
                         // Check for server-side rate limit or quota errors
@@ -1329,7 +1301,7 @@ class MessagingViewModel(
                 val cleaned = result.trim()
                     .removePrefix("```json").removePrefix("```")
                     .removeSuffix("```").trim()
-                val parsed = Json.decodeFromString<List<String>>(cleaned)
+                val parsed = JsonInstanceProvider.json.decodeFromString<List<String>>(cleaned)
                 _smartReplies.value = parsed.take(3)
             } catch (e: Exception) {
                 _smartReplies.value = emptyList()
@@ -1381,7 +1353,7 @@ class MessagingViewModel(
                 val cleaned = result.trim()
                     .removePrefix("```json").removePrefix("```")
                     .removeSuffix("```").trim()
-                val parsed = Json.decodeFromString<List<String>>(cleaned)
+                val parsed = JsonInstanceProvider.json.decodeFromString<List<String>>(cleaned)
                 _threadSmartReplies.value = parsed.take(3)
             } catch (e: Exception) {
                 _threadSmartReplies.value = emptyList()
@@ -1500,8 +1472,7 @@ class MessagingViewModel(
                     functionUrl = SUMMARIZE_THREAD_URL
                 ).await<JsString>().toString()
 
-                val json = Json { ignoreUnknownKeys = true }
-                val parsed = json.decodeFromString<CatchUpSummary>(result)
+                val parsed = JsonInstanceProvider.json.decodeFromString<CatchUpSummary>(result)
                 _catchUpState.value = CatchUpState.Ready(parsed)
             } catch (e: Exception) {
                 _catchUpState.value = CatchUpState.Error(
