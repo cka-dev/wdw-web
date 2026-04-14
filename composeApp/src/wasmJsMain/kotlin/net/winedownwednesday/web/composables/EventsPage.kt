@@ -127,7 +127,7 @@ fun EventsPage(
     val pastEvents by viewModel.pastEvents.collectAsState()
     val pendingEventName by viewModel.pendingEventName.collectAsState()
 
-    var showUpcoming by remember { mutableStateOf(true) }
+    val showUpcoming by viewModel.showUpcoming.collectAsState()
 
     val selectedEvent by viewModel.selectedEvent.collectAsState()
 
@@ -140,7 +140,7 @@ fun EventsPage(
         val match = allEventsFlat.firstOrNull { it.name.equals(name, ignoreCase = true) }
         if (match != null) {
             // Switch to the right tab so the user sees the card highlighted
-            showUpcoming = (upcomingEvents ?: emptyList()).contains(match)
+            viewModel.setShowUpcoming((upcomingEvents ?: emptyList()).contains(match))
             viewModel.setSelectedEvent(match)
             viewModel.clearPendingEventName()
         }
@@ -177,7 +177,7 @@ fun EventsPage(
 
             Row {
                 Button(
-                    onClick = { showUpcoming = true },
+                    onClick = { viewModel.setShowUpcoming(true) },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = upcomingColor,
                         contentColor   = if (LocalIsDarkTheme.current) Color.White
@@ -190,7 +190,7 @@ fun EventsPage(
                 }
 
                 Button(
-                    onClick = { showUpcoming = false },
+                    onClick = { viewModel.setShowUpcoming(false) },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = pastColor,
                         contentColor   = if (LocalIsDarkTheme.current) Color.White

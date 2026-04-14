@@ -32,7 +32,7 @@ val provideAppRepository = module {
 }
 
 val provideMembersViewModel = module {
-    viewModel { MembersPageViewModel(get()) }
+    single { MembersPageViewModel(get()) }
 }
 
 val provideEventsPageViewModel = module {
@@ -40,11 +40,11 @@ val provideEventsPageViewModel = module {
 }
 
 val providePodcastsPageViewModel = module {
-    viewModel { PodcastsPageViewModel(get()) }
+    single { PodcastsPageViewModel(get()) }
 }
 
 val provideAboutPageViewModel = module {
-    viewModel { AboutPageViewModel(get()) }
+    single { AboutPageViewModel(get()) }
 }
 
 val provideWinePageViewModel = module {
@@ -60,7 +60,7 @@ val provideHomePageViewModel = module {
 }
 
 val provideBlogPageViewModel = module {
-    viewModel { BlogPageViewModel(get()) }
+    single { BlogPageViewModel(get()) }
 }
 
 val provideMessagingViewModel = module {

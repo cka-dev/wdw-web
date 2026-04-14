@@ -31,6 +31,11 @@ class AboutPageViewModel(
     private val _aboutSections = MutableStateFlow<List<AboutSection>>(emptyList())
     val aboutSections = _aboutSections.asStateFlow()
 
+    private val _selectedSection = MutableStateFlow<AboutSection?>(null)
+    val selectedSection = _selectedSection.asStateFlow()
+
+    fun selectSection(section: AboutSection?) { _selectedSection.value = section }
+
     init {
         viewModelScope.launch {
             mapAboutItemsToAboutSections()

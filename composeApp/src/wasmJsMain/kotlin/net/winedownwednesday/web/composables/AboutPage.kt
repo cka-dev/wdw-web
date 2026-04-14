@@ -70,7 +70,7 @@ fun AboutPage(
 ) {
     val viewModel: AboutPageViewModel = koinInject()
     val aboutSections by viewModel.aboutSections.collectAsState()
-    var selectedSection by remember { mutableStateOf<AboutSection?>(null) }
+    val selectedSection by viewModel.selectedSection.collectAsState()
 
     val aboutListState = rememberLazyListState()
     Surface(color = MaterialTheme.colorScheme.background) {
@@ -128,7 +128,7 @@ fun AboutPage(
                     GridItemReveal(index = index) {
                         CompactScreenAboutCard(
                             section = aboutSection,
-                            onClick = { selectedSection = aboutSection }
+                            onClick = { viewModel.selectSection(aboutSection) }
                         )
                     }
                     Spacer(modifier = Modifier.height(16.dp))
@@ -150,7 +150,7 @@ fun AboutPage(
                                 Box(modifier = Modifier.weight(1f)) {
                                     LSAboutCard(
                                         section = section,
-                                        onClick = { selectedSection = section }
+                                        onClick = { viewModel.selectSection(section) }
                                     )
                                 }
                             }
@@ -173,7 +173,7 @@ fun AboutPage(
     selectedSection?.let { section ->
         AboutSectionDialog(
             section = section,
-            onDismiss = { selectedSection = null }
+            onDismiss = { viewModel.selectSection(null) }
         )
     }
 }

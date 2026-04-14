@@ -42,6 +42,13 @@ class EventsPageViewModel(
     private val _pendingEventName = MutableStateFlow<String?>(null)
     val pendingEventName = _pendingEventName.asStateFlow()
 
+    // ─── UI State (retained across navigation) ──────────────────────────────
+
+    private val _showUpcoming = MutableStateFlow(true)
+    val showUpcoming: StateFlow<Boolean> = _showUpcoming.asStateFlow()
+
+    fun setShowUpcoming(show: Boolean) { _showUpcoming.value = show }
+
 
     init {
         loadEvents()

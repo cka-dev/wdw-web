@@ -28,6 +28,17 @@ class BlogPageViewModel(
         .map { it == null }
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
+    // ─── UI State (retained across navigation) ──────────────────────────────
+
+    private val _selectedPost = MutableStateFlow<BlogPost?>(null)
+    val selectedPost: StateFlow<BlogPost?> = _selectedPost.asStateFlow()
+
+    private val _showTldr = MutableStateFlow(false)
+    val showTldr: StateFlow<Boolean> = _showTldr.asStateFlow()
+
+    fun selectPost(post: BlogPost?) { _selectedPost.value = post }
+    fun setShowTldr(show: Boolean) { _showTldr.value = show }
+
     // ─── TL;DR Summarization ───────────────────────────────────────────────────
 
     /** Map of postId → bullet-point summary string */

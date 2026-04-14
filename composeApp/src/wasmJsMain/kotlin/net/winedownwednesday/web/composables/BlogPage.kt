@@ -41,14 +41,12 @@ fun BlogPage(
     val isLoading by viewModel.isLoading.collectAsState()
     val summaries by viewModel.summaries.collectAsState()
     val summarizing by viewModel.summarizing.collectAsState()
-
-    // Simple state to hold the currently selected post for reading, null means list view.
-    var selectedPost by remember { mutableStateOf<BlogPost?>(null) }
-    var showTldr by remember { mutableStateOf(false) }
+    val selectedPost by viewModel.selectedPost.collectAsState()
+    val showTldr by viewModel.showTldr.collectAsState()
 
     // Auto-trigger summarization when a post is opened
     LaunchedEffect(selectedPost) {
-        showTldr = false  // collapse when switching posts
+        viewModel.setShowTldr(false)  // collapse when switching posts
         val post = selectedPost ?: return@LaunchedEffect
         val bodyText = post.content.joinToString(" ") { block ->
             when (block) {
@@ -88,7 +86,7 @@ fun BlogPage(
                             Row(
                                 modifier = Modifier
                                     .padding(bottom = 24.dp)
-                                    .clickable { selectedPost = null },
+                                    .clickable { viewModel.selectPost(null) },
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 androidx.compose.material3.Icon(
@@ -144,7 +142,7 @@ fun BlogPage(
                                      modifier = Modifier.padding(bottom = 8.dp)
                                  ) {
                                      Card(
-                                         modifier = Modifier.clickable { showTldr = !showTldr },
+                                         modifier = Modifier.clickable { viewModel.setShowTldr(!showTldr) },
                                          shape = RoundedCornerShape(50),
                                          colors = CardDefaults.cardColors(
                                              containerColor = if (showTldr)
@@ -236,7 +234,7 @@ fun BlogPage(
                             items(posts) { post ->
                                 Box(modifier = Modifier.widthIn(max = 800.dp)) {
                                     ScrollReveal {
-                                        BlogSummaryCard(post = post, onClick = { selectedPost = post })
+                                        BlogSummaryCard(post = post, onClick = { viewModel.selectPost(post) })
                                     }
                                 }
                             }
