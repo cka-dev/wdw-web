@@ -67,6 +67,13 @@ To prevent leaking project identifiers, some JavaScript files are excluded from 
 
 ### Content Modules
 - **Event Management**: List view with RSVP capability for authenticated users, featuring strict admin-side validation and chronological descending default sorts.
+- **Content Sharing & Deep Linking**: All major content types (Events, Wines, Members, Blog) support sharing via `ShareUtils.kt`:
+    - **Share URLs**: Path-based format (`/share/event/123`) routed through the `serveOgPreview` Cloud Function for dynamic OG meta tags (social media link previews). Real browsers are 302-redirected to the SPA hash deep link (`/#events?eventId=123`).
+    - **Desktop**: Copies bare URL to clipboard via `navigator.clipboard.writeText()`. Native `navigator.share()` is restricted to mobile devices (touch + narrow viewport) to avoid macOS share sheet UX issues.
+    - **Deep-link resolution**: `AppNavigation` captures `window.location.hash` synchronously at composition time (before any `LaunchedEffect` can strip query params), parses `eventId`/`wineId`/`memberId`/`postId`, and sets `pending*Id` StateFlows on the respective ViewModels. Each page's `LaunchedEffect` watches both the data list and the pending ID, auto-selecting the matching item once data arrives.
+    - **QR Codes**: `QrCodeDialog.kt` generates branded QR codes (orange dots, WDW logo, dark background) via the `qr-code-styling` CDN library.
+    - **Calendar Integration**: `CalendarUtils.kt` generates Google Calendar links and `.ics` file downloads for events via JS interop.
+    - **Member sharing**: Gated behind authentication — share button only visible to logged-in users.
 - **Member Directory & Spotlight**: Directory of community members, highlighting a deterministic rotating "Member Spotlight" driven by a robust round-robin queue, automated birthday prioritization, and secure manual override architecture.
 - **Blog Engine**: A rich-text publishing system where content is served from Firebase as structured JSON `ContentBlock` arrays, rather than HTML or MD files. This permitting flawless native UI rendering (without WebViews) optimized for Compose reading modes across devices.
     - **Multi-Client Support Requirement**: While fully implemented on Web/Admin, the **Android client must be updated** to consume these structured payloads natively to maintain parity. See [android_blog_implementation_guide.md] for details.
@@ -256,7 +263,7 @@ Top-level navigation uses **Jetpack Navigation 3** (`NavDisplay` + `rememberNavB
 
 **Browser history integration** (custom JS interop via `kotlinx.browser`):
 - `LaunchedEffect(currentRoute)` pushes `window.history.pushState()` whenever the active route changes, keeping the URL hash (e.g. `#about`) in sync.
-- `LaunchedEffect(Unit)` reads the initial hash on first load to support bookmarked / deep-linked URLs.
+- `LaunchedEffect(Unit)` reads the initial hash on first load to support bookmarked / deep-linked URLs. **Query parameters** on hash fragments (e.g. `#events?eventId=123`) are supported: `routeFromHash()` strips params before matching, and `extractHashParam()` extracts individual values. Currently used for event deep-linking.
 - `DisposableEffect(Unit)` attaches a `popstate` listener so the browser Back/Forward buttons update the back stack.
 
 > **Note**: Full browser address-bar integration (path-based URLs rather than hash fragments) is postponed to a future CMP release per JetBrains roadmap.

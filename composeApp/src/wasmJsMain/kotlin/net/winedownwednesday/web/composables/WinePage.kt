@@ -32,7 +32,10 @@ import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.QrCode2
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -41,6 +44,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -94,6 +98,17 @@ fun WinePage(
         if (match != null) {
             viewModel.setSelectedWine(match)
             viewModel.clearPendingWineName()
+        }
+    }
+
+    // Auto-select a wine by ID from a shared deep link
+    val pendingWineId by viewModel.pendingWineId.collectAsState()
+    LaunchedEffect(wines, pendingWineId) {
+        val id = pendingWineId ?: return@LaunchedEffect
+        val match = wines?.firstOrNull { it.id == id }
+        if (match != null) {
+            viewModel.setSelectedWine(match)
+            viewModel.clearPendingWineId()
         }
     }
 
@@ -430,6 +445,23 @@ fun WineDetailContent(
     val flagSuccess by viewModel.flagSuccess.collectAsState()
     val flagError by viewModel.flagError.collectAsState()
     var showWriteReview by rememberSaveable { mutableStateOf(false) }
+    var shareConfirmation by remember { mutableStateOf<String?>(null) }
+    var showQrDialog by remember { mutableStateOf(false) }
+
+    // URL sync: update hash while popup is open
+    DisposableEffect(wine.id) {
+        val hash = "#wines?wineId=${wine.id}"
+        kotlinx.browser.window.history.pushState(
+            null?.toJsString(), "", hash
+        )
+        onDispose {
+            kotlinx.browser.window.history.pushState(
+                null?.toJsString(), "", "#wines"
+            )
+        }
+    }
+
+    val shareUrl = buildShareUrl("wine", wine.id.toString())
 
     // Close dialog when success
     val reviewSubmitSuccess by viewModel.reviewSubmitSuccess.collectAsState()
@@ -455,13 +487,57 @@ fun WineDetailContent(
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                WineRatingBadge(averageRating = wine.averageRating, reviewCount = wine.reviewCount)
+                WineRatingBadge(
+                    averageRating = wine.averageRating,
+                    reviewCount = wine.reviewCount
+                )
             }
             IconButton(onClick = onCloseClick) {
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Close"
                 )
+            }
+        }
+
+        // Action buttons row
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            IconButton(
+                onClick = {
+                    val usedNative = shareOrCopy(
+                        url = shareUrl,
+                        title = wine.name,
+                        text = "Check out this wine: ${wine.name}"
+                    )
+                    shareConfirmation = if (usedNative) null
+                        else "Link copied!"
+                }
+            ) {
+                Icon(
+                    imageVector = if (shareConfirmation != null)
+                        Icons.Default.Check
+                    else Icons.Default.Share,
+                    contentDescription = "Share wine",
+                    tint = if (shareConfirmation != null)
+                        Color(0xFF4CAF50)
+                    else WdwOrange
+                )
+            }
+            IconButton(onClick = { showQrDialog = true }) {
+                Icon(
+                    imageVector = Icons.Default.QrCode2,
+                    contentDescription = "Show QR code",
+                    tint = WdwOrange
+                )
+            }
+        }
+
+        if (shareConfirmation != null) {
+            LaunchedEffect(shareConfirmation) {
+                kotlinx.coroutines.delay(1500)
+                shareConfirmation = null
             }
         }
 
@@ -539,6 +615,14 @@ fun WineDetailContent(
             onSubmit = { rating, text ->
                 viewModel.submitReview(wine.id, rating, text, userName)
             }
+        )
+    }
+
+    if (showQrDialog) {
+        QrCodeDialog(
+            url = shareUrl,
+            title = wine.name,
+            onDismiss = { showQrDialog = false }
         )
     }
 }

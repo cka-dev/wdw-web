@@ -37,6 +37,13 @@ class WinePageViewModel(
     fun setPendingWineName(name: String) { _pendingWineName.value = name }
     fun clearPendingWineName() { _pendingWineName.value = null }
 
+    /** Set when navigating via a shared deep link with wineId query param. */
+    private val _pendingWineId = MutableStateFlow<Long?>(null)
+    val pendingWineId: StateFlow<Long?> = _pendingWineId.asStateFlow()
+
+    fun setPendingWineId(id: Long) { _pendingWineId.value = id }
+    fun clearPendingWineId() { _pendingWineId.value = null }
+
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 

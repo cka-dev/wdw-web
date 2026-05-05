@@ -745,7 +745,12 @@ fun EventDetailsDialog(
             elevation = cardElevation(defaultElevation = 16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            val scrollState = rememberScrollState()
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .verticalScroll(scrollState)
+            ) {
                 AsyncImage(
                     model = event.imageUrl,
                     contentDescription = "${event.name} image",

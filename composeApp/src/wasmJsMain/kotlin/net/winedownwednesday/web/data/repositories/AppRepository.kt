@@ -72,11 +72,11 @@ class AppRepository (
                 _aboutItems.value = initialData.aboutItems
                 _memberSpotlight.value = initialData.memberSpotlight
                 _featuredWinesResponse.value = initialData.featuredWines
-                if (initialData.blogPosts != null &&
-                    initialData.blogPosts.posts.isNotEmpty()
-                ) {
-                    _blogPosts.value = initialData.blogPosts.posts
-                }
+                _blogPosts.value =
+                    if (initialData.blogPosts != null &&
+                        initialData.blogPosts.posts.isNotEmpty()
+                    ) initialData.blogPosts.posts
+                    else emptyList()
             } else {
                 // Fallback: individual calls if batch fails
                 fetchMembers()
@@ -119,8 +119,12 @@ class AppRepository (
             val remoteBlogPostsResponse = remoteDataSource.fetchBlogPosts()
             if (remoteBlogPostsResponse != null && remoteBlogPostsResponse.posts.isNotEmpty()) {
                 _blogPosts.value = remoteBlogPostsResponse.posts
+            } else {
+                _blogPosts.value = emptyList()
             }
-        } catch (_: Exception) { }
+        } catch (_: Exception) {
+            _blogPosts.value = emptyList()
+        }
     }
 
     private suspend fun fetchEpisodes() {

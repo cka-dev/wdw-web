@@ -32,7 +32,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.QrCode2
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -42,6 +45,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -83,6 +88,18 @@ fun MembersPage(
     val memberSections by viewModel.allMemberSections.collectAsState()
     val selectedMember by viewModel.selectedMember.collectAsState()
     val searchQuery   by viewModel.searchQuery.collectAsState()
+
+    // Deep-link: auto-select a member by ID
+    val pendingMemberId by viewModel.pendingMemberId.collectAsState()
+    LaunchedEffect(memberSections, pendingMemberId) {
+        val id = pendingMemberId ?: return@LaunchedEffect
+        val allMembers = memberSections.flatMap { it.members }
+        val match = allMembers.firstOrNull { it.id == id }
+        if (match != null) {
+            viewModel.setSelectedMember(match)
+            viewModel.clearPendingMemberId()
+        }
+    }
 
     if (sizeInfo.useTwoColumnLayout) {
         // ── Wide: persistent side-by-side list + detail ──────────────────
@@ -406,6 +423,25 @@ private fun MemberDetailPane(
 ) {
     val scrollState = rememberScrollState()
     var showFullPhoto by remember { mutableStateOf(false) }
+    var shareConfirmation by remember { mutableStateOf<String?>(null) }
+    var showQrDialog by remember { mutableStateOf(false) }
+    val isAuthenticated = uiState is LoginUIState.Authenticated
+
+    // URL sync: update hash while detail is open
+    DisposableEffect(member.id) {
+        val hash = "#members?memberId=${member.id}"
+        kotlinx.browser.window.history.pushState(
+            null?.toJsString(), "", hash
+        )
+        onDispose {
+            kotlinx.browser.window.history.pushState(
+                null?.toJsString(), "", "#members"
+            )
+        }
+    }
+
+    val shareUrl = buildShareUrl("member", member.id.toString())
+
     Box(modifier = modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -435,6 +471,50 @@ private fun MemberDetailPane(
                     contentDescription = "Close",
                     tint               = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                 )
+            }
+        }
+
+        // Share actions (auth-gated)
+        if (isAuthenticated) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                IconButton(
+                    onClick = {
+                        val usedNative = shareOrCopy(
+                            url = shareUrl,
+                            title = member.name,
+                            text = "Check out ${member.name}'s profile"
+                        )
+                        shareConfirmation = if (usedNative) null
+                            else "Link copied!"
+                    }
+                ) {
+                    Icon(
+                        imageVector = if (shareConfirmation != null)
+                            Icons.Default.Check
+                        else Icons.Default.Share,
+                        contentDescription = "Share member",
+                        tint = if (shareConfirmation != null)
+                            Color(0xFF4CAF50)
+                        else WdwOrange
+                    )
+                }
+                IconButton(
+                    onClick = { showQrDialog = true }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.QrCode2,
+                        contentDescription = "Show QR code",
+                        tint = WdwOrange
+                    )
+                }
+            }
+            if (shareConfirmation != null) {
+                LaunchedEffect(shareConfirmation) {
+                    kotlinx.coroutines.delay(1500)
+                    shareConfirmation = null
+                }
             }
         }
 
@@ -523,6 +603,14 @@ private fun MemberDetailPane(
                 )
             }
         }
+    }
+
+    if (showQrDialog && isAuthenticated) {
+        QrCodeDialog(
+            url = shareUrl,
+            title = member.name,
+            onDismiss = { showQrDialog = false }
+        )
     }
 }
 

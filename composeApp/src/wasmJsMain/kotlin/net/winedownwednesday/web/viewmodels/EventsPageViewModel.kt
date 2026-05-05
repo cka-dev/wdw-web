@@ -43,6 +43,10 @@ class EventsPageViewModel(
     private val _pendingEventName = MutableStateFlow<String?>(null)
     val pendingEventName = _pendingEventName.asStateFlow()
 
+    /** Set when navigating via a shared deep link with eventId query param. */
+    private val _pendingEventId = MutableStateFlow<Long?>(null)
+    val pendingEventId = _pendingEventId.asStateFlow()
+
     // ─── UI State (retained across navigation) ──────────────────────────────
 
     private val _showUpcoming = MutableStateFlow(true)
@@ -98,6 +102,14 @@ class EventsPageViewModel(
 
     fun clearPendingEventName() {
         _pendingEventName.value = null
+    }
+
+    fun setPendingEventId(id: Long) {
+        _pendingEventId.value = id
+    }
+
+    fun clearPendingEventId() {
+        _pendingEventId.value = null
     }
 
     fun addRsvpToEvent(rsvp: RSVPRequest, onResult: (Boolean) -> Unit) {

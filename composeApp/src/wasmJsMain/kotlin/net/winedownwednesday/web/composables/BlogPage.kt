@@ -26,6 +26,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.QrCode2
+import androidx.compose.material.icons.filled.Share
 import coil3.compose.AsyncImage
 import net.winedownwednesday.web.data.models.BlogPost
 import net.winedownwednesday.web.data.models.ContentBlock
@@ -43,6 +46,35 @@ fun BlogPage(
     val summarizing by viewModel.summarizing.collectAsState()
     val selectedPost by viewModel.selectedPost.collectAsState()
     val showTldr by viewModel.showTldr.collectAsState()
+
+    // Deep-link: auto-select a blog post by ID
+    val pendingPostId by viewModel.pendingPostId.collectAsState()
+    LaunchedEffect(blogPosts, pendingPostId) {
+        val id = pendingPostId ?: return@LaunchedEffect
+        val match = blogPosts?.firstOrNull { it.id == id }
+        if (match != null) {
+            viewModel.selectPost(match)
+            viewModel.clearPendingPostId()
+        }
+    }
+
+    // URL sync for selected post
+    DisposableEffect(selectedPost?.id) {
+        val post = selectedPost
+        if (post != null) {
+            val hash = "#blog?postId=${post.id}"
+            kotlinx.browser.window.history.pushState(
+                null?.toJsString(), "", hash
+            )
+        }
+        onDispose {
+            if (selectedPost == null) {
+                kotlinx.browser.window.history.pushState(
+                    null?.toJsString(), "", "#blog"
+                )
+            }
+        }
+    }
 
     // Auto-trigger summarization when a post is opened
     LaunchedEffect(selectedPost) {
@@ -99,6 +131,77 @@ fun BlogPage(
                                     text = "Back to Posts",
                                     color = WdwOrange,
                                     fontWeight = FontWeight.SemiBold
+                                )
+                            }
+
+                            // Share actions
+                            var shareConfirmation by remember {
+                                mutableStateOf<String?>(null)
+                            }
+                            var showQrDialog by remember {
+                                mutableStateOf(false)
+                            }
+                            val shareUrl = buildShareUrl(
+                                "blog", selectedPost!!.id
+                            )
+                            Row(
+                                horizontalArrangement =
+                                    Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            ) {
+                                androidx.compose.material3.IconButton(
+                                    onClick = {
+                                        val usedNative = shareOrCopy(
+                                            url = shareUrl,
+                                            title = selectedPost!!.title,
+                                            text = "Check out: " +
+                                                selectedPost!!.title
+                                        )
+                                        shareConfirmation =
+                                            if (usedNative) null
+                                            else "Link copied!"
+                                    }
+                                ) {
+                                    androidx.compose.material3.Icon(
+                                        imageVector =
+                                            if (shareConfirmation != null)
+                                                Icons.Default.Check
+                                            else Icons.Default.Share,
+                                        contentDescription =
+                                            "Share post",
+                                        tint =
+                                            if (shareConfirmation != null)
+                                                Color(0xFF4CAF50)
+                                            else WdwOrange
+                                    )
+                                }
+                                androidx.compose.material3.IconButton(
+                                    onClick = {
+                                        showQrDialog = true
+                                    }
+                                ) {
+                                    androidx.compose.material3.Icon(
+                                        imageVector =
+                                            Icons.Default.QrCode2,
+                                        contentDescription =
+                                            "Show QR code",
+                                        tint = WdwOrange
+                                    )
+                                }
+                            }
+                            if (shareConfirmation != null) {
+                                LaunchedEffect(shareConfirmation) {
+                                    kotlinx.coroutines.delay(1500)
+                                    shareConfirmation = null
+                                }
+                            }
+                            if (showQrDialog) {
+                                QrCodeDialog(
+                                    url = shareUrl,
+                                    title = selectedPost!!.title,
+                                    onDismiss = {
+                                        showQrDialog = false
+                                    }
                                 )
                             }
                             

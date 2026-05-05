@@ -29,6 +29,13 @@ private val _organizers = MutableStateFlow<List<Member>>(emptyList())
     private val _selectedMember = MutableStateFlow<Member?>(null)
     val selectedMember = _selectedMember.asStateFlow()
 
+    /** Set when navigating via a shared deep link with memberId query param. */
+    private val _pendingMemberId = MutableStateFlow<Long?>(null)
+    val pendingMemberId: StateFlow<Long?> = _pendingMemberId.asStateFlow()
+
+    fun setPendingMemberId(id: Long) { _pendingMemberId.value = id }
+    fun clearPendingMemberId() { _pendingMemberId.value = null }
+
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 

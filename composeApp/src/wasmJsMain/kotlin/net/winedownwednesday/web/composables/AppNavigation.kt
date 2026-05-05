@@ -38,8 +38,10 @@ import kotlinx.serialization.modules.subclass
 import net.winedownwednesday.web.loadThemePreference
 import net.winedownwednesday.web.saveThemePreference
 import net.winedownwednesday.web.viewmodels.AuthPageViewModel
+import net.winedownwednesday.web.viewmodels.BlogPageViewModel
 import net.winedownwednesday.web.viewmodels.EventsPageViewModel
 import net.winedownwednesday.web.viewmodels.LoginUIState
+import net.winedownwednesday.web.viewmodels.MembersPageViewModel
 import net.winedownwednesday.web.viewmodels.WinePageViewModel
 import org.koin.compose.koinInject
 import org.w3c.dom.events.Event
@@ -77,8 +79,9 @@ private fun Route.toHash(): String = when (this) {
 }
 
 // Restore a Route from a URL hash string (handles "#home" or "home")
+// Strips query params so "events?eventId=123" resolves to Route.Events
 private fun routeFromHash(hash: String): Route {
-    val name = hash.removePrefix("#").trimEnd('/')
+    val name = hash.removePrefix("#").trimEnd('/').substringBefore('?')
     return when (name) {
         "home"      -> Route.Home
         "about"     -> Route.About
@@ -95,6 +98,19 @@ private fun routeFromHash(hash: String): Route {
     }
 }
 
+/**
+ * Extract a query parameter from a hash fragment.
+ * e.g. extractHashParam("#events?eventId=123", "eventId") → "123"
+ */
+private fun extractHashParam(hash: String, key: String): String? {
+    val query = hash.substringAfter('?', "")
+    if (query.isEmpty()) return null
+    return query.split('&')
+        .firstOrNull { it.startsWith("$key=") }
+        ?.substringAfter('=')
+        ?.takeIf { it.isNotBlank() }
+}
+
 // ---------------------------------------------------------------------------
 // AppNavigation — main entry point composable
 // ---------------------------------------------------------------------------
@@ -105,6 +121,8 @@ fun AppNavigation(
 ) {
     val eventsViewModel: EventsPageViewModel = koinInject()
     val wineViewModel: WinePageViewModel = koinInject()
+    val membersViewModel: MembersPageViewModel = koinInject()
+    val blogViewModel: BlogPageViewModel = koinInject()
     // --- Nav 3 back stack ------------------------------------------------
     // SavedStateConfiguration is required by the API. An empty config is safe
     // because browser URL hash handles route restoration on reload.
@@ -178,6 +196,26 @@ fun AppNavigation(
         }
     }
 
+    // Capture the initial hash at composition time — BEFORE any LaunchedEffect
+    // can overwrite window.location.hash (e.g. the currentRoute sync below).
+    val initialHash = remember { window.location.hash }
+
+    // Helper: extract deep-link query params from a hash fragment
+    // and set the corresponding pending IDs on the ViewModels.
+    fun applyDeepLinkParams(hash: String) {
+        extractHashParam(hash, "eventId")
+            ?.toLongOrNull()
+            ?.let { eventsViewModel.setPendingEventId(it) }
+        extractHashParam(hash, "wineId")
+            ?.toLongOrNull()
+            ?.let { wineViewModel.setPendingWineId(it) }
+        extractHashParam(hash, "memberId")
+            ?.toLongOrNull()
+            ?.let { membersViewModel.setPendingMemberId(it) }
+        extractHashParam(hash, "postId")
+            ?.let { blogViewModel.setPendingPostId(it) }
+    }
+
     // --- Browser history sync --------------------------------------------
     // LaunchedEffect(currentRoute) re-runs every time the route changes,
     // so the URL hash always reflects the current page.
@@ -190,16 +228,18 @@ fun AppNavigation(
 
     // Restore route from URL hash on first launch (e.g. bookmarked link)
     LaunchedEffect(Unit) {
-        val initialHash = window.location.hash
         if (initialHash.isNotEmpty() && initialHash != "#${currentRoute.toHash()}") {
             replaceTop(routeFromHash(initialHash))
         }
+        // Deep-link: auto-open content by ID from query params
+        applyDeepLinkParams(initialHash)
     }
 
-    // Listen for browser Back/Forward buttons
+    // Listen for browser Back/Forward and hash changes (e.g. pasting a deep-link URL)
     DisposableEffect(Unit) {
-        val listener: (Event) -> Unit = {
-            val targetRoute = routeFromHash(window.location.hash)
+        val popStateListener: (Event) -> Unit = {
+            val hash = window.location.hash
+            val targetRoute = routeFromHash(hash)
             // If the 2nd-to-last entry matches the target this is a back press → pop
             val prevRoute = if (backStack.size >= 2)
                 backStack[backStack.lastIndex - 1] as? Route else null
@@ -208,9 +248,24 @@ fun AppNavigation(
             } else {
                 replaceTop(targetRoute)
             }
+            // Also extract deep-link params from the hash
+            applyDeepLinkParams(hash)
         }
-        window.addEventListener("popstate", listener)
-        onDispose { window.removeEventListener("popstate", listener) }
+        val hashChangeListener: (Event) -> Unit = {
+            val hash = window.location.hash
+            val targetRoute = routeFromHash(hash)
+            if (backStack.lastOrNull() != targetRoute) {
+                replaceTop(targetRoute)
+            }
+            // Extract deep-link params from the new hash
+            applyDeepLinkParams(hash)
+        }
+        window.addEventListener("popstate", popStateListener)
+        window.addEventListener("hashchange", hashChangeListener)
+        onDispose {
+            window.removeEventListener("popstate", popStateListener)
+            window.removeEventListener("hashchange", hashChangeListener)
+        }
     }
 
     // --- Theme & layout --------------------------------------------------

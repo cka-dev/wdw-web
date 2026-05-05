@@ -41,6 +41,13 @@ class BlogPageViewModel(
     fun selectPost(post: BlogPost?) { _selectedPost.value = post }
     fun setShowTldr(show: Boolean) { _showTldr.value = show }
 
+    /** Set when navigating via a shared deep link with postId query param. */
+    private val _pendingPostId = MutableStateFlow<String?>(null)
+    val pendingPostId: StateFlow<String?> = _pendingPostId.asStateFlow()
+
+    fun setPendingPostId(id: String) { _pendingPostId.value = id }
+    fun clearPendingPostId() { _pendingPostId.value = null }
+
     // ─── TL;DR Summarization ───────────────────────────────────────────────────
 
     /** Map of postId → bullet-point summary string */

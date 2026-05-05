@@ -47,9 +47,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -126,6 +130,7 @@ fun EventsPage(
     val upcomingEvents by viewModel.upcomingEvents.collectAsState()
     val pastEvents by viewModel.pastEvents.collectAsState()
     val pendingEventName by viewModel.pendingEventName.collectAsState()
+    val pendingEventId by viewModel.pendingEventId.collectAsState()
 
     val showUpcoming by viewModel.showUpcoming.collectAsState()
 
@@ -143,6 +148,18 @@ fun EventsPage(
             viewModel.setShowUpcoming((upcomingEvents ?: emptyList()).contains(match))
             viewModel.setSelectedEvent(match)
             viewModel.clearPendingEventName()
+        }
+    }
+
+    // Auto-select an event by ID when navigated from a shared deep link
+    androidx.compose.runtime.LaunchedEffect(upcomingEvents, pastEvents, pendingEventId) {
+        val id = pendingEventId ?: return@LaunchedEffect
+        val allEventsFlat = (upcomingEvents ?: emptyList()) + (pastEvents ?: emptyList())
+        val match = allEventsFlat.firstOrNull { it.id == id }
+        if (match != null) {
+            viewModel.setShowUpcoming((upcomingEvents ?: emptyList()).contains(match))
+            viewModel.setSelectedEvent(match)
+            viewModel.clearPendingEventId()
         }
     }
 
@@ -590,14 +607,36 @@ fun EventDetailContent(
     modifier: Modifier = Modifier
 ) {
 
+    var shareConfirmation by remember { mutableStateOf<String?>(null) }
+    var showQrDialog by remember { mutableStateOf(false) }
+    var showCalendarMenu by remember { mutableStateOf(false) }
+
+    // URL sync: update hash while popup is open
+    DisposableEffect(event.id) {
+        val hash = "#events?eventId=${event.id}"
+        window.history.pushState(null?.toJsString(), "", hash)
+        onDispose {
+            // Restore plain hash when popup closes
+            window.history.pushState(
+                null?.toJsString(), "", "#events"
+            )
+        }
+    }
+
+    val shareUrl = buildShareUrl("event", event.id.toString())
+
     val scrollState = rememberScrollState()
     Box(modifier = modifier) {
         Column(
             modifier = Modifier
-                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 120.dp)
+                .padding(
+                    start = 16.dp, end = 16.dp,
+                    top = 16.dp, bottom = 120.dp
+                )
                 .verticalScroll(scrollState)
                 .windowInsetsPadding(WindowInsets.systemBars)
         ) {
+            // Title row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -606,7 +645,8 @@ fun EventDetailContent(
                 Text(
                     text = event.name,
                     style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
                 )
                 IconButton(onClick = onCloseClick) {
                     Icon(
@@ -616,13 +656,140 @@ fun EventDetailContent(
                 }
             }
 
+            // Action buttons row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                // Share button
+                IconButton(
+                    onClick = {
+                        val usedNative = shareOrCopy(
+                            url = shareUrl,
+                            title = event.name,
+                            text = "Check out this event: ${event.name}"
+                        )
+                        shareConfirmation = if (usedNative) {
+                            null // Native share sheet handles feedback
+                        } else {
+                            "Link copied!"
+                        }
+                    }
+                ) {
+                    Icon(
+                        imageVector = if (shareConfirmation != null)
+                            Icons.Default.Check
+                        else Icons.Default.Share,
+                        contentDescription = "Share event",
+                        tint = if (shareConfirmation != null)
+                            Color(0xFF4CAF50)
+                        else WdwOrange
+                    )
+                }
+
+                // Calendar button
+                Box {
+                    IconButton(
+                        onClick = { showCalendarMenu = !showCalendarMenu }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DateRange,
+                            contentDescription = "Add to calendar",
+                            tint = WdwOrange
+                        )
+                    }
+
+                    // Calendar dropdown
+                    androidx.compose.material3.DropdownMenu(
+                        expanded = showCalendarMenu,
+                        onDismissRequest = {
+                            showCalendarMenu = false
+                        }
+                    ) {
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = {
+                                Text("Google Calendar")
+                            },
+                            onClick = {
+                                showCalendarMenu = false
+                                val url =
+                                    CalendarUtils.buildGoogleCalendarUrl(
+                                        title = event.name,
+                                        date = event.date,
+                                        time = event.time,
+                                        location = event.location,
+                                        description =
+                                            event.description
+                                    )
+                                if (url.isNotEmpty()) {
+                                    window.open(url, "_blank")
+                                }
+                            }
+                        )
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = {
+                                Text(
+                                    "Download .ics " +
+                                        "(Apple/Outlook)"
+                                )
+                            },
+                            onClick = {
+                                showCalendarMenu = false
+                                val ics =
+                                    CalendarUtils.buildIcsContent(
+                                        title = event.name,
+                                        date = event.date,
+                                        time = event.time,
+                                        location = event.location,
+                                        description =
+                                            event.description
+                                    )
+                                if (ics.isNotEmpty()) {
+                                    val filename = event.name
+                                        .replace(
+                                            Regex("[^a-zA-Z0-9]"),
+                                            "_"
+                                        ) + ".ics"
+                                    downloadIcsFile(
+                                        ics.toJsString(),
+                                        filename.toJsString()
+                                    )
+                                }
+                            }
+                        )
+                    }
+                }
+
+                // QR code button
+                IconButton(
+                    onClick = { showQrDialog = true }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.QrCode2,
+                        contentDescription = "Show QR code",
+                        tint = WdwOrange
+                    )
+                }
+            }
+
+            // Animated share confirmation toast
+            if (shareConfirmation != null) {
+                androidx.compose.runtime.LaunchedEffect(
+                    shareConfirmation
+                ) {
+                    delay(1500)
+                    shareConfirmation = null
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             Image(
                 painter = rememberAsyncImagePainter(
                     model = event.imageUrl,
-                    placeholder = painterResource(Res.drawable.placeholder),
-//                error = painterResource(R.drawable.error_placeholder)
+                    placeholder = painterResource(
+                        Res.drawable.placeholder
+                    ),
                 ),
                 contentDescription = "${event.name} Image",
                 contentScale = ContentScale.Fit,
@@ -639,23 +806,39 @@ fun EventDetailContent(
                 value = event.date.toEventDisplayDate()
             )
             if (!event.time.isNullOrBlank()) {
-                EventDetailRow(label = "Time", value = event.time)
+                EventDetailRow(
+                    label = "Time", value = event.time
+                )
             }
             EventDetailRow(
                 label = "Event Type", value = event
                     .eventType.toString().replace('_', ' ')
             )
-            EventDetailRow(label = "Location", value = event.location)
-            EventDetailRow(label = "Description", value = event.description)
+            EventDetailRow(
+                label = "Location", value = event.location
+            )
+            EventDetailRow(
+                label = "Description",
+                value = event.description
+            )
 
             if (event.wineSelection != null) {
-                EventDetailRow(label = "Wine Selection", value = event.wineSelection)
+                EventDetailRow(
+                    label = "Wine Selection",
+                    value = event.wineSelection
+                )
             }
             if (event.wineSelector != null) {
-                EventDetailRow(label = "Wine Selector", value = event.wineSelector)
+                EventDetailRow(
+                    label = "Wine Selector",
+                    value = event.wineSelector
+                )
             }
             if (event.additionalInfo != null) {
-                EventDetailRow(label = "Additional Info", value = event.additionalInfo)
+                EventDetailRow(
+                    label = "Additional Info",
+                    value = event.additionalInfo
+                )
             }
 
             val eventLocalDate = event.date.toEventLocalDate()
@@ -693,6 +876,15 @@ fun EventDetailContent(
                 .fillMaxHeight()
                 .padding(end = 2.dp),
             style = wdwScrollbarStyle()
+        )
+    }
+
+    // QR code dialog
+    if (showQrDialog) {
+        QrCodeDialog(
+            url = shareUrl,
+            title = event.name,
+            onDismiss = { showQrDialog = false }
         )
     }
 }
