@@ -254,7 +254,7 @@ fun BlogPage(
                                                  MaterialTheme.colorScheme.surfaceVariant
                                          )
                                      ) {
-                                         Text(
+                                         TextWithNotoImageEmoji(
                                              text = if (isSummarizing) "✨ Summarizing…"
                                                     else if (showTldr) "✨ TL;DR ▲"
                                                     else "✨ TL;DR",

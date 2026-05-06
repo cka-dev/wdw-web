@@ -920,7 +920,7 @@ fun WineRecommendationPanel(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Text(
+                TextWithNotoImageEmoji(
                     text = if (isLoading) "✨ Finding your next wine…"
                            else if (expanded) "✨ Vino's Picks  ▲"
                            else "✨ Vino's Picks",
