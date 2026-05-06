@@ -471,3 +471,44 @@ Firebase Hosting serves all responses with:
 
 ### Preconnect Hints
 `<link rel="preconnect">` for Firebase, Cloud Storage, and Cloud Functions domains to reduce connection latency.
+
+---
+
+## Pull-to-Refresh (Touch Devices)
+
+### Overview
+A native-feeling pull-to-refresh gesture is available on all scrollable pages, **gated exclusively to touch-capable devices** (phones, tablets, touchscreen laptops). Desktop users see zero behavioral change.
+
+### Touch Detection (`TouchDetection.kt`)
+Browser touch capability is detected at app startup via `@JsFun` JS interop:
+- `navigator.maxTouchPoints > 0` — device advertises touch points
+- `window.matchMedia('(pointer: coarse)').matches` — primary pointer is finger/stylus
+
+The result is exposed as `LocalIsTouchDevice`, a `staticCompositionLocalOf<Boolean>` provided at the `WdwTheme` root via `CompositionLocalProvider`.
+
+### Data Layer
+`AppRepository.refreshAll()` is the centralized method for re-fetching all app data. Each page ViewModel exposes a `refresh(onComplete: () -> Unit)` method that delegates to `refreshAll()` and signals completion for the PTR indicator.
+
+### UI Pattern
+Each page uses a **content lambda + conditional wrapper** pattern:
+```kotlin
+val content: @Composable () -> Unit = {
+    // ... existing page layout ...
+}
+
+if (isTouchDevice) {
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = { isRefreshing = true; viewModel.refresh { isRefreshing = false } },
+        modifier = Modifier.fillMaxSize()
+    ) { content() }
+} else {
+    content()
+}
+```
+
+### CSS
+`overscroll-behavior-y: contain` is set on `html, body` in `styles.css` to suppress Chrome's native browser-level pull-to-refresh gesture.
+
+### Excluded Pages
+- **MessagingScreen** — intentionally excluded to avoid conflicts with real-time WebSocket messaging and existing scroll behavior.
