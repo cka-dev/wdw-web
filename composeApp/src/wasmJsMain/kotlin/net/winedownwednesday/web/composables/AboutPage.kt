@@ -34,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -73,7 +74,12 @@ fun AboutPage(
     val aboutSections by viewModel.aboutSections.collectAsState()
     val selectedSection by viewModel.selectedSection.collectAsState()
 
+    val isTouchDevice = LocalIsTouchDevice.current
+    var isRefreshing by remember { mutableStateOf(false) }
+
     val aboutListState = rememberLazyListState()
+
+    val aboutContent: @Composable () -> Unit = {
     Surface(color = MaterialTheme.colorScheme.background) {
         Box(modifier = Modifier.fillMaxSize()) {
             LazyColumn(
@@ -172,6 +178,21 @@ fun AboutPage(
             )
         }
     }
+    }
+
+    if (isTouchDevice) {
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                isRefreshing = true
+                viewModel.refresh { isRefreshing = false }
+            },
+            modifier = Modifier.fillMaxSize()
+        ) { aboutContent() }
+    } else {
+        aboutContent()
+    }
+
     selectedSection?.let { section ->
         AboutSectionDialog(
             section = section,

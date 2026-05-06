@@ -82,6 +82,13 @@ private val _organizers = MutableStateFlow<List<Member>>(emptyList())
     fun clearSelectedMember(){
         _selectedMember.value = null
     }
+
+    fun refresh(onComplete: () -> Unit) {
+        viewModelScope.launch {
+            repository.refreshAll()
+            onComplete()
+        }
+    }
 }
 
 fun Member.matchesQuery(query: String): Boolean {

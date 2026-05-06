@@ -61,33 +61,39 @@ class AppRepository (
     val profileData: StateFlow<UserProfileData?> = _profileData.asStateFlow()
 
     init {
-        repositoryScope.launch {
-            // Primary: single batch call replaces 8 individual requests
-            val initialData = remoteDataSource.fetchInitialData()
-            if (initialData != null) {
-                _members.value = initialData.members
-                _events.value = initialData.events
-                _episodes.value = initialData.episodes
-                _wineList.value = initialData.wines
-                _aboutItems.value = initialData.aboutItems
-                _memberSpotlight.value = initialData.memberSpotlight
-                _featuredWinesResponse.value = initialData.featuredWines
-                _blogPosts.value =
-                    if (initialData.blogPosts != null &&
-                        initialData.blogPosts.posts.isNotEmpty()
-                    ) initialData.blogPosts.posts
-                    else emptyList()
-            } else {
-                // Fallback: individual calls if batch fails
-                fetchMembers()
-                fetchEvents()
-                fetchEpisodes()
-                fetchBlogPosts()
-                fetchAboutItems()
-                fetchWines()
-                fetchFeaturedWinesResponse()
-                fetchMemberSpotlight()
-            }
+        repositoryScope.launch { refreshAll() }
+    }
+
+    /**
+     * Re-fetches all data from the server.
+     * Called on app startup and on pull-to-refresh.
+     */
+    suspend fun refreshAll() {
+        // Primary: single batch call replaces 8 individual requests
+        val initialData = remoteDataSource.fetchInitialData()
+        if (initialData != null) {
+            _members.value = initialData.members
+            _events.value = initialData.events
+            _episodes.value = initialData.episodes
+            _wineList.value = initialData.wines
+            _aboutItems.value = initialData.aboutItems
+            _memberSpotlight.value = initialData.memberSpotlight
+            _featuredWinesResponse.value = initialData.featuredWines
+            _blogPosts.value =
+                if (initialData.blogPosts != null &&
+                    initialData.blogPosts.posts.isNotEmpty()
+                ) initialData.blogPosts.posts
+                else emptyList()
+        } else {
+            // Fallback: individual calls if batch fails
+            fetchMembers()
+            fetchEvents()
+            fetchEpisodes()
+            fetchBlogPosts()
+            fetchAboutItems()
+            fetchWines()
+            fetchFeaturedWinesResponse()
+            fetchMemberSpotlight()
         }
     }
 

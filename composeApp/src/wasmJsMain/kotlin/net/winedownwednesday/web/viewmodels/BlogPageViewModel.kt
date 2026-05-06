@@ -107,4 +107,11 @@ class BlogPageViewModel(
     fun clearSummary(postId: String) {
         _summaries.update { it - postId }
     }
+
+    fun refresh(onComplete: () -> Unit) {
+        viewModelScope.launch {
+            appRepository.refreshAll()
+            onComplete()
+        }
+    }
 }

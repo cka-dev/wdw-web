@@ -72,4 +72,11 @@ class HomePageViewModel(
             }
         }
     }
+
+    fun refresh(onComplete: () -> Unit) {
+        viewModelScope.launch {
+            repository.refreshAll()
+            onComplete()
+        }
+    }
 }

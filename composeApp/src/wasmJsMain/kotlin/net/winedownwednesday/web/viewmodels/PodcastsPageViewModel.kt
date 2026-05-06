@@ -47,6 +47,13 @@ class PodcastsPageViewModel(
     fun clearSelectedEpisode() {
         _selectedEpisode.value = null
     }
+
+    fun refresh(onComplete: () -> Unit) {
+        viewModelScope.launch {
+            repository.refreshAll()
+            onComplete()
+        }
+    }
 }
 
 fun Episode.matchesQuery(query: String): Boolean {
