@@ -880,7 +880,7 @@ fun ChannelSidebar(
                                             ),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Text(
+                                        TextWithNotoImageEmoji(
                                             "🍷",
                                             fontSize = 20.sp
                                         )
@@ -900,7 +900,7 @@ fun ChannelSidebar(
                                             fontSize = 11.sp
                                         )
                                     }
-                                    Text(
+                                    TextWithNotoImageEmoji(
                                         "🤖",
                                         fontSize = 14.sp
                                     )
@@ -1366,7 +1366,7 @@ fun ChatArea(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                                 ) {
-                                    Text("✨", fontSize = 14.sp)
+                                    TextWithNotoImageEmoji("✨", fontSize = 14.sp)
                                     Spacer(Modifier.width(6.dp))
                                     Text(
                                         "What did I miss? (${catchUp.count} new)",
@@ -1417,7 +1417,7 @@ fun ChatArea(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Text(
+                                        TextWithNotoImageEmoji(
                                             "✨ Catch-Up Summary",
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 15.sp,
@@ -1438,27 +1438,27 @@ fun ChatArea(
                                     val s = catchUp.summary
                                     if (s.key_topics.isNotEmpty()) {
                                         Spacer(Modifier.height(8.dp))
-                                        Text("📋 Key Topics", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                        TextWithNotoImageEmoji("📋 Key Topics", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                                         s.key_topics.forEach { Text("  • $it", fontSize = 13.sp) }
                                     }
                                     if (s.decisions.isNotEmpty()) {
                                         Spacer(Modifier.height(6.dp))
-                                        Text("✅ Decisions", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                        TextWithNotoImageEmoji("✅ Decisions", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                                         s.decisions.forEach { Text("  • $it", fontSize = 13.sp) }
                                     }
                                     if (s.mentions_of_you.isNotEmpty()) {
                                         Spacer(Modifier.height(6.dp))
-                                        Text("📌 Your Mentions", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                        TextWithNotoImageEmoji("📌 Your Mentions", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                                         s.mentions_of_you.forEach { Text("  • $it", fontSize = 13.sp) }
                                     }
                                     if (s.action_items.isNotEmpty()) {
                                         Spacer(Modifier.height(6.dp))
-                                        Text("🎯 Action Items", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                        TextWithNotoImageEmoji("🎯 Action Items", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                                         s.action_items.forEach { Text("  • $it", fontSize = 13.sp) }
                                     }
                                     if (s.vibe.isNotBlank()) {
                                         Spacer(Modifier.height(6.dp))
-                                        Text(
+                                        TextWithNotoImageEmoji(
                                             "🍷 Vibe: ${s.vibe}",
                                             fontSize = 13.sp,
                                             fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
@@ -3483,7 +3483,7 @@ fun MessageInput(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                             ) {
-                                Text("✨", fontSize = 12.sp)
+                                TextWithNotoImageEmoji("✨", fontSize = 12.sp)
                                 Spacer(Modifier.width(4.dp))
                                 Text(
                                     reply,
@@ -3678,7 +3678,7 @@ fun MessageInput(
                                         color = Color(0xFF9C6ADE)
                                     )
                                 } else {
-                                    Text("✨", fontSize = 14.sp)
+                                    TextWithNotoImageEmoji("✨", fontSize = 14.sp)
                                 }
                                 Spacer(Modifier.width(4.dp))
                                 Text(
