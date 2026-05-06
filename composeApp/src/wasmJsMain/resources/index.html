@@ -147,5 +147,132 @@
         <p style="margin-top: 2em; color: #999; font-size: 0.9em;">This application requires JavaScript and WebAssembly to run. Please enable JavaScript in your browser.</p>
     </div>
 </noscript>
+
+<!-- ===== Version Update Banner (shadow-DOM aware) ===== -->
+<script>
+(function() {
+    var initialVersion = null;
+    var bannerDismissed = false;
+    var lastCheckTime = 0;
+    var bannerEl = null;
+    var MIN_CHECK_INTERVAL = 5 * 60 * 1000;
+    var FALLBACK_INTERVAL = 2 * 60 * 60 * 1000;
+
+    var BANNER_CSS =
+        '#wdw-update-banner {' +
+        '  display: none; position: fixed; bottom: 0;' +
+        '  left: 0; right: 0; z-index: 99999;' +
+        '  background: rgba(30,30,30,0.97);' +
+        '  border-top: 2px solid #FF7F33;' +
+        '  padding: 14px 20px;' +
+        '  font-family: -apple-system, BlinkMacSystemFont,' +
+        '    "Segoe UI", Roboto, sans-serif;' +
+        '  color: #f0f0f0; font-size: 14px;' +
+        '  transform: translateY(100%);' +
+        '  transition: transform 0.4s cubic-bezier(0.4,0,0.2,1);' +
+        '  box-shadow: 0 -4px 20px rgba(0,0,0,0.4);' +
+        '}' +
+        '#wdw-update-banner.visible {' +
+        '  display: flex; align-items: center;' +
+        '  justify-content: center; gap: 16px;' +
+        '  transform: translateY(0);' +
+        '}' +
+        '#wdw-update-banner .msg { flex: 0 1 auto; }' +
+        '#wdw-update-btn {' +
+        '  background: #FF7F33; color: #fff; border: none;' +
+        '  padding: 8px 20px; border-radius: 6px;' +
+        '  cursor: pointer; font-size: 13px;' +
+        '  font-weight: 600; white-space: nowrap;' +
+        '  transition: background 0.2s;' +
+        '}' +
+        '#wdw-update-btn:hover { background: #e66a20; }' +
+        '#wdw-dismiss-btn {' +
+        '  background: none; border: none; color: #999;' +
+        '  font-size: 20px; cursor: pointer;' +
+        '  padding: 4px 8px; line-height: 1;' +
+        '  transition: color 0.2s;' +
+        '}' +
+        '#wdw-dismiss-btn:hover { color: #fff; }';
+
+    function injectBanner(root) {
+        if (bannerEl) return;
+
+        var style = document.createElement('style');
+        style.textContent = BANNER_CSS;
+        root.appendChild(style);
+
+        var div = document.createElement('div');
+        div.id = 'wdw-update-banner';
+        div.innerHTML =
+            '<span class="msg">\u{1F504} A new version is available</span>' +
+            '<button id="wdw-update-btn">Refresh Now</button>' +
+            '<button id="wdw-dismiss-btn">\u2715</button>';
+        root.appendChild(div);
+        bannerEl = div;
+
+        div.querySelector('#wdw-update-btn')
+            .addEventListener('click', function() {
+                location.reload(true);
+            });
+        div.querySelector('#wdw-dismiss-btn')
+            .addEventListener('click', function() {
+                div.classList.remove('visible');
+                setTimeout(function() {
+                    div.style.display = 'none';
+                }, 400);
+                bannerDismissed = true;
+            });
+    }
+
+    function getRenderRoot() {
+        var sr = document.body.shadowRoot;
+        if (sr) return sr;
+        return document.body;
+    }
+
+    function showBanner() {
+        if (bannerDismissed) return;
+        if (!bannerEl) injectBanner(getRenderRoot());
+        bannerEl.style.display = 'flex';
+        void bannerEl.offsetHeight;
+        bannerEl.classList.add('visible');
+    }
+
+    function fetchVersion(cb) {
+        fetch('version.json?t=' + Date.now(),
+            { cache: 'no-store' })
+            .then(function(r) { return r.json(); })
+            .then(function(d) { cb(d.version || null); })
+            .catch(function() { /* silent */ });
+    }
+
+    function checkForUpdate() {
+        var now = Date.now();
+        if (now - lastCheckTime < MIN_CHECK_INTERVAL) return;
+        lastCheckTime = now;
+
+        fetchVersion(function(v) {
+            if (v && initialVersion && v !== initialVersion) {
+                bannerDismissed = false;
+                showBanner();
+            }
+        });
+    }
+
+    // Capture initial version
+    fetchVersion(function(v) {
+        initialVersion = v;
+        lastCheckTime = Date.now();
+    });
+
+    // Check on tab focus
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) checkForUpdate();
+    });
+
+    // 2-hour safety net
+    setInterval(checkForUpdate, FALLBACK_INTERVAL);
+})();
+</script>
 </body>
 </html>
