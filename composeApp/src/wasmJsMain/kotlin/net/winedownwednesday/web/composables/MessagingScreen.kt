@@ -891,7 +891,7 @@ fun ChannelSidebar(
                                             )
                                         } else {
                                             TextWithNotoImageEmoji(
-                                                "🍷",
+                                                "✨",
                                                 fontSize = 20.sp
                                             )
                                         }
