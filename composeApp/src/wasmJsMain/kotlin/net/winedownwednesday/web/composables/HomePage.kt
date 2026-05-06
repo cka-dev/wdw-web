@@ -1130,21 +1130,21 @@ private fun MemberDetailsDialog(
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 if (member.profession.isNotBlank()) {
-                    Text(
+                    TextWithNotoImageEmoji(
                         text = "💼 ${member.profession}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
                 if (!member.company.isNullOrBlank()) {
-                    Text(
+                    TextWithNotoImageEmoji(
                         text = "🏢 ${member.company}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
                 if (member.birthday.isNotBlank()) {
-                    Text(
+                    TextWithNotoImageEmoji(
                         text = "🎂 ${formatBirthdayDisplay(member.birthday)}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
