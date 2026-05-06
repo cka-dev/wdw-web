@@ -18,7 +18,8 @@ data class InitialDataResponse(
     val episodes: List<Episode> = emptyList(),
     val wines: List<Wine> = emptyList(),
     val aboutItems: List<AboutItem> = emptyList(),
-    val memberSpotlight: Member? = null,
+    @Serializable(with = MemberSpotlightListSerializer::class)
+    val memberSpotlight: List<Member> = emptyList(),
     val featuredWines: FeaturedWinesResponse? = null,
     val blogPosts: BlogPostsResponse? = null,
 )

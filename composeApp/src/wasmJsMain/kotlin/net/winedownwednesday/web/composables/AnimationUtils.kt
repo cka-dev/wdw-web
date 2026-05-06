@@ -13,32 +13,46 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ScrollbarStyle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.horizontalScroll
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 /**
  * Scales the composable up smoothly on mouse hover (web/desktop).
@@ -342,4 +356,192 @@ fun BoxScope.WdwScrollbarTrack(
     )
     // Actual scrollbar thumb on top
     scrollbar()
+}
+
+// ── MarqueeText: auto-scrolling title for overflowing single-line text ────
+/**
+ * A single-line text composable that auto-scrolls horizontally when
+ * the content overflows the available width.
+ *
+ * Auto-starts the scroll cycle after [autoStartDelayMs].
+ * The scroll cycle repeats: pause → scroll right → pause → snap back.
+ * Subtle edge-fade gradients indicate clipped content.
+ *
+ * Has NO hover interaction so it does not interfere with parent
+ * composables that use [hoverScale] or similar hover effects.
+ */
+@Composable
+fun MarqueeText(
+    text: String,
+    modifier: Modifier = Modifier,
+    style: TextStyle = LocalTextStyle.current,
+    color: Color = Color.Unspecified,
+    initialDelayMs: Int = 1500,
+    endPauseMs: Int = 2000,
+    scrollSpeedDpPerSec: Float = 60f,
+    autoStartDelayMs: Int = 3000,
+    fadeEdgeWidth: Dp = 24.dp,
+) {
+    val scrollState = rememberScrollState()
+    val density = LocalDensity.current
+    val surfaceColor = MaterialTheme.colorScheme.surface
+
+    // Measure container vs text width to detect overflow
+    var containerWidthPx by remember { mutableIntStateOf(0) }
+    var textWidthPx by remember { mutableIntStateOf(0) }
+    val isOverflowing = textWidthPx > containerWidthPx &&
+        containerWidthPx > 0
+
+    var scrollRunning by remember { mutableStateOf(false) }
+
+    // Auto-start after delay when overflow is detected
+    LaunchedEffect(isOverflowing) {
+        if (!isOverflowing) return@LaunchedEffect
+        delay(autoStartDelayMs.toLong())
+        scrollRunning = true
+    }
+
+    // Drive the scroll cycle
+    LaunchedEffect(scrollRunning) {
+        if (!scrollRunning) return@LaunchedEffect
+        // Small delay for scroll state to compute maxValue
+        delay(50)
+        val maxScroll = scrollState.maxValue
+        if (maxScroll <= 0) return@LaunchedEffect
+
+        val speedPx = with(density) {
+            scrollSpeedDpPerSec.dp.toPx()
+        }
+        val scrollDurationMs = (
+            (maxScroll.toFloat() / speedPx) * 1000
+        ).toInt().coerceIn(800, 8000)
+
+        while (isActive) {
+            // Phase 1: initial pause
+            delay(initialDelayMs.toLong())
+
+            // Phase 2: scroll to end
+            scrollState.animateScrollTo(
+                maxScroll,
+                animationSpec = tween(
+                    durationMillis = scrollDurationMs,
+                    easing = LinearEasing
+                )
+            )
+
+            // Phase 3: pause at end
+            delay(endPauseMs.toLong())
+
+            // Phase 4: fast snap back to start
+            scrollState.animateScrollTo(
+                0,
+                animationSpec = tween(
+                    durationMillis = 400,
+                    easing = EaseOut
+                )
+            )
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clipToBounds()
+            .onSizeChanged { size ->
+                containerWidthPx = size.width
+            }
+    ) {
+        Row(
+            modifier = Modifier.horizontalScroll(scrollState)
+        ) {
+            Text(
+                text = text,
+                style = style,
+                color = color,
+                maxLines = 1,
+                overflow = TextOverflow.Clip,
+                softWrap = false,
+                onTextLayout = { result ->
+                    textWidthPx = result.size.width
+                }
+            )
+        }
+        // Right edge fade (when not fully scrolled)
+        if (isOverflowing &&
+            scrollState.value < scrollState.maxValue
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .matchParentSize()
+                    .width(fadeEdgeWidth)
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                surfaceColor
+                            )
+                        )
+                    )
+            )
+        }
+        // Left edge fade (when scrolled past start)
+        if (isOverflowing && scrollState.value > 0) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .matchParentSize()
+                    .width(fadeEdgeWidth)
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(
+                                surfaceColor,
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+        }
+    }
+}
+
+// ── ContentReveal: subtle slide-up + fade for card content ───────────────
+
+/**
+ * Wraps content in a slide-up + fade-in reveal animation.
+ * Triggers on initial composition — re-triggers when the composable
+ * re-enters the composition tree (e.g., card transitions).
+ *
+ * @param offsetDp  How far below the content starts (default 20dp)
+ * @param durationMs  Animation duration (default 500ms)
+ */
+@Composable
+fun ContentReveal(
+    offsetDp: Dp = 20.dp,
+    durationMs: Int = 500,
+    delayMs: Int = 150,
+    content: @Composable () -> Unit
+) {
+    var appeared by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(delayMs.toLong())
+        appeared = true
+    }
+    val density = LocalDensity.current
+    val offsetPx = remember(density) {
+        with(density) { offsetDp.toPx() }
+    }
+    val progress by animateFloatAsState(
+        targetValue = if (appeared) 1f else 0f,
+        animationSpec = tween(durationMs, easing = EaseOut),
+        label = "contentReveal"
+    )
+    Box(
+        modifier = Modifier.graphicsLayer {
+            translationY = offsetPx * (1f - progress)
+            alpha = progress
+        }
+    ) {
+        content()
+    }
 }

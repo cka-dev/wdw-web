@@ -38,7 +38,7 @@ interface ApiService {
 
     suspend fun fetchEvents(): List<Event>?
 
-    suspend fun fetchMemberSpotlight(): Member?
+    suspend fun fetchMemberSpotlight(): List<Member>
 
     suspend fun postRSVP(rsvp: RSVPRequest): Boolean
 

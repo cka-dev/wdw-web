@@ -170,17 +170,30 @@ class RemoteDataSource (
         }
     }
 
-    override suspend fun fetchMemberSpotlight(): Member? {
+    override suspend fun fetchMemberSpotlight(): List<Member> {
         return try {
-            client.get("$SERVER_URL/getMemberSpotlight"){
+            val response = client.get("$SERVER_URL/getMemberSpotlight"){
                 headers {
                     append(HttpHeaders.AccessControlAllowOrigin, "*")
                     append(HttpHeaders.Accept, ContentType.Application.Json.toString())
                 }
-            }.body()
+            }
+            val bodyText = response.bodyAsText()
+            val json = JsonInstanceProvider.json
+            // Try parsing as array first (v2), fallback to single object (legacy)
+            try {
+                json.decodeFromString<List<Member>>(bodyText)
+            } catch (_: Exception) {
+                try {
+                    val single = json.decodeFromString<Member>(bodyText)
+                    listOf(single)
+                } catch (_: Exception) {
+                    emptyList()
+                }
+            }
         } catch (e: Exception) {
             logError("fetchMemberSpotlight", e)
-            null
+            emptyList()
         }
     }
 
