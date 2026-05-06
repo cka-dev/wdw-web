@@ -15,12 +15,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollbarAdapter
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -274,16 +276,34 @@ fun BlogPage(
                                                  MaterialTheme.colorScheme.surfaceVariant
                                          )
                                      ) {
-                                         TextWithNotoImageEmoji(
-                                             text = if (isSummarizing) "✨ Summarizing…"
-                                                    else if (showTldr) "✨ TL;DR ▲"
-                                                    else "✨ TL;DR",
-                                             style = MaterialTheme.typography.labelMedium,
-                                             color = if (showTldr) Color.White else WdwOrange,
+                                         Row(
                                              modifier = Modifier.padding(
-                                                 horizontal = 12.dp, vertical = 6.dp
+                                                 horizontal = 10.dp, vertical = 6.dp
+                                             ),
+                                             verticalAlignment = Alignment.CenterVertically,
+                                             horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                         ) {
+                                             Box(
+                                                 modifier = Modifier
+                                                     .size(16.dp)
+                                                     .clip(CircleShape),
+                                                 contentAlignment = Alignment.Center
+                                             ) {
+                                                 AsyncImage(
+                                                     model = VinoAvatarUrl,
+                                                     contentDescription = "Vino",
+                                                     modifier = Modifier.fillMaxSize(),
+                                                     contentScale = ContentScale.Crop
+                                                 )
+                                             }
+                                             Text(
+                                                 text = if (isSummarizing) "Summarizing…"
+                                                        else if (showTldr) "TL;DR ▲"
+                                                        else "TL;DR",
+                                                 style = MaterialTheme.typography.labelMedium,
+                                                 color = if (showTldr) Color.White else WdwOrange
                                              )
-                                         )
+                                         }
                                      }
                                  }
                                  if (showTldr && summary != null) {

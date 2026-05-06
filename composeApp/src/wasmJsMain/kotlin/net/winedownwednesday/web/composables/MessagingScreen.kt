@@ -883,9 +883,7 @@ fun ChannelSidebar(
                                         var avatarFailed by remember { mutableStateOf(false) }
                                         if (!avatarFailed) {
                                             AsyncImage(
-                                                model = "https://storage.googleapis.com/" +
-                                                    "wdw-app-52a3c.firebasestorage.app/" +
-                                                    "vino_avatar.png",
+                                                model = VinoAvatarUrl,
                                                 contentDescription = "Vino avatar",
                                                 modifier = Modifier.fillMaxSize().clip(CircleShape),
                                                 contentScale = ContentScale.Crop,

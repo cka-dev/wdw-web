@@ -11,6 +11,10 @@ import androidx.compose.ui.graphics.Color
 // ── Accent / brand colours (unchanged across themes) ──────────────────────
 val WdwOrange       = Color(0xFFFF7F33)
 val WdwBurgundy     = Color(0xFF800020)
+const val VinoAvatarUrl =
+    "https://storage.googleapis.com/" +
+    "wdw-app-52a3c.firebasestorage.app/" +
+    "vino_avatar.png"
 
 // ── Dark palette ───────────────────────────────────────────────────────────
 private val DarkBackground      = Color(0xFF000000)

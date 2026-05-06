@@ -29,6 +29,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -917,14 +918,27 @@ fun WineRecommendationPanel(
             elevation = CardDefaults.cardElevation(2.dp)
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                TextWithNotoImageEmoji(
-                    text = if (isLoading) "✨ Finding your next wine…"
-                           else if (expanded) "✨ Vino's Picks  ▲"
-                           else "✨ Vino's Picks",
+                Box(
+                    modifier = Modifier
+                        .size(18.dp)
+                        .clip(CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = VinoAvatarUrl,
+                        contentDescription = "Vino",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                Text(
+                    text = if (isLoading) "Finding your next wine…"
+                           else if (expanded) "Vino's Picks  ▲"
+                           else "Vino's Picks",
                     style = MaterialTheme.typography.labelMedium,
                     color = if (expanded) Color.White else WdwOrange,
                     fontWeight = FontWeight.SemiBold
