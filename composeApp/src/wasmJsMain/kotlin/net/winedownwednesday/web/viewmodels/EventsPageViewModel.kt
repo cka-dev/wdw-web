@@ -162,6 +162,13 @@ class EventsPageViewModel(
             }
         }
     }
+
+    fun refresh(onComplete: () -> Unit) {
+        viewModelScope.launch {
+            repository.refreshAll()
+            onComplete()
+        }
+    }
 }
 
 @Serializable

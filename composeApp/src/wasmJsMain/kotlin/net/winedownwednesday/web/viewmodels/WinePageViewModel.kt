@@ -218,6 +218,13 @@ class WinePageViewModel(
         _reviewSubmitSuccess.value = false
     }
 
+    fun refresh(onComplete: () -> Unit) {
+        viewModelScope.launch {
+            repository.refreshAll()
+            onComplete()
+        }
+    }
+
     // ─── Vino Recommendations ─────────────────────────────────────────────────
 
     private val _vinoRecommendations =

@@ -43,6 +43,7 @@ import androidx.compose.material3.CardDefaults.cardElevation
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -121,8 +122,12 @@ fun HomePage(
         color = MaterialTheme.colorScheme.background
     ) {
         val homeListState = rememberLazyListState()
-        Box(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
+        val isTouchDevice = LocalIsTouchDevice.current
+        var isRefreshing by remember { mutableStateOf(false) }
+
+        val content: @Composable () -> Unit = {
+            Box(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
                 state = homeListState,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -245,6 +250,20 @@ fun HomePage(
                     .padding(end = 2.dp),
                 style    = wdwScrollbarStyle()
             )
+            }
+        }
+
+        if (isTouchDevice) {
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = {
+                    isRefreshing = true
+                    viewModel.refresh { isRefreshing = false }
+                },
+                modifier = Modifier.fillMaxSize()
+            ) { content() }
+        } else {
+            content()
         }
     }
 
