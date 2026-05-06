@@ -212,14 +212,7 @@
 
         div.querySelector('#wdw-update-btn')
             .addEventListener('click', function() {
-                // Pre-fetch main script with cache bypass
-                // to update the browser's HTTP cache entry,
-                // then reload. The new composeApp.js will
-                // reference new hashed .wasm URLs.
-                fetch('composeApp.js', { cache: 'reload' })
-                    .finally(function() {
-                        location.reload();
-                    });
+                location.reload();
             });
         div.querySelector('#wdw-dismiss-btn')
             .addEventListener('click', function() {
