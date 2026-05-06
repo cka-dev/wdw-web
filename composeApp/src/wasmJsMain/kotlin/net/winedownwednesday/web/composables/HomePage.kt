@@ -291,7 +291,10 @@ fun AutoScrollingEventDisplay(
         modifier = modifier
             .then(cardWidthMod)
             .then(cardHeightMod)
-            .hoverScale(),
+            .hoverScale()
+            .clickable {
+                onEventDetailsClick(events[currentIndex])
+            },
         elevation = cardElevation(defaultElevation = 16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
@@ -377,7 +380,10 @@ fun AutoScrollingWineListHorizontal(
         modifier = modifier
             .then(wineCardWidthMod)
             .then(wineCardHeightMod)
-            .hoverScale(),
+            .hoverScale()
+            .clickable {
+                onWineDetailsClick(wines[currentIndex])
+            },
         elevation = cardElevation(defaultElevation = 16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
@@ -464,7 +470,15 @@ private fun SingleEventOrEmptyHorizontal(
         shape = RoundedCornerShape(16.dp),
         modifier = modifier
             .then(seWidthMod)
-            .then(seHeightMod),
+            .then(seHeightMod)
+            .hoverScale()
+            .then(
+                if (events.isNotEmpty()) {
+                    Modifier.clickable {
+                        onEventDetailsClick(events.first())
+                    }
+                } else Modifier
+            ),
         elevation = cardElevation(defaultElevation = 16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
@@ -542,7 +556,15 @@ private fun SingleWineOrEmptyHorizontal(
         shape = RoundedCornerShape(16.dp),
         modifier = modifier
             .then(swWidthMod)
-            .then(swHeightMod),
+            .then(swHeightMod)
+            .hoverScale()
+            .then(
+                if (wines.isNotEmpty()) {
+                    Modifier.clickable {
+                        onWineDetailsClick(wines.first())
+                    }
+                } else Modifier
+            ),
         elevation = cardElevation(defaultElevation = 16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
@@ -613,24 +635,16 @@ fun HomePageEventCard(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 250.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .clickable { onDetailsClick() },
+            .clip(RoundedCornerShape(12.dp)),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = event.name,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+            MarqueeText(
+                text = event.name,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
             Spacer(modifier = Modifier.height(8.dp))
             Box(
                 modifier = Modifier
@@ -646,24 +660,28 @@ fun HomePageEventCard(
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = event.description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Location: ${event.location}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-            )
-            Text(
-                text = "Date: ${event.date.toEventDisplayDate()}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-            )
+            ContentReveal {
+                Column {
+                    Text(
+                        text = event.description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Location: ${event.location}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        text = "Date: ${event.date.toEventDisplayDate()}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                    )
+                }
+            }
 
         }
     }
@@ -679,18 +697,15 @@ fun WineCard(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 350.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .clickable { onDetailsClick() },
+            .clip(RoundedCornerShape(12.dp)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = cardElevation(defaultElevation = 8.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
+            MarqueeText(
                 text = wine.name,
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
             )
             Spacer(modifier = Modifier.height(8.dp))
             Box(
@@ -707,19 +722,23 @@ fun WineCard(
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = wine.technicalDetails,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "${wine.type} - ${wine.year} - ${wine.country}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-            )
+            ContentReveal {
+                Column {
+                    Text(
+                        text = wine.technicalDetails,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "${wine.type} - ${wine.year} - ${wine.country}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                    )
+                }
+            }
 
         }
     }
