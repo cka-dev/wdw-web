@@ -154,3 +154,30 @@ val generateVersionJson by tasks.registering {
 tasks.named("wasmJsProcessResources") {
     dependsOn(generateVersionJson)
 }
+
+// ── Stamp __APP_VERSION__ in index.html after resource processing ──
+val stampIndexHtml by tasks.registering {
+    val version = project.findProperty("appVersion")?.toString() ?: "0.0.0"
+    inputs.property("appVersion", version)
+    dependsOn(tasks.named("wasmJsProcessResources"))
+    doLast {
+        val resDir = project.file(
+            "build/processedResources/wasmJs/main"
+        )
+        val indexFile = resDir.resolve("index.html")
+        if (indexFile.exists()) {
+            val content = indexFile.readText()
+            indexFile.writeText(
+                content.replace("__APP_VERSION__", version)
+            )
+        }
+    }
+}
+
+// Hook into compilation so stamping always runs before webpack
+tasks.matching {
+    it.name == "wasmJsDevelopmentExecutableCompileSync" ||
+    it.name == "wasmJsProductionExecutableCompileSync"
+}.configureEach {
+    dependsOn(stampIndexHtml)
+}
