@@ -880,10 +880,23 @@ fun ChannelSidebar(
                                             ),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        TextWithNotoImageEmoji(
-                                            "🍷",
-                                            fontSize = 20.sp
-                                        )
+                                        var avatarFailed by remember { mutableStateOf(false) }
+                                        if (!avatarFailed) {
+                                            AsyncImage(
+                                                model = "https://storage.googleapis.com/" +
+                                                    "wdw-app-52a3c.firebasestorage.app/" +
+                                                    "vino_avatar.png",
+                                                contentDescription = "Vino avatar",
+                                                modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                                contentScale = ContentScale.Crop,
+                                                onError = { avatarFailed = true }
+                                            )
+                                        } else {
+                                            TextWithNotoImageEmoji(
+                                                "🍷",
+                                                fontSize = 20.sp
+                                            )
+                                        }
                                     }
                                     Spacer(Modifier.width(12.dp))
                                     Column(modifier = Modifier.weight(1f)) {
