@@ -52,7 +52,7 @@ class AppRepository (
     private val _featuredWinesResponse = MutableStateFlow<FeaturedWinesResponse?>(null)
     val featuredWinesResponse = _featuredWinesResponse.asStateFlow()
 
-    private val _memberSpotlight = MutableStateFlow<Member?>(null)
+    private val _memberSpotlight = MutableStateFlow<List<Member>>(emptyList())
     val memberSpotlight = _memberSpotlight.asStateFlow()
 
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -156,8 +156,8 @@ class AppRepository (
 
     private suspend fun fetchMemberSpotlight() {
         try {
-            val member = remoteDataSource.fetchMemberSpotlight()
-            _memberSpotlight.value = member
+            val members = remoteDataSource.fetchMemberSpotlight()
+            _memberSpotlight.value = members
         } catch (_: Exception) { }
     }
 

@@ -9,6 +9,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.VerticalScrollbar
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,11 +26,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -86,7 +89,7 @@ fun HomePage(
     val viewModel: HomePageViewModel = koinInject()
     val upcomingEvents by viewModel.upcomingEvents.collectAsState()
     val featuredWines by viewModel.featuredWines.collectAsState()
-    val highlightedMember by viewModel.highlightedMember.collectAsState()
+    val highlightedMembers by viewModel.highlightedMembers.collectAsState()
     val eventsLoaded by viewModel.eventsLoaded.collectAsState()
     val winesLoaded by viewModel.winesLoaded.collectAsState()
     val campaignName by viewModel.campaignName.collectAsState()
@@ -227,7 +230,7 @@ fun HomePage(
                     }
                     SlideInCard(delayMs = 650) {
                         MemberSpotlightCard(
-                            member = highlightedMember,
+                            members = highlightedMembers,
                             sizeInfo = sizeInfo
                         )
                     }
@@ -908,11 +911,23 @@ fun WineDetailsDialog(wine: Wine, isCompactScreen: Boolean, onDismiss: () -> Uni
 
 @Composable
 fun MemberSpotlightCard(
-    member: Member?,
+    members: List<Member>,
     sizeInfo: WindowSizeInfo,
     modifier: Modifier = Modifier
 ) {
-    var showDetails by remember { mutableStateOf(false) }
+    var showDetailsMember by remember { mutableStateOf<Member?>(null) }
+
+    // Auto-scroll carousel index for multiple members
+    var spotlightIndex by remember { mutableIntStateOf(0) }
+    LaunchedEffect(members) {
+        spotlightIndex = 0
+        if (members.size > 1) {
+            while (true) {
+                delay(5000L)
+                spotlightIndex = (spotlightIndex + 1) % members.size
+            }
+        }
+    }
 
     val spotlightWidthMod = when (sizeInfo.widthClass) {
         WidthClass.Compact  -> Modifier.fillMaxWidth()
@@ -931,8 +946,12 @@ fun MemberSpotlightCard(
             .then(spotlightWidthMod)
             .then(spotlightHeightMod)
             .then(
-                if (member != null) Modifier.clickable { showDetails = true }
-                else Modifier
+                if (members.isNotEmpty()) {
+                    Modifier.clickable {
+                        val idx = spotlightIndex.coerceIn(0, members.lastIndex)
+                        showDetailsMember = members[idx]
+                    }
+                } else Modifier
             ),
         elevation = cardElevation(defaultElevation = 16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -942,22 +961,51 @@ fun MemberSpotlightCard(
                 .padding(16.dp)
                 .animateContentSize()
         ) {
-            Text(
-                text = "Member Spotlight",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Crossfade(targetState = member) { featuredMember ->
-                if (featuredMember == null) {
-                    Column {
-                        Text(
-                            text = "Fetching featured member",
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        )
-                        LinearProgressBar()
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Member Spotlight",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
+                )
+                // Dot indicator for multiple members
+                if (members.size > 1) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        members.forEachIndexed { index, _ ->
+                            Box(
+                                modifier = Modifier
+                                    .size(if (index == spotlightIndex) 8.dp else 6.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (index == spotlightIndex)
+                                            WdwOrange
+                                        else
+                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                                    )
+                            )
+                        }
                     }
-                } else {
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (members.isEmpty()) {
+                Column {
+                    Text(
+                        text = "Fetching featured member",
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                    LinearProgressBar()
+                }
+            } else {
+                val currentIndex = spotlightIndex.coerceIn(0, members.lastIndex)
+                Crossfade(targetState = currentIndex) { idx ->
+                    val featuredMember = members[idx]
                     Column {
                         // Reason badge
                         val isBirthdayMonth = if (featuredMember.spotlightReason != null) {
@@ -1021,11 +1069,11 @@ fun MemberSpotlightCard(
         }
     }
 
-    if (showDetails && member != null) {
+    showDetailsMember?.let { member ->
         MemberDetailsDialog(
             member = member,
             isCompactScreen = sizeInfo.useCompactNav,
-            onDismiss = { showDetails = false }
+            onDismiss = { showDetailsMember = null }
         )
     }
 }

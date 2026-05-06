@@ -31,8 +31,8 @@ class HomePageViewModel(
     private val _winesLoaded = MutableStateFlow(false)
     val winesLoaded = _winesLoaded.asStateFlow()
 
-    private val _highlightedMember = MutableStateFlow<Member?>(null)
-    val highlightedMember = _highlightedMember.asStateFlow()
+    private val _highlightedMembers = MutableStateFlow<List<Member>>(emptyList())
+    val highlightedMembers = _highlightedMembers.asStateFlow()
 
     private val _campaignName = MutableStateFlow("Featured Wines")
     val campaignName = _campaignName.asStateFlow()
@@ -67,8 +67,8 @@ class HomePageViewModel(
         }
 
         viewModelScope.launch {
-            repository.memberSpotlight.collect { member ->
-                _highlightedMember.value = member
+            repository.memberSpotlight.collect { members ->
+                _highlightedMembers.value = members
             }
         }
     }
