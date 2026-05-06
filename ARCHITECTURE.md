@@ -388,6 +388,7 @@ Top-level `@Composable` that uses `LocalWindowInfo.containerSize` + `LocalDensit
     - **Web Client**: Source of truth is `gradle.properties` → `appVersion`. A Gradle task (`generateBuildConfig`) auto-generates `BuildConfig.kt` with a `VERSION` constant at compile time. Displayed in the footer (desktop: Legal column, mobile: compact footer).
     - **Admin Dashboard**: Source of truth is `admin/package.json` → `"version"`. Injected at build time via Vite `define` → `__APP_VERSION__`. Displayed in sidebar footer, logged to console on mount.
     - **Bump Policy**: Versions are only bumped at deploy time, not on every commit. Git tags use `wdw-web@X.Y.Z` / `wdw-admin@X.Y.Z` prefixes.
+    - **Update Banner**: A `version.json` file (auto-generated from `gradle.properties` by the `generateVersionJson` Gradle task) is deployed alongside the app. An inline script in `index.html` polls this file on tab focus (throttled to once per 5 min) and every 2 hours. If the deployed version differs from the loaded version, a branded toast banner slides up from the bottom prompting the user to refresh. The banner injects into `document.body.shadowRoot` to be visible above the Compose/Skiko canvas. Firebase Hosting serves `version.json` with `Cache-Control: no-cache, no-store, must-revalidate`.
 
 ---
 

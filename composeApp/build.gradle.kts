@@ -139,3 +139,17 @@ kotlin.sourceSets.named("wasmJsMain") {
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
     dependsOn(generateBuildConfig)
 }
+
+// ── Build-time version.json for update-check polling ────────────
+val generateVersionJson by tasks.registering {
+    val version = project.findProperty("appVersion")?.toString() ?: "0.0.0"
+    val outputFile = project.file("src/wasmJsMain/resources/version.json")
+    outputs.file(outputFile)
+    doLast {
+        outputFile.writeText("""{"version":"$version"}""" + "\n")
+    }
+}
+
+tasks.named("wasmJsProcessResources") {
+    dependsOn(generateVersionJson)
+}
