@@ -1052,7 +1052,7 @@ fun MemberSpotlightCard(
                         if (isBirthdayMonth) {
                             Spacer(modifier = Modifier.height(4.dp))
                             TextWithNotoImageEmoji(
-                                text = "🎉 Birthday: ${featuredMember.birthday}",
+                                text = "🎉 Birthday: ${formatBirthdayDisplay(featuredMember.birthday)}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = if (LocalIsDarkTheme.current) Color(0xFFFFD54F) else WdwOrange
                             )
@@ -1145,7 +1145,7 @@ private fun MemberDetailsDialog(
                 }
                 if (member.birthday.isNotBlank()) {
                     Text(
-                        text = "🎂 ${member.birthday}",
+                        text = "🎂 ${formatBirthdayDisplay(member.birthday)}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -1217,4 +1217,54 @@ private fun isBirthdayInCurrentMonth(birthday: String): Boolean {
         }
     }
     return false
+}
+
+/**
+ * Formats a birthday string for display, stripping the year
+ * and adding an ordinal suffix.  "05/01/87" → "May 1st",
+ * "May 1" → "May 1st", "March 14" → "March 14th".
+ */
+private fun formatBirthdayDisplay(birthday: String): String {
+    val monthNames = listOf(
+        "January", "February", "March", "April",
+        "May", "June", "July", "August",
+        "September", "October", "November", "December"
+    )
+
+    fun ordinal(day: Int): String = when {
+        day in 11..13 -> "${day}th"
+        day % 10 == 1 -> "${day}st"
+        day % 10 == 2 -> "${day}nd"
+        day % 10 == 3 -> "${day}rd"
+        else -> "${day}th"
+    }
+
+    val trimmed = birthday.trim()
+
+    // "MM/DD" or "MM/DD/YY" format
+    if (trimmed.contains("/")) {
+        val parts = trimmed.split("/")
+        if (parts.size >= 2) {
+            val month = parts[0].toIntOrNull()
+            val day = parts[1].toIntOrNull()
+            if (month != null && day != null &&
+                month in 1..12
+            ) {
+                return "${monthNames[month - 1]} ${ordinal(day)}"
+            }
+        }
+    }
+
+    // "Month Day" format — already human-readable,
+    // just add ordinal
+    val parts = trimmed.split("\\s+".toRegex())
+    if (parts.size >= 2) {
+        val day = parts[1].toIntOrNull()
+        if (day != null) {
+            return "${parts[0]} ${ordinal(day)}"
+        }
+    }
+
+    // Fallback: return as-is
+    return trimmed
 }
