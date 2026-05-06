@@ -67,7 +67,6 @@ import net.winedownwednesday.web.data.Wine
 import net.winedownwednesday.web.viewmodels.WinePageViewModel
 import net.winedownwednesday.web.viewmodels.WineRecommendation
 import net.winedownwednesday.web.viewmodels.matchesQuery
-import org.kodein.emoji.compose.m3.TextWithNotoImageEmoji
 import org.koin.compose.koinInject
 
 
