@@ -33,6 +33,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -124,6 +125,10 @@ fun BlogPage(
         WidthClass.XLarge   -> 120.dp
     }
 
+    val isTouchDevice = LocalIsTouchDevice.current
+    var isRefreshing by remember { mutableStateOf(false) }
+
+    val blogContent: @Composable () -> Unit = {
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.TopCenter) {
         if (isLoading && blogPosts.isNullOrEmpty()) {
             LinearProgressBar()
@@ -397,6 +402,20 @@ fun BlogPage(
                 }
             }
         }
+    }
+    }
+
+    if (isTouchDevice) {
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                isRefreshing = true
+                viewModel.refresh { isRefreshing = false }
+            },
+            modifier = Modifier.fillMaxSize()
+        ) { blogContent() }
+    } else {
+        blogContent()
     }
 }
 

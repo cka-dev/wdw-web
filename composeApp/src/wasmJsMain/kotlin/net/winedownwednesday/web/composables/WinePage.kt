@@ -44,6 +44,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -120,39 +121,57 @@ fun WinePage(
         }
     }
 
-    if (sizeInfo.useCompactNav) {
-        CompactScreenWinePage(
-            favoriteWines = filteredWines,
-            selectedWine = selectedWine,
-            viewModel = viewModel,
-            isLoggedIn = isLoggedIn,
-            userName = userName,
-            userEmail = userEmail,
-            recommendations = recommendations,
-            isFetchingRecs = isFetchingRecs,
-            isLoaded = isWinesLoaded,
-            recPanelExpanded = recPanelExpanded,
-            onRecPanelExpandedChange = { viewModel.setRecPanelExpanded(it) }
-        )
-    } else {
-        val listFraction = when (sizeInfo.widthClass) {
-            WidthClass.Large, WidthClass.XLarge -> 0.25f
-            else -> 0.30f
+    val isTouchDevice = LocalIsTouchDevice.current
+    var isRefreshing by remember { mutableStateOf(false) }
+
+    val wineContent: @Composable () -> Unit = {
+        if (sizeInfo.useCompactNav) {
+            CompactScreenWinePage(
+                favoriteWines = filteredWines,
+                selectedWine = selectedWine,
+                viewModel = viewModel,
+                isLoggedIn = isLoggedIn,
+                userName = userName,
+                userEmail = userEmail,
+                recommendations = recommendations,
+                isFetchingRecs = isFetchingRecs,
+                isLoaded = isWinesLoaded,
+                recPanelExpanded = recPanelExpanded,
+                onRecPanelExpandedChange = { viewModel.setRecPanelExpanded(it) }
+            )
+        } else {
+            val listFraction = when (sizeInfo.widthClass) {
+                WidthClass.Large, WidthClass.XLarge -> 0.25f
+                else -> 0.30f
+            }
+            LargeScreenWinePage(
+                filteredWines = filteredWines,
+                selectedWine = selectedWine,
+                viewModel = viewModel,
+                isLoggedIn = isLoggedIn,
+                userName = userName,
+                userEmail = userEmail,
+                listFraction = listFraction,
+                recommendations = recommendations,
+                isFetchingRecs = isFetchingRecs,
+                isLoaded = isWinesLoaded,
+                recPanelExpanded = recPanelExpanded,
+                onRecPanelExpandedChange = { viewModel.setRecPanelExpanded(it) }
+            )
         }
-        LargeScreenWinePage(
-            filteredWines = filteredWines,
-            selectedWine = selectedWine,
-            viewModel = viewModel,
-            isLoggedIn = isLoggedIn,
-            userName = userName,
-            userEmail = userEmail,
-            listFraction = listFraction,
-            recommendations = recommendations,
-            isFetchingRecs = isFetchingRecs,
-            isLoaded = isWinesLoaded,
-            recPanelExpanded = recPanelExpanded,
-            onRecPanelExpandedChange = { viewModel.setRecPanelExpanded(it) }
-        )
+    }
+
+    if (isTouchDevice) {
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                isRefreshing = true
+                viewModel.refresh { isRefreshing = false }
+            },
+            modifier = Modifier.fillMaxSize()
+        ) { wineContent() }
+    } else {
+        wineContent()
     }
 }
 

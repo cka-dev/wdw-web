@@ -38,11 +38,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -78,35 +81,53 @@ fun PodcastsPage(
     }
     val selectedEpisode = viewModel.selectedEpisode.collectAsState()
 
-    if (sizeInfo.useCompactNav) {
-        // Compact + Medium → stacked card list
-        CompactPodcastsScreen(
-            episodes = filteredEpisodes,
-            selectedEpisode = selectedEpisode.value,
-            searchQuery = searchQuery,
-            onSelectedEpisodeChange = { viewModel.setSelectedEpisode(it) },
-            onDismissRequest = { viewModel.clearSelectedEpisode() },
-            onSearchQueryChange = { viewModel.setSearchQuery(it) }
-        )
+    val isTouchDevice = LocalIsTouchDevice.current
+    var isRefreshing by remember { mutableStateOf(false) }
+
+    val podcastContent: @Composable () -> Unit = {
+        if (sizeInfo.useCompactNav) {
+            // Compact + Medium → stacked card list
+            CompactPodcastsScreen(
+                episodes = filteredEpisodes,
+                selectedEpisode = selectedEpisode.value,
+                searchQuery = searchQuery,
+                onSelectedEpisodeChange = { viewModel.setSelectedEpisode(it) },
+                onDismissRequest = { viewModel.clearSelectedEpisode() },
+                onSearchQueryChange = { viewModel.setSearchQuery(it) }
+            )
+        } else {
+            // Expanded / Large / XLarge → side-by-side list + video detail
+            val listWeight = when (sizeInfo.widthClass) {
+                WidthClass.Large, WidthClass.XLarge -> 1f  // narrower list on big screens
+                else -> 1f                                  // Expanded default
+            }
+            val detailWeight = when (sizeInfo.widthClass) {
+                WidthClass.Large, WidthClass.XLarge -> 3f
+                else -> 2f  // Expanded
+            }
+            LargeScreenPodcastPage(
+                searchQuery = searchQuery,
+                onQueryChange = { viewModel.setSearchQuery(it) },
+                filteredEpisodes = filteredEpisodes,
+                onEpisodeSelected = { viewModel.setSelectedEpisode(it) },
+                selectedEpisode = selectedEpisode.value,
+                listWeight = listWeight,
+                detailWeight = detailWeight
+            )
+        }
+    }
+
+    if (isTouchDevice) {
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                isRefreshing = true
+                viewModel.refresh { isRefreshing = false }
+            },
+            modifier = Modifier.fillMaxSize()
+        ) { podcastContent() }
     } else {
-        // Expanded / Large / XLarge → side-by-side list + video detail
-        val listWeight = when (sizeInfo.widthClass) {
-            WidthClass.Large, WidthClass.XLarge -> 1f  // narrower list on big screens
-            else -> 1f                                  // Expanded default
-        }
-        val detailWeight = when (sizeInfo.widthClass) {
-            WidthClass.Large, WidthClass.XLarge -> 3f
-            else -> 2f  // Expanded
-        }
-        LargeScreenPodcastPage(
-            searchQuery = searchQuery,
-            onQueryChange = { viewModel.setSearchQuery(it) },
-            filteredEpisodes = filteredEpisodes,
-            onEpisodeSelected = { viewModel.setSelectedEpisode(it) },
-            selectedEpisode = selectedEpisode.value,
-            listWeight = listWeight,
-            detailWeight = detailWeight
-        )
+        podcastContent()
     }
 
 

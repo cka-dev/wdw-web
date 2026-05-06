@@ -65,6 +65,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -163,6 +164,10 @@ fun EventsPage(
         }
     }
 
+    val isTouchDevice = LocalIsTouchDevice.current
+    var isRefreshing by remember { mutableStateOf(false) }
+
+    val eventsContent: @Composable () -> Unit = {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -308,6 +313,20 @@ fun EventsPage(
                 style = wdwScrollbarStyle()
             )
         }
+    }
+    }
+
+    if (isTouchDevice) {
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                isRefreshing = true
+                viewModel.refresh { isRefreshing = false }
+            },
+            modifier = Modifier.fillMaxSize()
+        ) { eventsContent() }
+    } else {
+        eventsContent()
     }
 
     if (selectedEvent != null) {

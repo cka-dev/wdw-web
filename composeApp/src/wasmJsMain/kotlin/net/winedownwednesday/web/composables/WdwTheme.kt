@@ -77,7 +77,11 @@ fun WdwTheme(
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (isDark) wdwDarkColorScheme() else wdwLightColorScheme()
-    CompositionLocalProvider(LocalIsDarkTheme provides isDark) {
+    val isTouchDevice = isPrimaryPointerCoarse() || hasTouchPoints()
+    CompositionLocalProvider(
+        LocalIsDarkTheme provides isDark,
+        LocalIsTouchDevice provides isTouchDevice
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             content     = content

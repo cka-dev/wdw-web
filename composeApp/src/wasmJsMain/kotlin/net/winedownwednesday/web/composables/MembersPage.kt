@@ -44,6 +44,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -89,6 +90,9 @@ fun MembersPage(
     val selectedMember by viewModel.selectedMember.collectAsState()
     val searchQuery   by viewModel.searchQuery.collectAsState()
 
+    val isTouchDevice = LocalIsTouchDevice.current
+    var isRefreshing by remember { mutableStateOf(false) }
+
     // Deep-link: auto-select a member by ID
     val pendingMemberId by viewModel.pendingMemberId.collectAsState()
     LaunchedEffect(memberSections, pendingMemberId) {
@@ -101,36 +105,51 @@ fun MembersPage(
         }
     }
 
-    if (sizeInfo.useTwoColumnLayout) {
-        // ── Wide: persistent side-by-side list + detail ──────────────────
-        MembersListDetailLayout(
-            memberSections   = memberSections,
-            selectedMember   = selectedMember,
-            searchQuery      = searchQuery,
-            onMemberClick    = {
-                hapticVibrate(HapticDuration.TICK, HapticCategory.DIALOGS)
-                viewModel.setSelectedMember(it)
+    val membersContent: @Composable () -> Unit = {
+        if (sizeInfo.useTwoColumnLayout) {
+            // ── Wide: persistent side-by-side list + detail ──────────────────
+            MembersListDetailLayout(
+                memberSections   = memberSections,
+                selectedMember   = selectedMember,
+                searchQuery      = searchQuery,
+                onMemberClick    = {
+                    hapticVibrate(HapticDuration.TICK, HapticCategory.DIALOGS)
+                    viewModel.setSelectedMember(it)
+                },
+                onDetailClose    = { viewModel.clearSelectedMember() },
+                onSearchChange   = { viewModel.setSearchQuery(it) },
+                uiState          = uiState,
+                userProfileData  = userProfileData,
+            )
+        } else {
+            // ── Narrow: grid + modal dialog ───────────────────────────────────
+            MembersGridLayout(
+                memberSections  = memberSections,
+                selectedMember  = selectedMember,
+                searchQuery     = searchQuery,
+                onMemberClick   = {
+                    hapticVibrate(HapticDuration.TICK, HapticCategory.DIALOGS)
+                    viewModel.setSelectedMember(it)
+                },
+                onDismiss       = { viewModel.clearSelectedMember() },
+                onSearchChange  = { viewModel.setSearchQuery(it) },
+                uiState         = uiState,
+                userProfileData = userProfileData,
+            )
+        }
+    }
+
+    if (isTouchDevice) {
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                isRefreshing = true
+                viewModel.refresh { isRefreshing = false }
             },
-            onDetailClose    = { viewModel.clearSelectedMember() },
-            onSearchChange   = { viewModel.setSearchQuery(it) },
-            uiState          = uiState,
-            userProfileData  = userProfileData,
-        )
+            modifier = Modifier.fillMaxSize()
+        ) { membersContent() }
     } else {
-        // ── Narrow: grid + modal dialog ───────────────────────────────────
-        MembersGridLayout(
-            memberSections  = memberSections,
-            selectedMember  = selectedMember,
-            searchQuery     = searchQuery,
-            onMemberClick   = {
-                hapticVibrate(HapticDuration.TICK, HapticCategory.DIALOGS)
-                viewModel.setSelectedMember(it)
-            },
-            onDismiss       = { viewModel.clearSelectedMember() },
-            onSearchChange  = { viewModel.setSearchQuery(it) },
-            uiState         = uiState,
-            userProfileData = userProfileData,
-        )
+        membersContent()
     }
 }
 
