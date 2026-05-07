@@ -4,6 +4,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
 import { getAuth, signInWithCustomToken, signOut, onAuthStateChanged, browserLocalPersistence, setPersistence } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-messaging.js";
+import { initializeAppCheck, ReCaptchaEnterpriseProvider, getToken as getAppCheckToken } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app-check.js";
 
 // REPLACE THE VALUES BELOW WITH YOUR PROJECT'S CONFIGURATION
 const firebaseConfig = {
@@ -19,6 +20,7 @@ const firebaseConfig = {
 let app;
 let auth;
 let messaging;
+let appCheck;
 let initialized = false;
 let resolveInit;
 const initPromise = new Promise(resolve => {
@@ -31,6 +33,16 @@ window.wdwFirebaseBridge = {
 
         app = initializeApp(firebaseConfig);
         auth = getAuth(app);
+
+        // ── App Check (reCAPTCHA Enterprise) ────────────────
+        try {
+            appCheck = initializeAppCheck(app, {
+                provider: new ReCaptchaEnterpriseProvider('YOUR_RECAPTCHA_SITE_KEY'),
+                isTokenAutoRefreshEnabled: true
+            });
+        } catch (e) {
+            console.error("App Check initialization failed:", e);
+        }
 
         try {
             messaging = getMessaging(app);
@@ -123,5 +135,20 @@ window.wdwFirebaseBridge = {
             }
         });
         console.log("FirebaseBridge: Foreground notification handler set up");
+    },
+
+    /**
+     * Returns a current App Check token for attaching
+     * to outgoing API requests.
+     */
+    getAppCheckToken: async function() {
+        if (!appCheck) return null;
+        try {
+            const result = await getAppCheckToken(appCheck, /* forceRefresh */ false);
+            return result.token;
+        } catch (e) {
+            console.warn("App Check token unavailable:", e);
+            return null;
+        }
     }
 };
