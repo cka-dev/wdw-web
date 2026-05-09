@@ -53,10 +53,14 @@ private external fun consoleError(msg: JsString)
 @JsFun(
     """() => {
     try {
-        if (!window.wdwFirebaseBridge ||
-            !window.wdwFirebaseBridge._lastAppCheckToken) return '';
-        return window.wdwFirebaseBridge._lastAppCheckToken;
-    } catch(e) { return ''; }
+        const bridge = window.wdwFirebaseBridge;
+        const token = (bridge && bridge._lastAppCheckToken) || '';
+        console.log('[AppCheck @JsFun] called, token length:', token.length);
+        return token;
+    } catch(e) {
+        console.log('[AppCheck @JsFun] error:', e);
+        return '';
+    }
 }"""
 )
 private external fun jsGetCachedAppCheckToken(): JsString
@@ -72,17 +76,27 @@ class RemoteDataSource (
     }
 
     /**
-     * Returns the cached App Check token, or null if
-     * unavailable.  Reads synchronously from the JS bridge
-     * (no Promise.await — that crashes the WASM compiler).
+     * Returns the cached App Check token. If the token isn't
+     * available yet (initFirebase still in progress), polls
+     * with short delays for up to ~2 s before giving up.
+     *
+     * We cannot use Promise.await() here because the WASM
+     * compiler crashes on it.  Polling + coroutine delay
+     * yields the event loop so the JS-side token fetch can
+     * complete.
      */
-    private fun appCheckToken(): String? {
-        return try {
+    private suspend fun appCheckToken(): String? {
+        // Fast path — token already cached
+        val immediate = jsGetCachedAppCheckToken().toString()
+        if (immediate.isNotEmpty()) return immediate
+
+        // Slow path — wait for initFirebase to finish
+        repeat(10) {
+            kotlinx.coroutines.delay(200)
             val t = jsGetCachedAppCheckToken().toString()
-            t.ifEmpty { null }
-        } catch (_: Throwable) {
-            null
+            if (t.isNotEmpty()) return t
         }
+        return null
     }
 
     companion object {
