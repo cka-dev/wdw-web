@@ -54,13 +54,8 @@ private external fun consoleError(msg: JsString)
     """() => {
     try {
         const bridge = window.wdwFirebaseBridge;
-        const token = (bridge && bridge._lastAppCheckToken) || '';
-        console.log('[AppCheck @JsFun] called, token length:', token.length);
-        return token;
-    } catch(e) {
-        console.log('[AppCheck @JsFun] error:', e);
-        return '';
-    }
+        return (bridge && bridge._lastAppCheckToken) || '';
+    } catch(e) { return ''; }
 }"""
 )
 private external fun jsGetCachedAppCheckToken(): JsString
