@@ -25,7 +25,7 @@ object KtorClientInstance {
         }
         install(Logging) {
             logger = Logger.DEFAULT
-            level = LogLevel.NONE // Disabled API request/response logging
+            level = LogLevel.NONE
         }
     }
 }

@@ -19,6 +19,7 @@ external object FirebaseBridge {
     fun waitUntilInitialized(): Promise<JsAny>
     fun setupForegroundNotifications()
     fun sendEmailVerification(): Promise<JsAny?>
+    fun getAppCheckToken(): Promise<JsString?>
 
 }
 

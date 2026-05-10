@@ -44,6 +44,22 @@ import net.winedownwednesday.web.data.models.VerifyRegistrationRequest
 @JsFun("(msg) => console.error(msg)")
 private external fun consoleError(msg: JsString)
 
+/**
+ * Synchronously reads the cached App Check token from the
+ * JS bridge. Returns '' if the token isn't available yet.
+ * The token is kept fresh by firebase-bridge.js
+ * onTokenChanged listener.
+ */
+@JsFun(
+    """() => {
+    try {
+        const bridge = window.wdwFirebaseBridge;
+        return (bridge && bridge._lastAppCheckToken) || '';
+    } catch(e) { return ''; }
+}"""
+)
+private external fun jsGetCachedAppCheckToken(): JsString
+
 class RemoteDataSource (
     private val client: HttpClient
 ): ApiService {
@@ -54,13 +70,41 @@ class RemoteDataSource (
         )
     }
 
+    /**
+     * Returns the cached App Check token. If the token isn't
+     * available yet (initFirebase still in progress), polls
+     * with short delays for up to ~2 s before giving up.
+     *
+     * We cannot use Promise.await() here because the WASM
+     * compiler crashes on it.  Polling + coroutine delay
+     * yields the event loop so the JS-side token fetch can
+     * complete.
+     */
+    private suspend fun appCheckToken(): String? {
+        // Fast path — token already cached
+        val immediate = jsGetCachedAppCheckToken().toString()
+        if (immediate.isNotEmpty()) return immediate
+
+        // Slow path — wait for initFirebase to finish
+        repeat(10) {
+            kotlinx.coroutines.delay(200)
+            val t = jsGetCachedAppCheckToken().toString()
+            if (t.isNotEmpty()) return t
+        }
+        return null
+    }
+
     companion object {
         private const val TAG = "[RemoteDataSource]"
+        private const val APP_CHECK_HEADER =
+            "X-Firebase-AppCheck"
     }
 
     override suspend fun fetchInitialData(): InitialDataResponse? {
         return try {
+            val act = appCheckToken()
             client.get("$SERVER_URL/getInitialData"){
+                act?.let { header(APP_CHECK_HEADER, it) }
                 headers {
                     append(HttpHeaders.AccessControlAllowOrigin, "*")
                     append(HttpHeaders.Accept, ContentType.Application.Json.toString())
@@ -74,7 +118,9 @@ class RemoteDataSource (
 
     override suspend fun fetchEpisodes(): List<Episode>? {
         return try {
+            val act = appCheckToken()
             client.get("$SERVER_URL/getEpisodes"){
+                act?.let { header(APP_CHECK_HEADER, it) }
                 headers {
                     append(HttpHeaders.AccessControlAllowOrigin, "*")
                     append(HttpHeaders.Accept, ContentType.Application.Json.toString())
@@ -88,7 +134,9 @@ class RemoteDataSource (
 
     override suspend fun fetchBlogPosts(): BlogPostsResponse? {
         return try {
+            val act = appCheckToken()
             client.get("$SERVER_URL/getBlogPosts"){
+                act?.let { header(APP_CHECK_HEADER, it) }
                 headers {
                     append(HttpHeaders.AccessControlAllowOrigin, "*")
                     append(HttpHeaders.Accept, ContentType.Application.Json.toString())
@@ -102,7 +150,9 @@ class RemoteDataSource (
 
     override suspend fun fetchAboutItems(): List<AboutItem> {
         return try {
+            val act = appCheckToken()
             client.get("$SERVER_URL/getAboutItems"){
+                act?.let { header(APP_CHECK_HEADER, it) }
                 headers {
                     append(HttpHeaders.AccessControlAllowOrigin, "*")
                     append(HttpHeaders.Accept, ContentType.Application.Json.toString())
@@ -116,7 +166,9 @@ class RemoteDataSource (
 
     override suspend fun fetchWines(): List<Wine>? {
         return try {
+            val act = appCheckToken()
             client.get("$SERVER_URL/getWines"){
+                act?.let { header(APP_CHECK_HEADER, it) }
                 headers {
                     append(HttpHeaders.AccessControlAllowOrigin, "*")
                     append(HttpHeaders.Accept, ContentType.Application.Json.toString())
@@ -130,7 +182,9 @@ class RemoteDataSource (
 
     override suspend fun fetchFeaturedWines(): FeaturedWinesResponse? {
         return try {
+            val act = appCheckToken()
             client.get("$SERVER_URL/getFeaturedWines"){
+                act?.let { header(APP_CHECK_HEADER, it) }
                 headers {
                     append(HttpHeaders.AccessControlAllowOrigin, "*")
                     append(HttpHeaders.Accept, ContentType.Application.Json.toString())
@@ -144,7 +198,9 @@ class RemoteDataSource (
 
     override suspend fun fetchMembers(): List<Member>? {
         try {
+            val act = appCheckToken()
             return client.get("$SERVER_URL/getMembers"){
+                act?.let { header(APP_CHECK_HEADER, it) }
                 headers {
                     append(HttpHeaders.AccessControlAllowOrigin, "*")
                     append(HttpHeaders.Accept, ContentType.Application.Json.toString())
@@ -158,7 +214,9 @@ class RemoteDataSource (
 
     override suspend fun fetchEvents(): List<Event>? {
         return try {
+            val act = appCheckToken()
             client.get("$SERVER_URL/getEvents"){
+                act?.let { header(APP_CHECK_HEADER, it) }
                 headers {
                     append(HttpHeaders.AccessControlAllowOrigin, "*")
                     append(HttpHeaders.Accept, ContentType.Application.Json.toString())
@@ -172,7 +230,9 @@ class RemoteDataSource (
 
     override suspend fun fetchMemberSpotlight(): List<Member> {
         return try {
+            val act = appCheckToken()
             val response = client.get("$SERVER_URL/getMemberSpotlight"){
+                act?.let { header(APP_CHECK_HEADER, it) }
                 headers {
                     append(HttpHeaders.AccessControlAllowOrigin, "*")
                     append(HttpHeaders.Accept, ContentType.Application.Json.toString())
@@ -199,7 +259,9 @@ class RemoteDataSource (
 
     override suspend fun postRSVP(rsvp: RSVPRequest): Boolean {
         return try {
+            val act = appCheckToken()
             val response: HttpResponse = client.post("$SERVER_URL/postRsvp") {
+                act?.let { header(APP_CHECK_HEADER, it) }
                 headers {
                     append(HttpHeaders.ContentType, ContentType.Application.Json.toString())
                 }
@@ -215,8 +277,10 @@ class RemoteDataSource (
     override suspend fun generatePasskeyRegistrationOptions(email: String):
             ApiResult<PublicKeyCredentialCreationOptions> {
         return try {
+            val act = appCheckToken()
             val response: HttpResponse = client.post(
                 CloudFunctionUrls.GENERATE_PASSKEY_REGISTRATION) {
+                act?.let { header(APP_CHECK_HEADER, it) }
                 contentType(ContentType.Application.Json)
                 setBody(RegistrationOptionsRequest(email))
             }
@@ -240,8 +304,10 @@ class RemoteDataSource (
     override suspend fun verifyPasskeyRegistration(
         credential: RegistrationResponse, email: String): Boolean {
         return try {
+            val act = appCheckToken()
             val response: HttpResponse = client.post(
                 CloudFunctionUrls.VERIFY_PASSKEY_REGISTRATION) {
+                act?.let { header(APP_CHECK_HEADER, it) }
                 contentType(ContentType.Application.Json)
                 setBody(VerifyRegistrationRequest(credential, email))
             }
@@ -256,8 +322,10 @@ class RemoteDataSource (
         email: String
     ): ApiResult<PublicKeyCredentialRequestOptions> {
         return try {
+            val act = appCheckToken()
             val response: HttpResponse = client.post(
                 CloudFunctionUrls.GENERATE_PASSKEY_AUTH) {
+                act?.let { header(APP_CHECK_HEADER, it) }
                 contentType(ContentType.Application.Json)
                 setBody(mapOf("email" to email))
             }
@@ -283,8 +351,10 @@ class RemoteDataSource (
     override suspend fun verifyPasskeyAuthentication(
         credential: AuthenticationResponse, email: String): Boolean {
         return try {
+            val act = appCheckToken()
             val response: HttpResponse = client.post(
                 CloudFunctionUrls.VERIFY_PASSKEY_AUTH) {
+                act?.let { header(APP_CHECK_HEADER, it) }
                 contentType(ContentType.Application.Json)
                 setBody(VerifyAuthenticationRequest(credential, email))
             }
@@ -297,7 +367,9 @@ class RemoteDataSource (
 
     override suspend fun fetchUserProfile(userEmail: String): UserProfileData? {
         return try {
+            val act = appCheckToken()
             val response = client.post("$SERVER_URL/fetchUserProfile"){
+                act?.let { header(APP_CHECK_HEADER, it) }
                 contentType(ContentType.Application.Json)
                 header("x-user-email", userEmail)
                 url { parameters.append("email", userEmail) }
@@ -323,7 +395,9 @@ class RemoteDataSource (
 
     override suspend fun updateProfile(profileData: UserProfileData): Boolean {
         return try {
+            val act = appCheckToken()
             val response: HttpResponse = client.post("$SERVER_URL/updateUserProfile") {
+                act?.let { header(APP_CHECK_HEADER, it) }
                 contentType(ContentType.Application.Json)
                 setBody(profileData)
             }
@@ -336,7 +410,9 @@ class RemoteDataSource (
 
     override suspend fun addRsvpToEvent(rsvp: RSVPRequest): Boolean {
         return try {
+            val act = appCheckToken()
             val response: HttpResponse = client.post("$SERVER_URL/addRsvpToEvent") {
+                act?.let { header(APP_CHECK_HEADER, it) }
                 contentType(ContentType.Application.Json)
                 setBody(rsvp)
             }
@@ -350,7 +426,9 @@ class RemoteDataSource (
     override suspend fun registerFcmInstanceId(request: FcmInstanceRegistrationRequest): Boolean
     {
         try {
+            val act = appCheckToken()
             val response = client.post("$SERVER_URL/registerFcmInstanceId") {
+                act?.let { header(APP_CHECK_HEADER, it) }
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }
@@ -366,7 +444,9 @@ class RemoteDataSource (
     override suspend fun unRegisterFcmInstanceId(request: FcmInstanceRegistrationRequest): Boolean
     {
         try {
+            val act = appCheckToken()
             val response = client.post("$SERVER_URL/unRegisterFcmInstanceId") {
+                act?.let { header(APP_CHECK_HEADER, it) }
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }
@@ -381,7 +461,9 @@ class RemoteDataSource (
 
     override suspend fun sendEmailVerification(email: String): Boolean {
         try {
+            val act = appCheckToken()
             val response = client.post("$SERVER_URL/sendEmailVerification") {
+                act?.let { header(APP_CHECK_HEADER, it) }
                 contentType(ContentType.Application.Json)
                 setBody(mapOf("email" to email))
             }
@@ -397,9 +479,11 @@ class RemoteDataSource (
     override suspend fun verifyPasskeyRegistrationWithToken(
         credential: RegistrationResponse, email: String): ApiResult<FirebaseAuthResponse> {
         return try {
+            val act = appCheckToken()
             val response: HttpResponse = client.post(
                 "https://verifypasskeyregistrationwithfirebaseauth-iktff5ztia-uc.a.run.app"
             ) {
+                act?.let { header(APP_CHECK_HEADER, it) }
                 contentType(ContentType.Application.Json)
                 setBody(VerifyRegistrationRequest(credential, email))
             }
@@ -419,9 +503,11 @@ class RemoteDataSource (
     override suspend fun verifyPasskeyAuthenticationWithToken(
         credential: AuthenticationResponse, email: String): ApiResult<FirebaseAuthResponse> {
         return try {
+            val act = appCheckToken()
             val response: HttpResponse = client.post(
                 "https://verifypasskeyauthenticationwithfirebaseauth-iktff5ztia-uc.a.run.app"
             ) {
+                act?.let { header(APP_CHECK_HEADER, it) }
                 contentType(ContentType.Application.Json)
                 setBody(VerifyAuthenticationRequest(credential, email))
             }
@@ -444,9 +530,11 @@ class RemoteDataSource (
         request: EmailPasswordRequest
     ): ApiResult<FirebaseAuthResponse> {
         return try {
+            val act = appCheckToken()
             val response: HttpResponse =
                 client.post("$SERVER_URL/registerWithEmailPassword")
                 {
+                    act?.let { header(APP_CHECK_HEADER, it) }
                     contentType(ContentType.Application.Json)
                     setBody(request)
             }
@@ -465,8 +553,10 @@ class RemoteDataSource (
         request: EmailPasswordRequest): ApiResult<FirebaseAuthResponse>
     {
         return try {
+            val act = appCheckToken()
             val response: HttpResponse = client
                 .post("$SERVER_URL/signInWithEmailPassword") {
+                    act?.let { header(APP_CHECK_HEADER, it) }
                     contentType(ContentType.Application.Json)
                     setBody(request)
             }
@@ -483,8 +573,10 @@ class RemoteDataSource (
 
     override suspend fun linkPasswordToAccount(request: EmailPasswordRequest): Boolean {
         return try {
+            val act = appCheckToken()
             val response: HttpResponse = client
                 .post("$SERVER_URL/linkPasswordToAccount") {
+                    act?.let { header(APP_CHECK_HEADER, it) }
                     contentType(ContentType.Application.Json)
                     setBody(request)
             }
@@ -497,7 +589,9 @@ class RemoteDataSource (
 
     override suspend fun changePassword(request: ChangePasswordRequest): Boolean {
         return try {
+            val act = appCheckToken()
             val response: HttpResponse = client.post("$SERVER_URL/changePassword") {
+                act?.let { header(APP_CHECK_HEADER, it) }
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }
@@ -510,8 +604,10 @@ class RemoteDataSource (
 
     override suspend fun sendPasswordResetEmail(email: String): Boolean {
         return try {
+            val act = appCheckToken()
             val response: HttpResponse = client
                 .post("$SERVER_URL/sendPasswordResetEmail") {
+                    act?.let { header(APP_CHECK_HEADER, it) }
                     contentType(ContentType.Application.Json)
                     setBody(mapOf("email" to email))
             }
@@ -524,9 +620,11 @@ class RemoteDataSource (
 
     override suspend fun fetchStreamToken(): StreamTokenResponse? {
         return try {
+            val act = appCheckToken()
             val idToken = FirebaseBridge.getIdToken().await<JsAny?>().toString()
             val response: HttpResponse = client
                 .post("https://generatestreamtoken-iktff5ztia-uc.a.run.app") {
+                    act?.let { header(APP_CHECK_HEADER, it) }
                     header(HttpHeaders.Authorization, "Bearer $idToken")
                     contentType(ContentType.Application.Json)
             }
@@ -545,10 +643,12 @@ class RemoteDataSource (
 
     override suspend fun blockUser(targetEmail: String): Boolean {
         return try {
+            val act = appCheckToken()
             val idToken = FirebaseBridge.getIdToken().await<JsAny?>().toString()
             val response: HttpResponse = client.post(
                 "https://blockuser-iktff5ztia-uc.a.run.app"
             ) {
+                act?.let { header(APP_CHECK_HEADER, it) }
                 header(HttpHeaders.Authorization, "Bearer $idToken")
                 contentType(ContentType.Application.Json)
                 setBody(mapOf("targetUserId" to targetEmail))
@@ -562,10 +662,12 @@ class RemoteDataSource (
 
     override suspend fun unblockUser(targetEmail: String): Boolean {
         return try {
+            val act = appCheckToken()
             val idToken = FirebaseBridge.getIdToken().await<JsAny?>().toString()
             val response: HttpResponse = client.post(
                 "https://unblockuser-iktff5ztia-uc.a.run.app"
             ) {
+                act?.let { header(APP_CHECK_HEADER, it) }
                 header(HttpHeaders.Authorization, "Bearer $idToken")
                 contentType(ContentType.Application.Json)
                 setBody(mapOf("targetUserId" to targetEmail))
@@ -583,10 +685,12 @@ class RemoteDataSource (
         category: String
     ): Boolean {
         return try {
+            val act = appCheckToken()
             val idToken = FirebaseBridge.getIdToken().await<JsAny?>().toString()
             val response: HttpResponse = client.post(
                 "https://flaguser-iktff5ztia-uc.a.run.app"
             ) {
+                act?.let { header(APP_CHECK_HEADER, it) }
                 header(HttpHeaders.Authorization, "Bearer $idToken")
                 contentType(ContentType.Application.Json)
                 setBody(mapOf(
@@ -608,10 +712,12 @@ class RemoteDataSource (
         category: String
     ): Boolean {
         return try {
+            val act = appCheckToken()
             val idToken = FirebaseBridge.getIdToken().await<JsAny?>().toString()
             val response: HttpResponse = client.post(
                 "https://flagmessage-iktff5ztia-uc.a.run.app"
             ) {
+                act?.let { header(APP_CHECK_HEADER, it) }
                 header(HttpHeaders.Authorization, "Bearer $idToken")
                 contentType(ContentType.Application.Json)
                 setBody(mapOf(
@@ -629,10 +735,12 @@ class RemoteDataSource (
 
     override suspend fun getBlockedUsers(): List<String> {
         return try {
+            val act = appCheckToken()
             val idToken = FirebaseBridge.getIdToken().await<JsAny?>().toString()
             val response: HttpResponse = client.get(
                 "https://getblockedusers-iktff5ztia-uc.a.run.app"
             ) {
+                act?.let { header(APP_CHECK_HEADER, it) }
                 header(HttpHeaders.Authorization, "Bearer $idToken")
             }
             if (response.status.isSuccess()) {
@@ -656,11 +764,13 @@ class RemoteDataSource (
         confirmPhrase: String
     ): Boolean {
         return try {
+            val act = appCheckToken()
             val idToken = FirebaseBridge.getIdToken()
                 .await<JsAny?>().toString()
             val response: HttpResponse = client.post(
                 "https://deleteaccount-iktff5ztia-uc.a.run.app"
             ) {
+                act?.let { header(APP_CHECK_HEADER, it) }
                 header(
                     HttpHeaders.Authorization,
                     "Bearer $idToken")
@@ -685,9 +795,12 @@ class RemoteDataSource (
     override suspend fun getWineReviews(wineId: Long):
             net.winedownwednesday.web.data.models.WineReviewsResponse? {
         return try {
+            val act = appCheckToken()
             val response: HttpResponse = client.get(
                 "$SERVER_URL/getWineReviews?wineId=$wineId"
-            )
+            ) {
+                act?.let { header(APP_CHECK_HEADER, it) }
+            }
             if (response.status.isSuccess()) {
                 response.body()
             } else null
@@ -700,10 +813,12 @@ class RemoteDataSource (
     override suspend fun getMyWineReview(wineId: Long):
             net.winedownwednesday.web.data.models.WineReview? {
         return try {
+            val act = appCheckToken()
             val idToken = FirebaseBridge.getIdToken().await<JsAny?>().toString()
             val response: HttpResponse = client.get(
                 "$SERVER_URL/getMyWineReview?wineId=$wineId"
             ) {
+                act?.let { header(APP_CHECK_HEADER, it) }
                 header(HttpHeaders.Authorization, "Bearer $idToken")
             }
             if (response.status.isSuccess()) {
@@ -721,10 +836,12 @@ class RemoteDataSource (
         request: net.winedownwednesday.web.data.models.SubmitReviewRequest
     ): Boolean {
         return try {
+            val act = appCheckToken()
             val idToken = FirebaseBridge.getIdToken().await<JsAny?>().toString()
             val response: HttpResponse = client.post(
                 "$SERVER_URL/submitWineReview"
             ) {
+                act?.let { header(APP_CHECK_HEADER, it) }
                 header(HttpHeaders.Authorization, "Bearer $idToken")
                 contentType(ContentType.Application.Json)
                 setBody(request)
@@ -738,10 +855,12 @@ class RemoteDataSource (
 
     override suspend fun deleteMyWineReview(wineId: Long): Boolean {
         return try {
+            val act = appCheckToken()
             val idToken = FirebaseBridge.getIdToken().await<JsAny?>().toString()
             val response: HttpResponse = client.post(
                 "$SERVER_URL/deleteMyWineReview"
             ) {
+                act?.let { header(APP_CHECK_HEADER, it) }
                 header(HttpHeaders.Authorization, "Bearer $idToken")
                 contentType(ContentType.Application.Json)
                 setBody(mapOf("wineId" to wineId))
@@ -756,10 +875,12 @@ class RemoteDataSource (
     override suspend fun flagWineReview(
         request: net.winedownwednesday.web.data.models.FlagReviewRequest
     ): Boolean {
+        val act = appCheckToken()
         val idToken = FirebaseBridge.getIdToken().await<JsAny?>().toString()
         val response: HttpResponse = client.post(
             "$SERVER_URL/flagWineReview"
         ) {
+            act?.let { header(APP_CHECK_HEADER, it) }
             header(HttpHeaders.Authorization, "Bearer $idToken")
             contentType(ContentType.Application.Json)
             setBody(request)
