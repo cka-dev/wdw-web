@@ -550,21 +550,16 @@ class AuthPageViewModel(
 
     fun refreshVerificationStatus(email: String, onResult: (Boolean) -> Unit) {
         if (email.isBlank()) {
-            println("[Verification] email is blank, returning false")
             onResult(false)
             return
         }
         viewModelScope.launch {
             try {
-                println("[Verification] Checking status for: $email")
                 val profile = repository.fetchProfileFromServer(email)
-                println("[Verification] Profile returned: ${profile != null}, isVerified: ${profile?.isVerified}")
                 _profileData.value = profile
                 val verified = profile?.isVerified == true
-                println("[Verification] Calling onResult($verified)")
                 onResult(verified)
             } catch (e: Exception) {
-                println("[Verification] Error: ${e.message}")
                 onResult(false)
             }
         }
