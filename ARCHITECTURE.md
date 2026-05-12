@@ -599,3 +599,54 @@ Toggle via the 🔒/🔓 button in the admin dashboard.
 - **Admin dashboard toggle** — flags can be toggled per-platform in real time at `/feature-flags`
 - **Gate at the highest level** — prefer screen/route-level checks over deep component checks
 
+---
+
+## Onboarding Enforcement & Welcome System
+
+### Overview
+A four-pillar system for onboarding new users, gated behind the `onboardingEnforcement` and `vinoWelcomePosts` feature flags.
+
+### Pillar 1 — Enforcement Gating
+When `onboardingEnforcement` is ON, users with incomplete profiles (missing `name`, `phone`, or `isVerified`) are blocked from:
+
+| Surface | Behavior |
+|---------|----------|
+| **Messaging** | Full-screen overlay ("🔒 Complete your profile to start chatting") replaces the chat UI |
+| **RSVP** | `window.alert()` before opening RSVP form |
+| **Profile "Skip for now"** | Hidden for new users — forces completion |
+| **App-wide banner** | Orange WdwOrange banner below TopNavBar linking to Profile page |
+
+Server-side enforcement: `generateStreamToken` and `addRsvpToEvent` return `403 profile_incomplete` with a `missing` array.
+
+### Pillar 2 — Vino Welcome Posts
+- **Community welcome**: Vino posts in `wdw-community` when a user completes their profile for the first time. Deduped via `welcomedAt` timestamp.
+- **Member welcome**: Vino posts in `wdw-members` when an admin promotes a user to MEMBER or LEADER. Deduped via `memberWelcomedAt` timestamp.
+- **Templates**: Stored in `config/welcomeTemplates` Firestore doc. Support `{name}` and `{date}` placeholders.
+
+### Pillar 3 — Vino DM Onboarding
+- On first profile completion, Vino creates a DM and sends a welcome message.
+- If the user's profile is still incomplete, `chatWithBot` injects `[ONBOARDING_MODE]` context into the Gemini prompt, listing missing fields.
+- Vino conversationally collects profile data (name, phone, profession, company, interests, favoriteWines).
+- Extracted data is parsed from `ACTION:PROFILE_UPDATE` markers and persisted to Firestore automatically.
+
+### Pillar 4 — Profile Field Parity
+`UserProfileData` now includes fields previously only available on the `Member` model:
+
+| Field | Type | Source |
+|-------|------|--------|
+| `profession` | `String?` | User-editable on Profile page |
+| `company` | `String?` | User-editable on Profile page |
+| `interests` | `List<String>?` | User-editable, comma-separated input |
+| `favoriteWines` | `List<String>?` | User-editable, comma-separated input |
+| `profileComplete` | `Boolean?` | Server-computed (name + phone + isVerified) |
+
+`isOnboardingComplete` is a **client-computed** property: `!name.isNullOrEmpty() && !phone.isNullOrEmpty() && isVerified == true`.
+
+### Profile Edit UI
+`ProfileEditSection` now has two grouped sections:
+- **Personal Info**: Name*, Email*, Phone* (required indicators when enforcement ON)
+- **About You**: Profession, Company, Interests (comma-separated), Favorite Wines (comma-separated), About Me
+
+### Nudging
+A scheduled Cloud Function (`nudgeIncompleteProfiles`) runs every 24 hours. Users who registered > 48 hours ago but haven't completed their profile receive a Vino DM reminder. Deduped via `nudgedAt` timestamp.
+
