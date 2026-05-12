@@ -61,6 +61,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -398,13 +400,10 @@ fun MemberCard(
             horizontalAlignment   = Alignment.CenterHorizontally,
             verticalArrangement   = Arrangement.Center,
         ) {
-            AsyncImage(
-                model              = member.profilePictureUrl,
-                contentDescription = "${member.name}'s photo",
-                contentScale       = ContentScale.Crop,
-                modifier           = Modifier
-                    .size(80.dp)
-                    .clip(CircleShape),
+            MemberAvatar(
+                name     = member.name,
+                imageUrl = member.profilePictureUrl,
+                size     = 80.dp,
             )
             Spacer(Modifier.height(8.dp))
             Text(
@@ -544,29 +543,34 @@ private fun MemberDetailPane(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment     = Alignment.Top,
         ) {
-            AsyncImage(
-                model              = member.profilePictureUrl,
-                contentDescription = "${member.name}'s photo",
-                contentScale       = ContentScale.Crop,
-                modifier           = Modifier
-                    .size(160.dp)
-                    .clip(CircleShape)
-                    .clickable { showFullPhoto = true },
+            MemberAvatar(
+                name     = member.name,
+                imageUrl = member.profilePictureUrl,
+                size     = 160.dp,
+                onClick  = { showFullPhoto = true },
             )
             Column(
                 verticalArrangement = Arrangement.spacedBy(6.dp),
                 modifier            = Modifier.weight(1f),
             ) {
                 MemberDetailField("Role",  member.role)
-                MemberDetailField("Email", member.email)
-                AnimatedVisibility(
-                    visible = userProfileData?.isMember == true
-                           && uiState == LoginUIState.Authenticated
-                ) {
+
+                val isMemberViewer = userProfileData?.isMember == true
+                        && uiState == LoginUIState.Authenticated
+                AnimatedVisibility(visible = isMemberViewer) {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        MemberDetailField("Email",    member.email)
                         MemberDetailField("Phone",    member.phoneNumber)
                         MemberDetailField("Birthday", member.birthday)
                     }
+                }
+                AnimatedVisibility(visible = !isMemberViewer) {
+                    Text(
+                        text = "Contact details visible to members only",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                        fontStyle = FontStyle.Italic,
+                    )
                 }
             }
         }
@@ -670,3 +674,56 @@ fun MemberDetailField(label: String, value: String) {
 // Keep for backward compatibility with any remaining call sites
 @Composable
 fun MemberDetailRow(label: String, value: String) = MemberDetailField(label, value)
+
+// ---------------------------------------------------------------------------
+// Reusable avatar with initials fallback
+// ---------------------------------------------------------------------------
+@Composable
+fun MemberAvatar(
+    name: String,
+    imageUrl: String?,
+    size: Dp,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+) {
+    var imageFailed by remember { mutableStateOf(false) }
+    val showInitials = imageUrl.isNullOrBlank() || imageFailed
+
+    if (showInitials) {
+        Box(
+            modifier = modifier
+                .size(size)
+                .clip(CircleShape)
+                .background(WdwOrange.copy(alpha = 0.15f))
+                .then(
+                    if (onClick != null) Modifier.clickable(onClick = onClick)
+                    else Modifier
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            val initials = name.split(" ")
+                .mapNotNull { it.firstOrNull()?.uppercase() }
+                .take(2).joinToString("")
+            Text(
+                text = initials.ifEmpty { "?" },
+                fontSize = (size.value * 0.35f).sp,
+                fontWeight = FontWeight.Bold,
+                color = WdwOrange,
+            )
+        }
+    } else {
+        AsyncImage(
+            model = imageUrl,
+            contentDescription = "$name's photo",
+            contentScale = ContentScale.Crop,
+            modifier = modifier
+                .size(size)
+                .clip(CircleShape)
+                .then(
+                    if (onClick != null) Modifier.clickable(onClick = onClick)
+                    else Modifier
+                ),
+            onError = { imageFailed = true },
+        )
+    }
+}

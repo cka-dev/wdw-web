@@ -71,6 +71,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -148,6 +149,13 @@ data class ChatAttachment(
 )
 
 val LocalMembers = androidx.compose.runtime.compositionLocalOf<List<Member?>> { emptyList() }
+
+private data class MentionEntry(
+    val id: String,
+    val name: String,
+    val imageUrl: String,
+    val isBot: Boolean = false,
+)
 
 data class ModerationCallbacks(
     val currentUserId: String? = null,
@@ -400,6 +408,7 @@ fun MessagingScreen(
                             onOpenSettings = { showSettingsDialog = true },
                             onOpenVinoDm = { viewModel.openVinoDm() },
                             onClearVinoChat = { viewModel.clearVinoChat() },
+                            onHideChannel = { viewModel.hideChannel(it) },
                             isVinoDm = viewModel.isVinoDmChannel(),
                             vinoResponding = vinoResponding,
                             modifier = Modifier
@@ -568,6 +577,7 @@ fun ChatLayout(
     onOpenSettings: () -> Unit = {},
     onOpenVinoDm: () -> Unit = {},
     onClearVinoChat: () -> Unit = {},
+    onHideChannel: (String) -> Unit = {},
     isVinoDm: Boolean = false,
     vinoResponding: Boolean = false,
     modifier: Modifier = Modifier
@@ -593,7 +603,8 @@ fun ChatLayout(
                     onEnableNotifications = onEnableNotifications,
                     searchQuery = channelSearchQuery,
                     onSearchQueryChange = onChannelSearchQueryChange,
-                    isCompactScreen = isCompactScreen
+                    isCompactScreen = isCompactScreen,
+                    onHideChannel = onHideChannel
                 )
 
                 // Draggable divider (only on non-compact screens)
@@ -688,7 +699,8 @@ fun ChannelSidebar(
     onEnableNotifications: () -> Unit,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
-    isCompactScreen: Boolean = false
+    isCompactScreen: Boolean = false,
+    onHideChannel: (String) -> Unit = {}
 ) {
     Card(
         modifier = modifier.padding(if (isCompactScreen) 4.dp else 16.dp),
@@ -922,7 +934,8 @@ fun ChannelSidebar(
                             ChannelItem(
                                 channel = channel,
                                 isSelected = channel.id == selectedChannelId,
-                                onClick = { onChannelSelect(channel.id) }
+                                onClick = { onChannelSelect(channel.id) },
+                                onDelete = { onHideChannel(channel.id) }
                             )
                         }
                     }
@@ -1027,7 +1040,8 @@ fun ChannelSidebar(
 fun ChannelItem(
     channel: JsChatChannel,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDelete: (() -> Unit)? = null
 ) {
     val channelSubtitle = when (channel.id) {
         "wdw-community" -> "Everyone"
@@ -1038,16 +1052,19 @@ fun ChannelItem(
 
     val bgColor = if (isSelected) WdwOrange else MaterialTheme.colorScheme.surfaceVariant
 
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .clickable(onClick = onClick),
+            .padding(vertical = 4.dp),
         colors = CardDefaults.cardColors(containerColor = bgColor),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier
+                .clickable(onClick = onClick)
+                .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (isSelected) {
@@ -1126,7 +1143,62 @@ fun ChannelItem(
                     Text(channel.unreadCount.toString(), color = Color.White)
                 }
             }
+
+            // Delete icon for DM channels
+            if (onDelete != null) {
+                IconButton(
+                    onClick = { showDeleteConfirm = true },
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Delete conversation",
+                        tint = if (isSelected) Color.White
+                            else MaterialTheme.colorScheme.onSurface
+                                .copy(alpha = 0.4f),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
         }
+    }
+
+    // Confirmation dialog
+    if (showDeleteConfirm && onDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = {
+                Text("Delete conversation?")
+            },
+            text = {
+                Text(
+                    "This conversation will be removed " +
+                        "from your list. It will reappear " +
+                        "if ${channel.name} sends you a " +
+                        "new message."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteConfirm = false
+                        onDelete()
+                    }
+                ) {
+                    Text(
+                        "Delete",
+                        color = Color(0xFFEF5350)
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteConfirm = false }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -3399,69 +3471,140 @@ fun MessageInput(
                 )
             }
 
-            // @Vino autocomplete suggestion
-            val showVinoHint = remember(textFieldValue.text) {
+            // ─── @mention autocomplete suggestions ──────────────────
+            val mentionQuery = remember(
+                textFieldValue.text,
+                textFieldValue.selection
+            ) {
                 val text = textFieldValue.text
-                val cursorPos = textFieldValue.selection.start
-                if (cursorPos == 0) return@remember false
-                // Find the word being typed at cursor
-                val beforeCursor = text.substring(0, cursorPos)
-                val lastWord = beforeCursor.split(" ", "\n").lastOrNull() ?: ""
-                lastWord.equals("@", ignoreCase = true) ||
-                    lastWord.startsWith("@v", ignoreCase = true) ||
-                    lastWord.startsWith("@vi", ignoreCase = true) ||
-                    lastWord.startsWith("@vin", ignoreCase = true)
+                val cursor = textFieldValue.selection.start
+                if (cursor == 0) return@remember null
+                val beforeCursor = text.substring(0, cursor)
+                val lastAtIndex = beforeCursor.lastIndexOf('@')
+                if (lastAtIndex < 0) return@remember null
+                // @ must be at word boundary
+                if (lastAtIndex > 0 &&
+                    beforeCursor[lastAtIndex - 1] !in listOf(
+                        ' ', '\n'
+                    )
+                ) return@remember null
+                val partial = beforeCursor.substring(lastAtIndex + 1)
+                // Already completed — space means done
+                if (partial.contains(' ')) return@remember null
+                partial
             }
+
+            val members = LocalMembers.current
+            val mentionSuggestions = remember(mentionQuery, members) {
+                if (mentionQuery == null) emptyList()
+                else {
+                    val vinoEntry = MentionEntry(
+                        "vino-bot", "Vino", "", isBot = true
+                    )
+                    val memberEntries = members.filterNotNull().map {
+                        MentionEntry(
+                            it.email,
+                            it.name,
+                            it.profilePictureUrl ?: ""
+                        )
+                    }
+                    val all = listOf(vinoEntry) + memberEntries
+                    if (mentionQuery.isBlank()) all.take(8)
+                    else all.filter {
+                        it.name.contains(
+                            mentionQuery, ignoreCase = true
+                        )
+                    }.take(8)
+                }
+            }
+
+            // Helper: apply a mention selection
+            fun applyMention(entry: MentionEntry) {
+                val text = textFieldValue.text
+                val cursor = textFieldValue.selection.start
+                val beforeCursor = text.substring(0, cursor)
+                val lastAt = beforeCursor.lastIndexOf('@')
+                val prefix = text.substring(0, lastAt)
+                val after = text.substring(cursor)
+                val newText = "$prefix@${entry.name} $after"
+                val newCursor = prefix.length +
+                    entry.name.length + 2 // "@Name "
+                textFieldValue = TextFieldValue(
+                    text = newText,
+                    selection = TextRange(newCursor)
+                )
+            }
+
             AnimatedVisibility(
-                visible = showVinoHint,
+                visible = mentionSuggestions.isNotEmpty(),
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically()
             ) {
-                Surface(
-                    onClick = {
-                        // Replace the partial @mention with @Vino
-                        val text = textFieldValue.text
-                        val cursorPos = textFieldValue.selection.start
-                        val beforeCursor = text.substring(0, cursorPos)
-                        val afterCursor = text.substring(cursorPos)
-                        val lastSpaceOrNewline = maxOf(
-                            beforeCursor.lastIndexOf(' '),
-                            beforeCursor.lastIndexOf('\n'),
-                            -1
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant,
+                            RoundedCornerShape(12.dp)
                         )
-                        val prefix = beforeCursor.substring(0, lastSpaceOrNewline + 1)
-                        val newText = prefix + "@Vino " + afterCursor
-                        val newCursor = prefix.length + 7 // "@Vino " length
-                        textFieldValue = TextFieldValue(
-                            text = newText,
-                            selection = TextRange(newCursor)
-                        )
-                    },
-                    color = Color(0xFF9C6ADE).copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            "\uD83E\uDD16",
-                            fontSize = 14.sp
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            "@Vino",
-                            color = Color(0xFF9C6ADE),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            "— Ask the AI sommelier",
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                            fontSize = 11.sp
-                        )
+                    mentionSuggestions.forEachIndexed { index, entry ->
+                        Surface(
+                            onClick = { applyMention(entry) },
+                            color = Color.Transparent,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .padding(
+                                        horizontal = 12.dp,
+                                        vertical = 8.dp
+                                    ),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (entry.isBot) {
+                                    TextWithNotoImageEmoji(
+                                        "\uD83E\uDD16",
+                                        fontSize = 20.sp
+                                    )
+                                } else {
+                                    MemberAvatar(
+                                        name = entry.name,
+                                        imageUrl = entry.imageUrl
+                                            .takeIf { it.isNotBlank() },
+                                        size = 28.dp
+                                    )
+                                }
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    entry.name,
+                                    color = if (entry.isBot)
+                                        Color(0xFF9C6ADE)
+                                    else
+                                        MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                if (entry.isBot) {
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        "— AI sommelier",
+                                        color = MaterialTheme.colorScheme
+                                            .onSurface.copy(alpha = 0.5f),
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+                        }
+                        if (index < mentionSuggestions.lastIndex) {
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme
+                                    .outline.copy(alpha = 0.15f),
+                                modifier = Modifier
+                                    .padding(horizontal = 12.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -3608,6 +3751,14 @@ fun MessageInput(
                         .weight(1f)
                         .onPreviewKeyEvent { event ->
                             if (event.key == Key.Enter) {
+                                // If mention popup is showing,
+                                // Enter selects the top suggestion
+                                if (mentionSuggestions.isNotEmpty()) {
+                                    applyMention(
+                                        mentionSuggestions.first()
+                                    )
+                                    return@onPreviewKeyEvent true
+                                }
                                 if (event.isShiftPressed) {
                                     val cursorPos = textFieldValue.selection.start
                                     val before = textFieldValue.text.substring(0, cursorPos)
