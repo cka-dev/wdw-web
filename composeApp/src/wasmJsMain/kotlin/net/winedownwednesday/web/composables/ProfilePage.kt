@@ -166,10 +166,6 @@ fun ProfilePage(
                         // is read inside the item lambda which IS @Composable.
                         item(key = "profile_section") {
                             val flags = LocalFeatureFlags.current
-                            val showingWizard = editMode &&
-                                flags.onboardingEnforcement &&
-                                isNewUser &&
-                                userProfile?.isOnboardingComplete != true
                             if (editMode) {
                                 if (flags.onboardingEnforcement && isNewUser && userProfile?.isOnboardingComplete != true) {
                                     OnboardingWizard(
