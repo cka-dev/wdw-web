@@ -219,6 +219,18 @@ fun AppNavigation(
         }
     }
 
+    // Redirect new users to Profile (wizard) from any page.
+    // This fires when profile loading completes and isNewUser becomes true,
+    // regardless of which page the user is currently on.
+    LaunchedEffect(isNewUser) {
+        if (isNewUser) {
+            val top = backStack.lastOrNull() as? Route
+            if (top != Route.Profile) {
+                navigateTo(Route.Profile)
+            }
+        }
+    }
+
     // Capture the initial hash at composition time — BEFORE any LaunchedEffect
     // can overwrite window.location.hash (e.g. the currentRoute sync below).
     val initialHash = remember { window.location.hash }
@@ -323,9 +335,9 @@ fun AppNavigation(
                             val isUnverified =
                                 userProfileData?.isVerified != true
                             val bannerText = if (isUnverified) {
-                                "⚠️ Verify your email to unlock messaging and events"
+                                "Verify your email to unlock messaging and events"
                             } else {
-                                "⚠️ Complete your profile to unlock all features"
+                                "Complete your profile to unlock all features"
                             }
                             Box(
                                 modifier = Modifier
