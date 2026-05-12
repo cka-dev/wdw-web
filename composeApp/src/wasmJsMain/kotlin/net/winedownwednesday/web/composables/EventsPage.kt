@@ -460,14 +460,22 @@ fun EventCard(
                 modifier = Modifier.fillMaxWidth()
             )
             {
+                val flags = LocalFeatureFlags.current
                 Button(
                     enabled = showUpcoming,
                     onClick = {
                         hapticVibrate(HapticDuration.MEDIUM, HapticCategory.ALERTS)
-                        if (isUserAuthenticated) {
-                            onRsvpClick()
-                        } else {
+                        if (!isUserAuthenticated) {
                             window.alert("You need to register or log in in to RSVP")
+                        } else if (flags.onboardingEnforcement &&
+                            userProfileData?.isOnboardingComplete != true
+                        ) {
+                            window.alert(
+                                "Please complete your profile and verify " +
+                                        "your email before you can RSVP."
+                            )
+                        } else {
+                            onRsvpClick()
                         }
                     },
                     colors = ButtonDefaults.buttonColors(
