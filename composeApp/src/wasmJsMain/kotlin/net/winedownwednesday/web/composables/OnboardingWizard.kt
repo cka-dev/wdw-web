@@ -282,8 +282,20 @@ fun OnboardingWizard(
                                         Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                             CircularProgressIndicator(color = Color(0xFFFF7F33), modifier = Modifier.size(24.dp))
                                             Spacer(modifier = Modifier.height(8.dp))
-                                            Text("Waiting for verification...", color = Color.White, style = MaterialTheme.typography.bodySmall)
-                                            Text("Check your inbox and click the link.", color = Color(0xFFCCCCCC), style = MaterialTheme.typography.bodySmall)
+                                            Text(
+                                                "Waiting for verification...", 
+                                                color = Color.White, 
+                                                style = MaterialTheme.typography.bodySmall,
+                                                textAlign = TextAlign.Center,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                            Text(
+                                                "Check your inbox and click the link.", 
+                                                color = Color(0xFFCCCCCC), 
+                                                style = MaterialTheme.typography.bodySmall,
+                                                textAlign = TextAlign.Center,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
                                             Spacer(modifier = Modifier.height(8.dp))
                                             TextButton(onClick = {
                                                 viewModel.refreshVerificationStatus(email) { verified ->
@@ -516,43 +528,85 @@ fun OnboardingWizard(
                 }
                 
                 if (currentStep != OnboardingStep.COMPLETE) {
-                    Button(
-                        onClick = {
-                            if (currentStep == OnboardingStep.WELCOME) {
-                                currentStep = OnboardingStep.NAME
-                            } else if (currentIndex < steps.size - 2) {
-                                currentStep = steps[currentIndex + 1]
-                            } else if (currentStep == OnboardingStep.PHOTO) {
-                                // Last step, save profile
-                                val updatedProfile = UserProfileData(
-                                    name = name,
-                                    email = email,
-                                    phone = phone.ifBlank { null },
-                                    aboutMe = profile?.aboutMe, // carry over
-                                    profileImageBitmap = profileImageBitmap,
-                                    profileImageUrl = profileImageUrl,
-                                    birthDate = profile?.birthDate, // carry over
-                                    isVerified = isVerified,
-                                    isMember = profile?.isMember ?: false,
-                                    hasPassword = profile?.hasPassword ?: false,
-                                    hasPasskey = profile?.hasPasskey ?: false,
-                                    eventRsvps = profile?.eventRsvps ?: emptyMap(),
-                                    blockedEmails = profile?.blockedEmails ?: emptyList(),
-                                    profession = profession.ifBlank { null },
-                                    company = company.ifBlank { null },
-                                    interests = interestsText.split(",").map { it.trim() }.filter { it.isNotEmpty() }.ifEmpty { null },
-                                    favoriteWines = favoriteWinesText.split(",").map { it.trim() }.filter { it.isNotEmpty() }.ifEmpty { null },
-                                )
-                                onComplete(updatedProfile)
-                                currentStep = OnboardingStep.COMPLETE
-                            }
-                        },
-                        enabled = isNextEnabled,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (nextButtonText.startsWith("Skip")) Color(0xFF555555) else Color(0xFFFF7F33)
-                        )
-                    ) {
-                        Text(text = nextButtonText)
+                    val isSkip = nextButtonText.startsWith("Skip")
+                    
+                    if (isSkip) {
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = {
+                                if (currentStep == OnboardingStep.WELCOME) {
+                                    currentStep = OnboardingStep.NAME
+                                } else if (currentIndex < steps.size - 2) {
+                                    currentStep = steps[currentIndex + 1]
+                                } else if (currentStep == OnboardingStep.PHOTO) {
+                                    val updatedProfile = UserProfileData(
+                                        name = name,
+                                        email = email,
+                                        phone = phone.ifBlank { null },
+                                        aboutMe = profile?.aboutMe,
+                                        profileImageBitmap = profileImageBitmap,
+                                        profileImageUrl = profileImageUrl,
+                                        birthDate = profile?.birthDate,
+                                        isVerified = isVerified,
+                                        isMember = profile?.isMember ?: false,
+                                        hasPassword = profile?.hasPassword ?: false,
+                                        hasPasskey = profile?.hasPasskey ?: false,
+                                        eventRsvps = profile?.eventRsvps ?: emptyMap(),
+                                        blockedEmails = profile?.blockedEmails ?: emptyList(),
+                                        profession = profession.ifBlank { null },
+                                        company = company.ifBlank { null },
+                                        interests = interestsText.split(",").map { it.trim() }.filter { it.isNotEmpty() }.ifEmpty { null },
+                                        favoriteWines = favoriteWinesText.split(",").map { it.trim() }.filter { it.isNotEmpty() }.ifEmpty { null },
+                                    )
+                                    onComplete(updatedProfile)
+                                    currentStep = OnboardingStep.COMPLETE
+                                }
+                            },
+                            enabled = isNextEnabled,
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color(0xFFCCCCCC)
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF555555))
+                        ) {
+                            Text(text = nextButtonText)
+                        }
+                    } else {
+                        Button(
+                            onClick = {
+                                if (currentStep == OnboardingStep.WELCOME) {
+                                    currentStep = OnboardingStep.NAME
+                                } else if (currentIndex < steps.size - 2) {
+                                    currentStep = steps[currentIndex + 1]
+                                } else if (currentStep == OnboardingStep.PHOTO) {
+                                    val updatedProfile = UserProfileData(
+                                        name = name,
+                                        email = email,
+                                        phone = phone.ifBlank { null },
+                                        aboutMe = profile?.aboutMe,
+                                        profileImageBitmap = profileImageBitmap,
+                                        profileImageUrl = profileImageUrl,
+                                        birthDate = profile?.birthDate,
+                                        isVerified = isVerified,
+                                        isMember = profile?.isMember ?: false,
+                                        hasPassword = profile?.hasPassword ?: false,
+                                        hasPasskey = profile?.hasPasskey ?: false,
+                                        eventRsvps = profile?.eventRsvps ?: emptyMap(),
+                                        blockedEmails = profile?.blockedEmails ?: emptyList(),
+                                        profession = profession.ifBlank { null },
+                                        company = company.ifBlank { null },
+                                        interests = interestsText.split(",").map { it.trim() }.filter { it.isNotEmpty() }.ifEmpty { null },
+                                        favoriteWines = favoriteWinesText.split(",").map { it.trim() }.filter { it.isNotEmpty() }.ifEmpty { null },
+                                    )
+                                    onComplete(updatedProfile)
+                                    currentStep = OnboardingStep.COMPLETE
+                                }
+                            },
+                            enabled = isNextEnabled,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFFF7F33)
+                            )
+                        ) {
+                            Text(text = nextButtonText)
+                        }
                     }
                 } else {
                     // Show a loading indicator on COMPLETE while waiting for saveProfile to finish
