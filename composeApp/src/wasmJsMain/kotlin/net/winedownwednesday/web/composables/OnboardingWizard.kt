@@ -161,7 +161,10 @@ fun OnboardingWizard(
                 },
                 label = "WizardSteps"
             ) { step ->
-                Column(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     when (step) {
                         OnboardingStep.WELCOME -> {
                             Text(

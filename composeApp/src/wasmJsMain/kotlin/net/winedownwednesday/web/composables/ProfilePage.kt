@@ -260,9 +260,16 @@ fun ProfilePage(
                                         }
                                     )
                                 }
-                                AnimatedVisibility(visible = isProfileSaving) {
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    LinearProgressBar()
+                                // Only show the saving bar for the flat edit form,
+                                // not the wizard (which has its own COMPLETE spinner).
+                                val isWizardActive = flags.onboardingEnforcement &&
+                                    isNewUser &&
+                                    userProfile?.isOnboardingComplete != true
+                                if (!isWizardActive) {
+                                    AnimatedVisibility(visible = isProfileSaving) {
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        LinearProgressBar()
+                                    }
                                 }
                             } else {
                                 userProfile?.let {

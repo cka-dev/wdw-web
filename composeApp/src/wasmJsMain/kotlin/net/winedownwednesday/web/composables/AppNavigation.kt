@@ -176,13 +176,19 @@ fun AppNavigation(
     val userEmail by authViewModel.email.collectAsState()
     val userProfileData by authViewModel.profileData.collectAsState()
 
-    // Treat a user as "new" if their profile is not yet onboarding-complete.
-    // This is more reliable than the UI toggle (isNewUser from ViewModel),
-    // which only gets set on the passkey register path and misses email/
-    // password and other sign-in flows. Profile data starts null while
-    // loading, so we default to false (no wizard flash) until it arrives.
-    val isNewUser = userProfileData != null &&
-        userProfileData?.isOnboardingComplete != true
+    val isFetchingProfile by authViewModel.isFetchingProfile.collectAsState()
+
+    // Treat a user as "new" if:
+    //   (a) profile loaded but onboarding is not complete, OR
+    //   (b) profile fetch finished and no profile doc exists
+    //       (brand-new user who just registered).
+    // While the profile is still loading we default to false
+    // to avoid a wizard flash on page load.
+    val isNewUser = when {
+        isFetchingProfile -> false
+        userProfileData == null -> isLoggedIn   // no doc = new
+        else -> userProfileData?.isOnboardingComplete != true
+    }
 
     // --- Responsive layout ------------------------------------------------
     val sizeInfo = rememberWindowSizeInfo()
