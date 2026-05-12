@@ -503,7 +503,7 @@ fun OnboardingWizard(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Optional — skip anytime.",
+                                text = "Recommended — helps members recognize you.",
                                 color = Color(0xFFCCCCCC),
                                 style = MaterialTheme.typography.bodyMedium,
                                 textAlign = TextAlign.Center,
