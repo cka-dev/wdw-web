@@ -96,6 +96,12 @@ fun ProfilePage(
     val isProfileLoading by viewModel.isFetchingProfile.collectAsStateWithLifecycle()
     val isProfileSaving by viewModel.isSavingProfile.collectAsStateWithLifecycle()
     var editMode by remember { mutableStateOf(isNewUser) }
+    // When profile data arrives and reveals the user hasn't completed
+    // onboarding, auto-flip editMode so the wizard shows immediately
+    // without requiring a manual "Edit Profile" click.
+    LaunchedEffect(isNewUser) {
+        if (isNewUser) editMode = true
+    }
     var showSuccessToast by remember { mutableStateOf(false) }
     var showFailureToast by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
