@@ -163,52 +163,93 @@ fun ProfilePage(
                     ) {
                         item(key = "profile_content_${userProfile?.hashCode()}") {
                             if (editMode) {
-                                ProfileEditSection(
-                                    profile = userProfile,
-                                    editMode = editMode,
-                                    onSave = { updatedProfile ->
-                                        viewModel.saveProfile(updatedProfile)
-                                        { success ->
-                                            if (success) {
-                                                editMode = false
-                                                showSuccessToast = true
-                                                showFailureToast = false
-                                            } else {
-                                                showFailureToast = true
-                                                showSuccessToast = false
-                                            }
-                                            coroutineScope.launch {
-                                                delay(3500)
-                                                showSuccessToast = false
-                                                showFailureToast = false
-                                            }
-                                        }
-                                    },
-
-                                    onCancel = {
-                                        editMode = false
-                                        viewModel.fetchProfile(userEmail)
-                                    },
-                                    isNewUser = isNewUser,
-                                    userEmail = userEmail,
-                                    onEmailVerification = {
-                                        viewModel.sendVerificationEmail(userEmail) { success ->
-                                            if (success) {
-                                                showVerificationEmailToast = true
+                                if (isNewUser && userProfile?.isOnboardingComplete != true) {
+                                    OnboardingWizard(
+                                        profile = userProfile,
+                                        userEmail = userEmail,
+                                        onComplete = { updatedProfile ->
+                                            viewModel.saveProfile(updatedProfile) { success ->
+                                                if (success) {
+                                                    editMode = false
+                                                    showSuccessToast = true
+                                                    showFailureToast = false
+                                                } else {
+                                                    showFailureToast = true
+                                                    showSuccessToast = false
+                                                }
                                                 coroutineScope.launch {
                                                     delay(3500)
-                                                    showVerificationEmailToast = false
+                                                    showSuccessToast = false
+                                                    showFailureToast = false
                                                 }
-                                            } else {
-                                                showVerificationEmailFailureToast = true
+                                            }
+                                        },
+                                        onEmailVerification = {
+                                            viewModel.sendVerificationEmail(userEmail) { success ->
+                                                if (success) {
+                                                    showVerificationEmailToast = true
+                                                    coroutineScope.launch {
+                                                        delay(3500)
+                                                        showVerificationEmailToast = false
+                                                    }
+                                                } else {
+                                                    showVerificationEmailFailureToast = true
+                                                    coroutineScope.launch {
+                                                        delay(3500)
+                                                        showVerificationEmailFailureToast = false
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        viewModel = viewModel
+                                    )
+                                } else {
+                                    ProfileEditSection(
+                                        profile = userProfile,
+                                        editMode = editMode,
+                                        onSave = { updatedProfile ->
+                                            viewModel.saveProfile(updatedProfile)
+                                            { success ->
+                                                if (success) {
+                                                    editMode = false
+                                                    showSuccessToast = true
+                                                    showFailureToast = false
+                                                } else {
+                                                    showFailureToast = true
+                                                    showSuccessToast = false
+                                                }
                                                 coroutineScope.launch {
                                                     delay(3500)
-                                                    showVerificationEmailFailureToast = false
+                                                    showSuccessToast = false
+                                                    showFailureToast = false
+                                                }
+                                            }
+                                        },
+                                        onCancel = {
+                                            editMode = false
+                                            viewModel.fetchProfile(userEmail)
+                                        },
+                                        isNewUser = isNewUser,
+                                        userEmail = userEmail,
+                                        onEmailVerification = {
+                                            viewModel.sendVerificationEmail(userEmail) { success ->
+                                                if (success) {
+                                                    showVerificationEmailToast = true
+                                                    coroutineScope.launch {
+                                                        delay(3500)
+                                                        showVerificationEmailToast = false
+                                                    }
+                                                } else {
+                                                    showVerificationEmailFailureToast = true
+                                                    coroutineScope.launch {
+                                                        delay(3500)
+                                                        showVerificationEmailFailureToast = false
+                                                    }
                                                 }
                                             }
                                         }
-                                    }
-                                )
+                                    )
+                                }
                                 AnimatedVisibility(visible = isProfileSaving) {
                                     Spacer(modifier = Modifier.height(16.dp))
                                     LinearProgressBar()
@@ -579,8 +620,8 @@ fun ProfileEditSection(
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text(requiredLabel("Name"), color = Color.White) },
-                isError = enforced && name.isBlank(),
+                label = { Text("Name *", color = Color.White) },
+                isError = name.isBlank(),
                 colors = TextFieldDefaults.colors(cursorColor = Color(0xFFFF7F33))
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -588,7 +629,7 @@ fun ProfileEditSection(
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                label = { Text(requiredLabel("Email"), color = Color.White) },
+                label = { Text("Email *", color = Color.White) },
                 colors = TextFieldDefaults.colors(cursorColor = Color(0xFFFF7F33))
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -599,8 +640,8 @@ fun ProfileEditSection(
                     val stripped = numericRegex.replace(it, "")
                     phone = stripped.take(10)
                 },
-                label = { Text(requiredLabel("Phone"), color = Color.White) },
-                isError = enforced && phone.isBlank(),
+                label = { Text("Phone *", color = Color.White) },
+                isError = phone.isBlank(),
                 visualTransformation = NanpVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 colors = TextFieldDefaults.colors(
