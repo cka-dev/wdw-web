@@ -57,6 +57,7 @@ external object StreamBridge {
     fun addDevice(token: String, pushProvider: String): Promise<JsBoolean>
     fun removeDevice(token: String): Promise<JsBoolean>
     fun truncateChannel(channelId: String): Promise<JsBoolean>
+    fun hideChannel(channelId: String): Promise<JsBoolean>
     fun disconnectUser(): Promise<JsAny?>
 }
 

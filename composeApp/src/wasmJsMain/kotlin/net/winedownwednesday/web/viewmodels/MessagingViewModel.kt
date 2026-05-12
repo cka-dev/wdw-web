@@ -361,6 +361,30 @@ class MessagingViewModel(
         }
     }
 
+    /**
+     * Hides a DM channel from the user's channel list.
+     * The channel will reappear if the other user sends a new message.
+     */
+    fun hideChannel(channelId: String) {
+        viewModelScope.launch {
+            try {
+                StreamBridge.hideChannel(channelId)
+                    .await<JsBoolean>()
+                // Remove from local state immediately
+                _channels.value = _channels.value
+                    .filter { it.id != channelId }
+                // If it was the active channel, deselect
+                if (_selectedChannelId.value == channelId) {
+                    _selectedChannelId.value = null
+                    _messages.value = emptyList()
+                }
+                messageCache.remove(channelId)
+            } catch (e: Exception) {
+                // Silently ignore
+            }
+        }
+    }
+
     fun startDirectMessage(userId: String) {
         viewModelScope.launch {
             try {
