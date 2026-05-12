@@ -482,7 +482,10 @@ fun OnboardingWizard(
             // Navigation Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = when (currentStep) {
+                    OnboardingStep.WELCOME, OnboardingStep.COMPLETE -> Arrangement.Center
+                    else -> Arrangement.SpaceBetween
+                },
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (currentStep != OnboardingStep.WELCOME && currentStep != OnboardingStep.COMPLETE) {
@@ -495,8 +498,6 @@ fun OnboardingWizard(
                     ) {
                         Text("← Back", color = Color.White)
                     }
-                } else {
-                    Spacer(modifier = Modifier.weight(1f)) // pushes Next button to right
                 }
                 
                 val isNextEnabled = when (currentStep) {
