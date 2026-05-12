@@ -72,17 +72,27 @@ fun OnboardingWizard(
     var currentStep by remember { mutableStateOf(OnboardingStep.WELCOME) }
     
     val numericRegex = Regex("[^0-9]")
-    var name by remember(profile) { mutableStateOf(profile?.name ?: "") }
-    var email by remember(profile) { mutableStateOf(profile?.email ?: userEmail) }
-    var phone by remember(profile) { mutableStateOf(profile?.phone?.replace(numericRegex, "")?.take(10) ?: "") }
-    var profession by remember(profile) { mutableStateOf(profile?.profession ?: "") }
-    var company by remember(profile) { mutableStateOf(profile?.company ?: "") }
-    var interestsText by remember(profile) { mutableStateOf(profile?.interests?.joinToString(", ") ?: "") }
-    var favoriteWinesText by remember(profile) { mutableStateOf(profile?.favoriteWines?.joinToString(", ") ?: "") }
-    var profileImageBitmap by remember(profile) { mutableStateOf(profile?.profileImageBitmap) }
-    var profileImageUrl by remember(profile) { mutableStateOf(profile?.profileImageUrl) }
-    
-    var isVerified by remember(profile) { mutableStateOf(profile?.isVerified == true) }
+    // No 'profile' key — prevents a server-side profile refresh
+    // (e.g. refreshVerificationStatus) from resetting fields the
+    // user has already typed in.
+    var name by remember { mutableStateOf(profile?.name ?: "") }
+    var email by remember { mutableStateOf(profile?.email ?: userEmail) }
+    var phone by remember { mutableStateOf(profile?.phone?.replace(numericRegex, "")?.take(10) ?: "") }
+    var profession by remember { mutableStateOf(profile?.profession ?: "") }
+    var company by remember { mutableStateOf(profile?.company ?: "") }
+    var interestsText by remember { mutableStateOf(profile?.interests?.joinToString(", ") ?: "") }
+    var favoriteWinesText by remember { mutableStateOf(profile?.favoriteWines?.joinToString(", ") ?: "") }
+    var profileImageBitmap by remember { mutableStateOf(profile?.profileImageBitmap) }
+    var profileImageUrl by remember { mutableStateOf(profile?.profileImageUrl) }
+
+    // isVerified is the one value we DO want to update reactively
+    // when refreshVerificationStatus returns, but we update only
+    // this field — not the whole wizard — via LaunchedEffect.
+    var isVerified by remember { mutableStateOf(profile?.isVerified == true) }
+    LaunchedEffect(profile?.isVerified) {
+        if (profile?.isVerified == true) isVerified = true
+    }
+
     var isPollingVerification by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     
@@ -175,13 +185,17 @@ fun OnboardingWizard(
                                 text = "What's your name?",
                                 style = MaterialTheme.typography.titleLarge,
                                 color = Color.White,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "This is how other members will know you.",
                                 color = Color(0xFFCCCCCC),
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             OutlinedTextField(
@@ -199,13 +213,17 @@ fun OnboardingWizard(
                                 text = "Verify your email",
                                 style = MaterialTheme.typography.titleLarge,
                                 color = Color.White,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "We need to verify your email address to secure your account.",
                                 color = Color(0xFFCCCCCC),
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             OutlinedTextField(
@@ -278,13 +296,17 @@ fun OnboardingWizard(
                                 text = "What's your phone number?",
                                 style = MaterialTheme.typography.titleLarge,
                                 color = Color.White,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "We need this to keep you in the loop about community events.",
                                 color = Color(0xFFCCCCCC),
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             OutlinedTextField(
@@ -311,13 +333,17 @@ fun OnboardingWizard(
                                 text = "Tell us about yourself",
                                 style = MaterialTheme.typography.titleLarge,
                                 color = Color.White,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "Optional — skip anytime.",
                                 color = Color(0xFFCCCCCC),
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             OutlinedTextField(
@@ -344,13 +370,17 @@ fun OnboardingWizard(
                                 text = "What are your interests?",
                                 style = MaterialTheme.typography.titleLarge,
                                 color = Color.White,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "Optional — skip anytime.",
                                 color = Color(0xFFCCCCCC),
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             OutlinedTextField(
@@ -377,13 +407,17 @@ fun OnboardingWizard(
                                 text = "Add a profile photo",
                                 style = MaterialTheme.typography.titleLarge,
                                 color = Color.White,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "Optional — skip anytime.",
                                 color = Color(0xFFCCCCCC),
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(modifier = Modifier.height(24.dp))
                             ProfilePictureSection(
