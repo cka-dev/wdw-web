@@ -173,9 +173,16 @@ fun AppNavigation(
     // --- Auth state -------------------------------------------------------
     val uiState by authViewModel.uiState.collectAsState()
     val isLoggedIn = uiState is LoginUIState.Authenticated
-    val isNewUser by authViewModel.isNewUser.collectAsState()
     val userEmail by authViewModel.email.collectAsState()
     val userProfileData by authViewModel.profileData.collectAsState()
+
+    // Treat a user as "new" if their profile is not yet onboarding-complete.
+    // This is more reliable than the UI toggle (isNewUser from ViewModel),
+    // which only gets set on the passkey register path and misses email/
+    // password and other sign-in flows. Profile data starts null while
+    // loading, so we default to false (no wizard flash) until it arrives.
+    val isNewUser = userProfileData != null &&
+        userProfileData?.isOnboardingComplete != true
 
     // --- Responsive layout ------------------------------------------------
     val sizeInfo = rememberWindowSizeInfo()
