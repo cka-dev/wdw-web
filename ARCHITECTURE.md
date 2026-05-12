@@ -539,7 +539,7 @@ Firestore (config/featureFlags)
 
 | File | Purpose |
 |------|---------|
-| `data/models/FeatureFlags.kt` | `@Serializable` data class with all-false defaults |
+| `data/models/FeatureFlags.kt` | `@Serializable` data class with **category-aware defaults** |
 | `data/models/InitialDataResponse.kt` | Includes `featureFlags` field |
 | `data/repositories/AppRepository.kt` | `_featureFlags` StateFlow populated from batch |
 | `composables/LocalFeatureFlags.kt` | `staticCompositionLocalOf { FeatureFlags() }` |
@@ -554,10 +554,48 @@ if (flags.deleteDmConversations) {
 }
 ```
 
+### Failure Contingency
+
+If the flag endpoint is unreachable or `getInitialData` fails, `FeatureFlags()` uses its **Kotlin default values**:
+
+| Category | Default | Rationale |
+|----------|---------|-----------|
+| **Stable** (shipped, proven) | `true` | Users keep working — stable features stay ON |
+| **Experimental** (new, untested) | `false` | Untested code stays hidden |
+
+This means endpoint downtime never causes stable features to disappear, and never leaks unreleased features.
+
+### Flag Lifecycle (Anti-Littering Policy)
+
+Flags are **temporary**. They exist to decouple deployment from rollout, not to permanently gate features.
+
+```
+1. NEW:     Add flag to FeatureFlags.kt with default = false
+2. GATED:   Server enables for specific platforms (e.g. web only)
+3. STABLE:  All platforms enabled → flip default to true
+4. REMOVE:  Delete flag check from code + delete from Firestore
+```
+
+> [!IMPORTANT]
+> When a feature is stable on all platforms, remove its flag check from the codebase. Don't let `if (flags.xxx)` accumulate — each one adds cognitive load and testing surface.
+
+### Cross-Platform Lock (`requireAllPlatforms`)
+
+Some features must go live on **all clients simultaneously** (e.g. protocol changes, shared state). The `requireAllPlatforms` modifier ensures a flag only resolves to `true` when every platform is enabled:
+
+```
+Firestore: { "myFeature": { "web": true, "android": false, "ios": false, "requireAllPlatforms": true } }
+Resolved for web: false  (because android + ios are off)
+```
+
+Toggle via the 🔒/🔓 button in the admin dashboard.
+
 ### Design Decisions
 
-- **All flags default to `false`** — features stay hidden if the server hasn't deployed or the endpoint fails
+- **Stable features default `true`** — survive endpoint outages
+- **New features default `false`** — stay hidden until explicitly enabled
 - **Unknown flags are silently ignored** — `kotlinx.serialization` with default values skips unknown keys
 - **No extra network call** — flags piggyback on the existing `getInitialData` batch endpoint
 - **Admin dashboard toggle** — flags can be toggled per-platform in real time at `/feature-flags`
+- **Gate at the highest level** — prefer screen/route-level checks over deep component checks
 
