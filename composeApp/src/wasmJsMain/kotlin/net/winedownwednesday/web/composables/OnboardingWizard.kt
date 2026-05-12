@@ -654,9 +654,11 @@ fun OnboardingWizard(
                             },
                             enabled = isNextEnabled,
                             colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = Color(0xFFCCCCCC)
+                                contentColor = Color(0xFFFF7F33)
                             ),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF555555))
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp, Color(0xFFFF7F33).copy(alpha = 0.5f)
+                            )
                         ) {
                             Text(text = nextButtonText)
                         }
