@@ -436,7 +436,8 @@ fun AppNavigation(
                                             isNewUser              = isNewUser,
                                             viewModel              = authViewModel,
                                             userEmail              = userEmail,
-                                            onNavigateToSettings   = { navigateTo(Route.Settings) }
+                                            onNavigateToSettings   = { navigateTo(Route.Settings) },
+                                            onNavigateHome         = { replaceTop(Route.Home) }
                                         )
                                     }
                                 }

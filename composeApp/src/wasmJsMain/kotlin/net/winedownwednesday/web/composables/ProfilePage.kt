@@ -90,6 +90,7 @@ fun ProfilePage(
     userEmail: String,
     viewModel: AuthPageViewModel,
     onNavigateToSettings: () -> Unit = {},
+    onNavigateHome: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val userProfile by viewModel.profileData.collectAsStateWithLifecycle()
@@ -183,6 +184,11 @@ fun ProfilePage(
                                                     editMode = false
                                                     showSuccessToast = true
                                                     showFailureToast = false
+                                                    // Brief delay to show success, then go Home
+                                                    coroutineScope.launch {
+                                                        delay(1500)
+                                                        onNavigateHome()
+                                                    }
                                                 } else {
                                                     showFailureToast = true
                                                     showSuccessToast = false
