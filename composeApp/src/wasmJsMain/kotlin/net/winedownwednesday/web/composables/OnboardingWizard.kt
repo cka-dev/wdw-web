@@ -109,19 +109,22 @@ fun OnboardingWizard(
 
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A)),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(8.dp),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(12.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp, Color(0xFF3A3A3A)
+        ),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp)
+                .padding(32.dp)
         ) {
             // Progress Bar (hidden on Welcome and Complete)
             if (currentStep != OnboardingStep.WELCOME && currentStep != OnboardingStep.COMPLETE) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -129,19 +132,20 @@ fun OnboardingWizard(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .height(4.dp)
+                                .height(5.dp)
                                 .background(
-                                    color = if (i <= currentProgress) Color(0xFFFF7F33) else Color(0xFF555555),
-                                    shape = RoundedCornerShape(2.dp)
+                                    color = if (i <= currentProgress)
+                                        Color(0xFFFF7F33) else Color(0xFF444444),
+                                    shape = RoundedCornerShape(3.dp)
                                 )
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = "Step $currentProgress of $totalSteps",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFF999999),
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center
                 )
@@ -167,6 +171,18 @@ fun OnboardingWizard(
                 ) {
                     when (step) {
                         OnboardingStep.WELCOME -> {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            // Decorative accent bar
+                            Box(
+                                modifier = Modifier
+                                    .width(48.dp)
+                                    .height(4.dp)
+                                    .background(
+                                        Color(0xFFFF7F33),
+                                        RoundedCornerShape(2.dp)
+                                    )
+                            )
+                            Spacer(modifier = Modifier.height(24.dp))
                             Text(
                                 text = "Welcome to Wine Down Wednesday!",
                                 style = MaterialTheme.typography.headlineMedium,
@@ -177,11 +193,13 @@ fun OnboardingWizard(
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = "We're excited to have you join our community. Let's get your profile set up so other members can get to know you.",
-                                color = Color(0xFFCCCCCC),
+                                text = "We're excited to have you join our community.\nLet's get your profile set up so other members can get to know you.",
+                                color = Color(0xFFBBBBBB),
+                                style = MaterialTheme.typography.bodyLarge,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.fillMaxWidth()
                             )
+                            Spacer(modifier = Modifier.height(8.dp))
                         }
                         
                         OnboardingStep.NAME -> {
@@ -206,7 +224,13 @@ fun OnboardingWizard(
                                 value = name,
                                 onValueChange = { name = it },
                                 label = { Text("Full Name *", color = Color.White) },
-                                colors = TextFieldDefaults.colors(cursorColor = Color(0xFFFF7F33)),
+                                colors = TextFieldDefaults.colors(
+                                    cursorColor = Color(0xFFFF7F33),
+                                    unfocusedContainerColor = Color.Transparent,
+                                    focusedContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color(0xFFFF7F33),
+                                    unfocusedIndicatorColor = Color(0xFF555555)
+                                ),
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true
                             )
@@ -268,7 +292,10 @@ fun OnboardingWizard(
                                         onEmailVerification() 
                                         isPollingVerification = true
                                     },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF555555))
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFFFF7F33)
+                                    ),
+                                    shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Text("Send Verification Link")
                                 }
@@ -276,10 +303,18 @@ fun OnboardingWizard(
                                 if (isPollingVerification) {
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Card(
-                                        colors = CardDefaults.cardColors(containerColor = Color(0xFF333333)),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = Color(0xFF333333)
+                                        ),
+                                        shape = RoundedCornerShape(12.dp),
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(20.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
                                             CircularProgressIndicator(color = Color(0xFFFF7F33), modifier = Modifier.size(24.dp))
                                             Spacer(modifier = Modifier.height(8.dp))
                                             Text(
@@ -350,7 +385,9 @@ fun OnboardingWizard(
                                 colors = TextFieldDefaults.colors(
                                     cursorColor = Color(0xFFFF7F33),
                                     unfocusedContainerColor = Color.Transparent,
-                                    focusedContainerColor = Color.Transparent
+                                    focusedContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color(0xFFFF7F33),
+                                    unfocusedIndicatorColor = Color(0xFF555555)
                                 ),
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true
@@ -379,16 +416,28 @@ fun OnboardingWizard(
                                 value = profession,
                                 onValueChange = { profession = it },
                                 label = { Text("Profession", color = Color.White) },
-                                colors = TextFieldDefaults.colors(cursorColor = Color(0xFFFF7F33)),
+                                colors = TextFieldDefaults.colors(
+                                    cursorColor = Color(0xFFFF7F33),
+                                    unfocusedContainerColor = Color.Transparent,
+                                    focusedContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color(0xFFFF7F33),
+                                    unfocusedIndicatorColor = Color(0xFF555555)
+                                ),
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
                             OutlinedTextField(
                                 value = company,
                                 onValueChange = { company = it },
                                 label = { Text("Company", color = Color.White) },
-                                colors = TextFieldDefaults.colors(cursorColor = Color(0xFFFF7F33)),
+                                colors = TextFieldDefaults.colors(
+                                    cursorColor = Color(0xFFFF7F33),
+                                    unfocusedContainerColor = Color.Transparent,
+                                    focusedContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color(0xFFFF7F33),
+                                    unfocusedIndicatorColor = Color(0xFF555555)
+                                ),
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true
                             )
@@ -416,17 +465,29 @@ fun OnboardingWizard(
                                 value = interestsText,
                                 onValueChange = { interestsText = it },
                                 label = { Text("Interests (comma-separated)", color = Color.White) },
-                                colors = TextFieldDefaults.colors(cursorColor = Color(0xFFFF7F33)),
-                                placeholder = { Text("Wine, Travel, Cooking", color = Color.Gray) },
+                                colors = TextFieldDefaults.colors(
+                                    cursorColor = Color(0xFFFF7F33),
+                                    unfocusedContainerColor = Color.Transparent,
+                                    focusedContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color(0xFFFF7F33),
+                                    unfocusedIndicatorColor = Color(0xFF555555)
+                                ),
+                                placeholder = { Text("Wine, Travel, Cooking", color = Color(0xFF666666)) },
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
                             OutlinedTextField(
                                 value = favoriteWinesText,
                                 onValueChange = { favoriteWinesText = it },
                                 label = { Text("Favorite Wines (comma-separated)", color = Color.White) },
-                                colors = TextFieldDefaults.colors(cursorColor = Color(0xFFFF7F33)),
-                                placeholder = { Text("Cabernet, Merlot, Pinot Noir", color = Color.Gray) },
+                                colors = TextFieldDefaults.colors(
+                                    cursorColor = Color(0xFFFF7F33),
+                                    unfocusedContainerColor = Color.Transparent,
+                                    focusedContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color(0xFFFF7F33),
+                                    unfocusedIndicatorColor = Color(0xFF555555)
+                                ),
+                                placeholder = { Text("Cabernet, Merlot, Pinot Noir", color = Color(0xFF666666)) },
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -469,6 +530,34 @@ fun OnboardingWizard(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                // Success circle
+                                Box(
+                                    modifier = Modifier
+                                        .size(64.dp)
+                                        .background(
+                                            Color(0xFF4CAF50).copy(alpha = 0.15f),
+                                            CircleShape
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .background(
+                                                Color(0xFF4CAF50),
+                                                CircleShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "\u2713",
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.titleLarge
+                                        )
+                                    }
+                                }
                                 Spacer(modifier = Modifier.height(24.dp))
                                 Text(
                                     text = "You're all set!",
@@ -477,12 +566,14 @@ fun OnboardingWizard(
                                     fontWeight = FontWeight.Bold,
                                     textAlign = TextAlign.Center
                                 )
-                                Spacer(modifier = Modifier.height(16.dp))
+                                Spacer(modifier = Modifier.height(12.dp))
                                 Text(
-                                    text = "Your profile is complete. Welcome to the Wine Down Wednesday community!",
-                                    color = Color(0xFFCCCCCC),
+                                    text = "Your profile is complete.\nWelcome to the Wine Down Wednesday community!",
+                                    color = Color(0xFFBBBBBB),
+                                    style = MaterialTheme.typography.bodyLarge,
                                     textAlign = TextAlign.Center
                                 )
+                                Spacer(modifier = Modifier.height(8.dp))
                             }
                         }
                     }
