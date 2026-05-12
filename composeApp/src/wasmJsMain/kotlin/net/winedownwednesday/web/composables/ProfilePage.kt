@@ -161,8 +161,15 @@ fun ProfilePage(
                             .padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        item(key = "profile_content_${userProfile?.hashCode()}") {
+                        // Single stable item key so the wizard is never
+                        // destroyed/recreated on profile refresh. LocalFeatureFlags
+                        // is read inside the item lambda which IS @Composable.
+                        item(key = "profile_section") {
                             val flags = LocalFeatureFlags.current
+                            val showingWizard = editMode &&
+                                flags.onboardingEnforcement &&
+                                isNewUser &&
+                                userProfile?.isOnboardingComplete != true
                             if (editMode) {
                                 if (flags.onboardingEnforcement && isNewUser && userProfile?.isOnboardingComplete != true) {
                                     OnboardingWizard(
