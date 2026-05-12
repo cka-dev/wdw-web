@@ -162,8 +162,9 @@ fun ProfilePage(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         item(key = "profile_content_${userProfile?.hashCode()}") {
+                            val flags = LocalFeatureFlags.current
                             if (editMode) {
-                                if (isNewUser && userProfile?.isOnboardingComplete != true) {
+                                if (flags.onboardingEnforcement && isNewUser && userProfile?.isOnboardingComplete != true) {
                                     OnboardingWizard(
                                         profile = userProfile,
                                         userEmail = userEmail,
