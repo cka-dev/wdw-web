@@ -548,6 +548,23 @@ class AuthPageViewModel(
         }
     }
 
+    fun refreshVerificationStatus(email: String, onResult: (Boolean) -> Unit) {
+        if (email.isBlank()) {
+            onResult(false)
+            return
+        }
+        viewModelScope.launch {
+            try {
+                val profile = repository.fetchProfileFromServer(email)
+                _profileData.value = profile
+                val verified = profile?.isVerified == true
+                onResult(verified)
+            } catch (e: Exception) {
+                onResult(false)
+            }
+        }
+    }
+
     fun fetchBlockedUsers() {
         viewModelScope.launch {
             try {

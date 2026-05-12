@@ -90,12 +90,19 @@ fun ProfilePage(
     userEmail: String,
     viewModel: AuthPageViewModel,
     onNavigateToSettings: () -> Unit = {},
+    onNavigateHome: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val userProfile by viewModel.profileData.collectAsStateWithLifecycle()
     val isProfileLoading by viewModel.isFetchingProfile.collectAsStateWithLifecycle()
     val isProfileSaving by viewModel.isSavingProfile.collectAsStateWithLifecycle()
     var editMode by remember { mutableStateOf(isNewUser) }
+    // When profile data arrives and reveals the user hasn't completed
+    // onboarding, auto-flip editMode so the wizard shows immediately
+    // without requiring a manual "Edit Profile" click.
+    LaunchedEffect(isNewUser) {
+        if (isNewUser) editMode = true
+    }
     var showSuccessToast by remember { mutableStateOf(false) }
     var showFailureToast by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
@@ -161,57 +168,114 @@ fun ProfilePage(
                             .padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        item(key = "profile_content_${userProfile?.hashCode()}") {
+                        // Single stable item key so the wizard is never
+                        // destroyed/recreated on profile refresh. LocalFeatureFlags
+                        // is read inside the item lambda which IS @Composable.
+                        item(key = "profile_section") {
+                            val flags = LocalFeatureFlags.current
                             if (editMode) {
-                                ProfileEditSection(
-                                    profile = userProfile,
-                                    editMode = editMode,
-                                    onSave = { updatedProfile ->
-                                        viewModel.saveProfile(updatedProfile)
-                                        { success ->
-                                            if (success) {
-                                                editMode = false
-                                                showSuccessToast = true
-                                                showFailureToast = false
-                                            } else {
-                                                showFailureToast = true
-                                                showSuccessToast = false
-                                            }
-                                            coroutineScope.launch {
-                                                delay(3500)
-                                                showSuccessToast = false
-                                                showFailureToast = false
-                                            }
-                                        }
-                                    },
-
-                                    onCancel = {
-                                        editMode = false
-                                        viewModel.fetchProfile(userEmail)
-                                    },
-                                    isNewUser = isNewUser,
-                                    userEmail = userEmail,
-                                    onEmailVerification = {
-                                        viewModel.sendVerificationEmail(userEmail) { success ->
-                                            if (success) {
-                                                showVerificationEmailToast = true
+                                if (flags.onboardingEnforcement && isNewUser && userProfile?.isOnboardingComplete != true) {
+                                    OnboardingWizard(
+                                        profile = userProfile,
+                                        userEmail = userEmail,
+                                        onComplete = { updatedProfile ->
+                                            viewModel.saveProfile(updatedProfile) { success ->
+                                                if (success) {
+                                                    editMode = false
+                                                    showSuccessToast = true
+                                                    showFailureToast = false
+                                                    // Brief delay to show success, then go Home
+                                                    coroutineScope.launch {
+                                                        delay(1500)
+                                                        onNavigateHome()
+                                                    }
+                                                } else {
+                                                    showFailureToast = true
+                                                    showSuccessToast = false
+                                                }
                                                 coroutineScope.launch {
                                                     delay(3500)
-                                                    showVerificationEmailToast = false
+                                                    showSuccessToast = false
+                                                    showFailureToast = false
                                                 }
-                                            } else {
-                                                showVerificationEmailFailureToast = true
+                                            }
+                                        },
+                                        onEmailVerification = {
+                                            viewModel.sendVerificationEmail(userEmail) { success ->
+                                                if (success) {
+                                                    showVerificationEmailToast = true
+                                                    coroutineScope.launch {
+                                                        delay(3500)
+                                                        showVerificationEmailToast = false
+                                                    }
+                                                } else {
+                                                    showVerificationEmailFailureToast = true
+                                                    coroutineScope.launch {
+                                                        delay(3500)
+                                                        showVerificationEmailFailureToast = false
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        viewModel = viewModel
+                                    )
+                                } else {
+                                    ProfileEditSection(
+                                        profile = userProfile,
+                                        editMode = editMode,
+                                        onSave = { updatedProfile ->
+                                            viewModel.saveProfile(updatedProfile)
+                                            { success ->
+                                                if (success) {
+                                                    editMode = false
+                                                    showSuccessToast = true
+                                                    showFailureToast = false
+                                                } else {
+                                                    showFailureToast = true
+                                                    showSuccessToast = false
+                                                }
                                                 coroutineScope.launch {
                                                     delay(3500)
-                                                    showVerificationEmailFailureToast = false
+                                                    showSuccessToast = false
+                                                    showFailureToast = false
+                                                }
+                                            }
+                                        },
+                                        onCancel = {
+                                            editMode = false
+                                            viewModel.fetchProfile(userEmail)
+                                        },
+                                        isNewUser = isNewUser,
+                                        userEmail = userEmail,
+                                        onEmailVerification = {
+                                            viewModel.sendVerificationEmail(userEmail) { success ->
+                                                if (success) {
+                                                    showVerificationEmailToast = true
+                                                    coroutineScope.launch {
+                                                        delay(3500)
+                                                        showVerificationEmailToast = false
+                                                    }
+                                                } else {
+                                                    showVerificationEmailFailureToast = true
+                                                    coroutineScope.launch {
+                                                        delay(3500)
+                                                        showVerificationEmailFailureToast = false
+                                                    }
                                                 }
                                             }
                                         }
+                                    )
+                                }
+                                // Only show the saving bar for the flat edit form,
+                                // not the wizard (which has its own COMPLETE spinner).
+                                val isWizardActive = flags.onboardingEnforcement &&
+                                    isNewUser &&
+                                    userProfile?.isOnboardingComplete != true
+                                if (!isWizardActive) {
+                                    AnimatedVisibility(visible = isProfileSaving) {
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        LinearProgressBar()
                                     }
-                                )
-                                AnimatedVisibility(visible = isProfileSaving) {
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    LinearProgressBar()
                                 }
                             } else {
                                 userProfile?.let {
@@ -407,6 +471,34 @@ fun ProfileReadSection(
                 }
             }
 
+            if (!profile.profession.isNullOrEmpty()) {
+                Text(
+                    text = "Profession: ${profile.profession}",
+                    color = Color.LightGray
+                )
+            }
+
+            if (!profile.company.isNullOrEmpty()) {
+                Text(
+                    text = "Company: ${profile.company}",
+                    color = Color.LightGray
+                )
+            }
+
+            if (!profile.interests.isNullOrEmpty()) {
+                Text(
+                    text = "Interests: ${profile.interests.joinToString(", ")}",
+                    color = Color.LightGray
+                )
+            }
+
+            if (!profile.favoriteWines.isNullOrEmpty()) {
+                Text(
+                    text = "Favorite Wines: ${profile.favoriteWines.joinToString(", ")}",
+                    color = Color.LightGray
+                )
+            }
+
             Text(
                 text = "About Me",
                 style = MaterialTheme.typography.titleMedium,
@@ -439,6 +531,8 @@ fun ProfileEditSection(
     isNewUser: Boolean,
     userEmail: String
 ) {
+    val flags = LocalFeatureFlags.current
+    val enforced = flags.onboardingEnforcement
     val numericRegex = Regex("[^0-9]")
     var name by remember(profile) { mutableStateOf(profile?.name ?: "") }
     var email by remember(profile) { mutableStateOf(profile?.email ?: userEmail) }
@@ -464,7 +558,27 @@ fun ProfileEditSection(
     val hasPasskey by remember(profile) {
         mutableStateOf(profile?.hasPasskey ?: false)
     }
+    var profession by remember(profile) {
+        mutableStateOf(profile?.profession ?: "")
+    }
+    var company by remember(profile) {
+        mutableStateOf(profile?.company ?: "")
+    }
+    var interestsText by remember(profile) {
+        mutableStateOf(
+            profile?.interests?.joinToString(", ") ?: ""
+        )
+    }
+    var favoriteWinesText by remember(profile) {
+        mutableStateOf(
+            profile?.favoriteWines?.joinToString(", ") ?: ""
+        )
+    }
     val showDatePicker = remember { mutableStateOf(false) }
+
+    fun requiredLabel(label: String): String {
+        return if (enforced) "$label *" else label
+    }
 
     val updatedProfile = UserProfileData(
         name = name,
@@ -479,7 +593,15 @@ fun ProfileEditSection(
         hasPassword = hasPassword,
         hasPasskey = hasPasskey,
         eventRsvps = profile?.eventRsvps ?: emptyMap(),
-        blockedEmails = profile?.blockedEmails ?: emptyList()
+        blockedEmails = profile?.blockedEmails ?: emptyList(),
+        profession = profession.ifBlank { null },
+        company = company.ifBlank { null },
+        interests = interestsText.split(",")
+            .map { it.trim() }.filter { it.isNotEmpty() }
+            .ifEmpty { null },
+        favoriteWines = favoriteWinesText.split(",")
+            .map { it.trim() }.filter { it.isNotEmpty() }
+            .ifEmpty { null },
     )
 
     Card(
@@ -509,10 +631,20 @@ fun ProfileEditSection(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // ── Personal Info Section ──
+            Text(
+                text = "Personal Info",
+                style = MaterialTheme.typography.titleSmall,
+                color = Color(0xFFFF7F33),
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Name", color = Color.White) },
+                label = { Text("Name *", color = Color.White) },
+                isError = name.isBlank(),
                 colors = TextFieldDefaults.colors(cursorColor = Color(0xFFFF7F33))
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -520,7 +652,7 @@ fun ProfileEditSection(
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                label = { Text("Email", color = Color.White) },
+                label = { Text("Email *", color = Color.White) },
                 colors = TextFieldDefaults.colors(cursorColor = Color(0xFFFF7F33))
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -531,7 +663,8 @@ fun ProfileEditSection(
                     val stripped = numericRegex.replace(it, "")
                     phone = stripped.take(10)
                 },
-                label = { Text("Phone", color = Color.White) },
+                label = { Text("Phone *", color = Color.White) },
+                isError = phone.isBlank(),
                 visualTransformation = NanpVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 colors = TextFieldDefaults.colors(
@@ -553,6 +686,49 @@ fun ProfileEditSection(
                 showDatePicker = showDatePicker
             )
 
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ── About You Section ──
+            Text(
+                text = "About You",
+                style = MaterialTheme.typography.titleSmall,
+                color = Color(0xFFFF7F33),
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = profession,
+                onValueChange = { profession = it },
+                label = { Text("Profession", color = Color.White) },
+                colors = TextFieldDefaults.colors(cursorColor = Color(0xFFFF7F33))
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = company,
+                onValueChange = { company = it },
+                label = { Text("Company", color = Color.White) },
+                colors = TextFieldDefaults.colors(cursorColor = Color(0xFFFF7F33))
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = interestsText,
+                onValueChange = { interestsText = it },
+                label = { Text("Interests (comma-separated)", color = Color.White) },
+                colors = TextFieldDefaults.colors(cursorColor = Color(0xFFFF7F33)),
+                placeholder = { Text("Wine, Travel, Cooking", color = Color.Gray) }
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = favoriteWinesText,
+                onValueChange = { favoriteWinesText = it },
+                label = { Text("Favorite Wines (comma-separated)", color = Color.White) },
+                colors = TextFieldDefaults.colors(cursorColor = Color(0xFFFF7F33)),
+                placeholder = { Text("Cabernet, Merlot, Pinot Noir", color = Color.Gray) }
+            )
             Spacer(modifier = Modifier.height(8.dp))
 
             OutlinedTextField(
@@ -601,6 +777,16 @@ fun ProfileEditSection(
                 }
             }
 
+            if (enforced && !isVerified) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "⚠️ Email verification is required " +
+                            "to access messaging and events",
+                    color = Color(0xFFFFB74D),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
             Spacer(modifier = Modifier.height(4.dp))
 
             Row(
@@ -646,18 +832,20 @@ fun ProfileEditSection(
                     Text("Save")
                 }
 
-                Button(
-                    onClick = { onCancel() },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF333333),
-                        contentColor = Color.White
-                    )
-                ) {
-                    Text(
-                        text = if (isNewUser) "Skip for now" else "Discard Changes"
-                    )
+                if (!enforced || !isNewUser) {
+                    Button(
+                        onClick = { onCancel() },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF333333),
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Text(
+                            text = if (isNewUser) "Skip for now" else "Discard Changes"
+                        )
+                    }
                 }
             }
         }

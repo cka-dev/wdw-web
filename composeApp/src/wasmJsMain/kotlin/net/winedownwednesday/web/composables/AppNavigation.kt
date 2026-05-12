@@ -1,5 +1,7 @@
 package net.winedownwednesday.web.composables
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -7,9 +9,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -24,6 +28,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
@@ -167,9 +173,22 @@ fun AppNavigation(
     // --- Auth state -------------------------------------------------------
     val uiState by authViewModel.uiState.collectAsState()
     val isLoggedIn = uiState is LoginUIState.Authenticated
-    val isNewUser by authViewModel.isNewUser.collectAsState()
     val userEmail by authViewModel.email.collectAsState()
     val userProfileData by authViewModel.profileData.collectAsState()
+
+    val isFetchingProfile by authViewModel.isFetchingProfile.collectAsState()
+
+    // Treat a user as "new" if:
+    //   (a) profile loaded but onboarding is not complete, OR
+    //   (b) profile fetch finished and no profile doc exists
+    //       (brand-new user who just registered).
+    // While the profile is still loading we default to false
+    // to avoid a wizard flash on page load.
+    val isNewUser = when {
+        isFetchingProfile -> false
+        userProfileData == null -> isLoggedIn   // no doc = new
+        else -> userProfileData?.isOnboardingComplete != true
+    }
 
     // --- Responsive layout ------------------------------------------------
     val sizeInfo = rememberWindowSizeInfo()
@@ -197,6 +216,18 @@ fun AppNavigation(
             replaceTop(Route.Profile)
         } else if (!isLoggedIn && top == Route.Profile) {
             replaceTop(Route.Home)
+        }
+    }
+
+    // Redirect new users to Profile (wizard) from any page.
+    // This fires when profile loading completes and isNewUser becomes true,
+    // regardless of which page the user is currently on.
+    LaunchedEffect(isNewUser) {
+        if (isNewUser) {
+            val top = backStack.lastOrNull() as? Route
+            if (top != Route.Profile) {
+                navigateTo(Route.Profile)
+            }
         }
     }
 
@@ -296,6 +327,39 @@ fun AppNavigation(
                         }
                     )
 
+                    // ── Onboarding enforcement banner ──
+                    if (featureFlags.onboardingEnforcement && isLoggedIn) {
+                        val profileComplete =
+                            userProfileData?.isOnboardingComplete == true
+                        if (!profileComplete) {
+                            val isUnverified =
+                                userProfileData?.isVerified != true
+                            val bannerText = if (isUnverified) {
+                                "Verify your email to unlock messaging and events"
+                            } else {
+                                "Complete your profile to unlock all features"
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color(0xFFFF7F33))
+                                    .clickable { navigateTo(Route.Profile) }
+                                    .padding(
+                                        horizontal = 16.dp,
+                                        vertical = 8.dp
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = bannerText,
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+
                     Box(modifier = Modifier.weight(1f)) {
                         NavDisplay(
                             backStack = backStack,
@@ -372,7 +436,8 @@ fun AppNavigation(
                                             isNewUser              = isNewUser,
                                             viewModel              = authViewModel,
                                             userEmail              = userEmail,
-                                            onNavigateToSettings   = { navigateTo(Route.Settings) }
+                                            onNavigateToSettings   = { navigateTo(Route.Settings) },
+                                            onNavigateHome         = { replaceTop(Route.Home) }
                                         )
                                     }
                                 }

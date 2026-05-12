@@ -22,5 +22,23 @@ data class UserProfileData(
     val hasPassword: Boolean = false,
     val hasPasskey: Boolean = false,
     val eventRsvps: Map<Long, RSVPRequest>? = emptyMap(),
-    val blockedEmails: List<String>? = emptyList()
-)
+    val blockedEmails: List<String>? = emptyList(),
+    // ── Profile parity with Member model ──
+    val profession: String? = null,
+    val company: String? = null,
+    val interests: List<String>? = null,
+    val favoriteWines: List<String>? = null,
+    // ── Onboarding ──
+    val profileComplete: Boolean? = false,
+) {
+    /**
+     * Whether this user has completed the minimum
+     * onboarding requirements: name, email verified,
+     * and phone number.
+     */
+    val isOnboardingComplete: Boolean
+        get() = !name.isNullOrBlank()
+                && !email.isNullOrBlank()
+                && !phone.isNullOrBlank()
+                && isVerified == true
+}

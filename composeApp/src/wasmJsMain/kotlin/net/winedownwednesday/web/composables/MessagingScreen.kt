@@ -205,6 +205,45 @@ fun MessagingScreen(
     onNavigateToEvents: (eventName: String) -> Unit = {},
     onNavigateToWines: (wineName: String) -> Unit = {}
 ) {
+    // ── Onboarding enforcement gate ──
+    val flags = LocalFeatureFlags.current
+    if (flags.onboardingEnforcement) {
+        val authVm: net.winedownwednesday.web.viewmodels.AuthPageViewModel =
+            org.koin.compose.koinInject()
+        val profile by authVm.profileData
+            .collectAsState()
+        if (profile?.isOnboardingComplete != true) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "🔒",
+                        fontSize = 48.sp
+                    )
+                    Text(
+                        text = "Complete your profile to start chatting",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "Your name, phone number, and email " +
+                                "verification are required.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+            return
+        }
+    }
+
     val viewModel: MessagingViewModel = koinInject()
     val streamToken by viewModel.streamToken.collectAsState()
     val isConnecting by viewModel.isConnecting.collectAsState()
