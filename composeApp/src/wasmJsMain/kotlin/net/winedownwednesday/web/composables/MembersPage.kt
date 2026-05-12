@@ -557,14 +557,24 @@ private fun MemberDetailPane(
 
                 val isMemberViewer = userProfileData?.isMember == true
                         && uiState == LoginUIState.Authenticated
-                AnimatedVisibility(visible = isMemberViewer) {
+                val memberInfoFlags = LocalFeatureFlags.current
+                // When memberInfoGating is ON, only members see contact info.
+                // When OFF, contact info is always visible (ungated).
+                val showContactInfo = if (memberInfoFlags.memberInfoGating) {
+                    isMemberViewer
+                } else {
+                    true
+                }
+                AnimatedVisibility(visible = showContactInfo) {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         MemberDetailField("Email",    member.email)
                         MemberDetailField("Phone",    member.phoneNumber)
                         MemberDetailField("Birthday", member.birthday)
                     }
                 }
-                AnimatedVisibility(visible = !isMemberViewer) {
+                AnimatedVisibility(
+                    visible = memberInfoFlags.memberInfoGating && !showContactInfo
+                ) {
                     Text(
                         text = "Contact details visible to members only",
                         style = MaterialTheme.typography.bodySmall,

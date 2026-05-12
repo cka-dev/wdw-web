@@ -931,11 +931,14 @@ fun ChannelSidebar(
                             }
                         }
                         items(unblockedDMs) { channel ->
+                            val flags = LocalFeatureFlags.current
                             ChannelItem(
                                 channel = channel,
                                 isSelected = channel.id == selectedChannelId,
                                 onClick = { onChannelSelect(channel.id) },
-                                onDelete = { onHideChannel(channel.id) }
+                                onDelete = if (flags.deleteDmConversations) {
+                                    { onHideChannel(channel.id) }
+                                } else null
                             )
                         }
                     }
@@ -3495,8 +3498,12 @@ fun MessageInput(
             }
 
             val members = LocalMembers.current
-            val mentionSuggestions = remember(mentionQuery, members) {
-                if (mentionQuery == null) emptyList()
+            val flagsForMentions = LocalFeatureFlags.current
+            val mentionSuggestions = remember(
+                mentionQuery, members, flagsForMentions.mentionsAutocomplete
+            ) {
+                if (!flagsForMentions.mentionsAutocomplete) emptyList()
+                else if (mentionQuery == null) emptyList()
                 else {
                     val vinoEntry = MentionEntry(
                         "vino-bot", "Vino", "", isBot = true
