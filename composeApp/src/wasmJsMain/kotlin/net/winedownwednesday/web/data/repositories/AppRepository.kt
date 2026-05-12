@@ -18,6 +18,7 @@ import net.winedownwednesday.web.data.models.ChangePasswordRequest
 import net.winedownwednesday.web.data.models.EmailPasswordRequest
 import net.winedownwednesday.web.data.models.FcmInstanceRegistrationRequest
 import net.winedownwednesday.web.data.models.FeaturedWinesResponse
+import net.winedownwednesday.web.data.models.FeatureFlags
 import net.winedownwednesday.web.data.models.FirebaseAuthResponse
 import net.winedownwednesday.web.data.models.PublicKeyCredentialCreationOptions
 import net.winedownwednesday.web.data.models.PublicKeyCredentialRequestOptions
@@ -55,6 +56,9 @@ class AppRepository (
     private val _memberSpotlight = MutableStateFlow<List<Member>>(emptyList())
     val memberSpotlight = _memberSpotlight.asStateFlow()
 
+    private val _featureFlags = MutableStateFlow(FeatureFlags())
+    val featureFlags = _featureFlags.asStateFlow()
+
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val _profileData = MutableStateFlow<UserProfileData?>(null)
@@ -84,6 +88,7 @@ class AppRepository (
                     initialData.blogPosts.posts.isNotEmpty()
                 ) initialData.blogPosts.posts
                 else emptyList()
+            _featureFlags.value = initialData.featureFlags
         } else {
             // Fallback: individual calls if batch fails
             fetchMembers()
