@@ -110,23 +110,23 @@ fun OnboardingWizard(
             // Progress Bar (hidden on Welcome and Complete)
             if (currentStep != OnboardingStep.WELCOME && currentStep != OnboardingStep.COMPLETE) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     for (i in 1..totalSteps) {
                         Box(
                             modifier = Modifier
-                                .padding(horizontal = 4.dp)
-                                .size(if (i == currentProgress) 10.dp else 8.dp)
+                                .weight(1f)
+                                .height(4.dp)
                                 .background(
                                     color = if (i <= currentProgress) Color(0xFFFF7F33) else Color(0xFF555555),
-                                    shape = CircleShape
+                                    shape = RoundedCornerShape(2.dp)
                                 )
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = "Step $currentProgress of $totalSteps",
                     style = MaterialTheme.typography.bodySmall,
@@ -154,8 +154,8 @@ fun OnboardingWizard(
                     when (step) {
                         OnboardingStep.WELCOME -> {
                             Text(
-                                text = "Welcome to Wine Down Wednesday! 🍷",
-                                style = MaterialTheme.typography.headlineSmall,
+                                text = "Welcome to Wine Down Wednesday!",
+                                style = MaterialTheme.typography.headlineMedium,
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 textAlign = TextAlign.Center,
@@ -406,8 +406,9 @@ fun OnboardingWizard(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
+                                Spacer(modifier = Modifier.height(24.dp))
                                 Text(
-                                    text = "🎉 You're all set!",
+                                    text = "You're all set!",
                                     style = MaterialTheme.typography.headlineMedium,
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold,
@@ -454,6 +455,14 @@ fun OnboardingWizard(
                     else -> true
                 }
                 
+                val nextButtonText = when (currentStep) {
+                    OnboardingStep.WELCOME -> "Let's get started"
+                    OnboardingStep.ABOUT_YOU -> if (profession.isBlank() && company.isBlank()) "Skip" else "Next →"
+                    OnboardingStep.INTERESTS -> if (interestsText.isBlank() && favoriteWinesText.isBlank()) "Skip" else "Next →"
+                    OnboardingStep.PHOTO -> if (profileImageBitmap == null && profileImageUrl == null) "Skip & Finish" else "Finish"
+                    else -> "Next →"
+                }
+                
                 if (currentStep != OnboardingStep.COMPLETE) {
                     Button(
                         onClick = {
@@ -487,16 +496,18 @@ fun OnboardingWizard(
                             }
                         },
                         enabled = isNextEnabled,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7F33))
-                    ) {
-                        Text(
-                            text = if (currentStep == OnboardingStep.WELCOME) "Let's get started" 
-                                   else if (currentStep == OnboardingStep.PHOTO) "Finish" 
-                                   else "Next →"
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (nextButtonText.startsWith("Skip")) Color(0xFF555555) else Color(0xFFFF7F33)
                         )
+                    ) {
+                        Text(text = nextButtonText)
                     }
                 } else {
-                    // COMPLETE step doesn't have a next button here, it's handled automatically or with a "Go to Profile" button
+                    // Show a loading indicator on COMPLETE while waiting for saveProfile to finish
+                    CircularProgressIndicator(
+                        color = Color(0xFFFF7F33),
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
         }
