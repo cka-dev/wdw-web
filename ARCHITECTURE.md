@@ -517,3 +517,47 @@ if (isTouchDevice) {
 
 ### Excluded Pages
 - **MessagingScreen** — intentionally excluded to avoid conflicts with real-time WebSocket messaging and existing scroll behavior.
+
+---
+
+## Feature Flags
+
+Per-platform feature flags allow features to be rolled out independently to web, Android, and iOS clients.
+
+### Data Flow
+
+```
+Firestore (config/featureFlags)
+  → getInitialData (server resolves for platform="web")
+  → InitialDataResponse.featureFlags (Kotlin data class)
+  → AppRepository._featureFlags (StateFlow)
+  → LocalFeatureFlags (CompositionLocal)
+  → Any composable via LocalFeatureFlags.current
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `data/models/FeatureFlags.kt` | `@Serializable` data class with all-false defaults |
+| `data/models/InitialDataResponse.kt` | Includes `featureFlags` field |
+| `data/repositories/AppRepository.kt` | `_featureFlags` StateFlow populated from batch |
+| `composables/LocalFeatureFlags.kt` | `staticCompositionLocalOf { FeatureFlags() }` |
+| `composables/AppNavigation.kt` | Provides `LocalFeatureFlags` at app root |
+
+### Usage
+
+```kotlin
+val flags = LocalFeatureFlags.current
+if (flags.deleteDmConversations) {
+    // Show delete button on DM channels
+}
+```
+
+### Design Decisions
+
+- **All flags default to `false`** — features stay hidden if the server hasn't deployed or the endpoint fails
+- **Unknown flags are silently ignored** — `kotlinx.serialization` with default values skips unknown keys
+- **No extra network call** — flags piggyback on the existing `getInitialData` batch endpoint
+- **Admin dashboard toggle** — flags can be toggled per-platform in real time at `/feature-flags`
+

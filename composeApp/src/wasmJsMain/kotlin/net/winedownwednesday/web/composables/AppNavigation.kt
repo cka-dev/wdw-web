@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,6 +44,7 @@ import net.winedownwednesday.web.viewmodels.EventsPageViewModel
 import net.winedownwednesday.web.viewmodels.LoginUIState
 import net.winedownwednesday.web.viewmodels.MembersPageViewModel
 import net.winedownwednesday.web.viewmodels.WinePageViewModel
+import net.winedownwednesday.web.data.repositories.AppRepository
 import org.koin.compose.koinInject
 import org.w3c.dom.events.Event
 
@@ -123,6 +125,8 @@ fun AppNavigation(
     val wineViewModel: WinePageViewModel = koinInject()
     val membersViewModel: MembersPageViewModel = koinInject()
     val blogViewModel: BlogPageViewModel = koinInject()
+    val appRepository: AppRepository = koinInject()
+    val featureFlags by appRepository.featureFlags.collectAsState()
     // --- Nav 3 back stack ------------------------------------------------
     // SavedStateConfiguration is required by the API. An empty config is safe
     // because browser URL hash handles route restoration on reload.
@@ -269,6 +273,7 @@ fun AppNavigation(
     }
 
     // --- Theme & layout --------------------------------------------------
+    CompositionLocalProvider(LocalFeatureFlags provides featureFlags) {
     WdwTheme(isDark = isDarkTheme) {
         val mainContent: @Composable () -> Unit = {
             Surface(modifier = Modifier.fillMaxSize()) {
@@ -468,4 +473,5 @@ fun AppNavigation(
             mainContent()
         }
     }
+    } // CompositionLocalProvider(LocalFeatureFlags)
 }

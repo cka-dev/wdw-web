@@ -22,4 +22,5 @@ data class InitialDataResponse(
     val memberSpotlight: List<Member> = emptyList(),
     val featuredWines: FeaturedWinesResponse? = null,
     val blogPosts: BlogPostsResponse? = null,
+    val featureFlags: FeatureFlags = FeatureFlags(),
 )
