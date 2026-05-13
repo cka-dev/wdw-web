@@ -1288,13 +1288,13 @@ fun RSVPComponent(
         )
     }
     var guestsCount by rememberSaveable {
-        mutableStateOf(existingRsvp?.guestsCount ?: 1)
+        mutableStateOf(existingRsvp?.guestsCount ?: 0)
     }
     var allowUpdates by rememberSaveable {
         mutableStateOf(true)
     }
     var guestsCountText by rememberSaveable {
-        mutableStateOf(existingRsvp?.guestsCount ?: "1")
+        mutableStateOf(existingRsvp?.guestsCount?.toString() ?: "0")
     }
 
     var firstNameError by rememberSaveable { mutableStateOf("") }
@@ -1347,10 +1347,10 @@ fun RSVPComponent(
                                 guestsError = ""
                                 if (newVal.isEmpty()) {
                                     guestsCountText = ""
-                                    guestsCount = 1
+                                    guestsCount = 0
                                 } else {
                                     newVal.toIntOrNull()?.let { parsed ->
-                                        if (parsed in 1..10) {
+                                        if (parsed in 0..10) {
                                             guestsCountText = newVal
                                             guestsCount = parsed
                                         }
@@ -1409,10 +1409,10 @@ fun RSVPComponent(
                                 guestsError = ""
                                 if (newVal.isEmpty()) {
                                     guestsCountText = ""
-                                    guestsCount = 1
+                                    guestsCount = 0
                                 } else {
                                     newVal.toIntOrNull()?.let { parsed ->
-                                        if (parsed in 1..10) {
+                                        if (parsed in 0..10) {
                                             guestsCountText = newVal
                                             guestsCount = parsed
                                         }
@@ -1631,7 +1631,7 @@ fun CompactScreenReservationFields(
                         ),
                         elevation = CardDefaults.cardElevation(4.dp),
                         modifier = Modifier.clickable {
-                            if (guestCount > 1) {
+                            if (guestCount > 0) {
                                 onGuestsCountChange((guestCount - 1).toString())
                             }
                         }
@@ -1873,7 +1873,7 @@ fun NonCompactReservationFields(
                     ),
                     elevation = CardDefaults.cardElevation(4.dp),
                     modifier = Modifier.clickable {
-                        if (guestCount > 1) {
+                        if (guestCount > 0) {
                             onGuestsCountChange((guestCount - 1).toString())
                         }
                     }
