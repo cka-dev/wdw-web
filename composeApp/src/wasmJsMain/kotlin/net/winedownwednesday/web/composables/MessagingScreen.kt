@@ -455,7 +455,8 @@ fun MessagingScreen(
                                 .fillMaxHeight()
                         )
                         // Thread panel slides in from the right
-                        if (!isCompactScreen && threadParentMessage != null) {
+                        val parentMsg = threadParentMessage
+                        if (!isCompactScreen && parentMsg != null) {
                             Box(
                                 modifier = Modifier
                                     .width(2.dp)
@@ -463,13 +464,13 @@ fun MessagingScreen(
                                     .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
                             )
                             ThreadPanel(
-                                parentMessage = threadParentMessage!!,
+                                parentMessage = parentMsg,
                                 replies = threadReplies,
                                 currentUserId = streamToken?.userId,
                                 threadSmartReplies = threadSmartReplies,
                                 onClose = { viewModel.closeThread() },
                                 onSendReply = { text, file -> viewModel.sendThreadReply(text, file) },
-                                onSendGif = { url, title -> viewModel.sendGiphyMessage(url, title, threadParentMessage!!.id) },
+                                onSendGif = { url, title -> viewModel.sendGiphyMessage(url, title, parentMsg.id) },
                                 onSendSmartReply = { viewModel.sendThreadSmartReply(it) },
                                 onClearSmartReplies = { viewModel.clearThreadSmartReplies() },
                                 modifier = Modifier
@@ -480,20 +481,21 @@ fun MessagingScreen(
                     }
                     
                     // Thread panel overlay on compact screens
+                    val parentMsgCompact = threadParentMessage
                     androidx.compose.animation.AnimatedVisibility(
-                        visible = isCompactScreen && threadParentMessage != null,
+                        visible = isCompactScreen && parentMsgCompact != null,
                         enter = androidx.compose.animation.slideInHorizontally { it },
                         exit = androidx.compose.animation.slideOutHorizontally { it }
                     ) {
-                        if (threadParentMessage != null) {
+                        if (parentMsgCompact != null) {
                             ThreadPanel(
-                                parentMessage = threadParentMessage!!,
+                                parentMessage = parentMsgCompact,
                                 replies = threadReplies,
                                 currentUserId = streamToken?.userId,
                                 threadSmartReplies = threadSmartReplies,
                                 onClose = { viewModel.closeThread() },
                                 onSendReply = { text, file -> viewModel.sendThreadReply(text, file) },
-                                onSendGif = { url, title -> viewModel.sendGiphyMessage(url, title, threadParentMessage!!.id) },
+                                onSendGif = { url, title -> viewModel.sendGiphyMessage(url, title, parentMsgCompact.id) },
                                 onSendSmartReply = { viewModel.sendThreadSmartReply(it) },
                                 onClearSmartReplies = { viewModel.clearThreadSmartReplies() },
                                 modifier = Modifier.fillMaxSize()
@@ -1834,9 +1836,10 @@ fun ChatArea(
         }
 
         // Forward dialog
-        if (forwardingMessage != null) {
+        val msgToForward = forwardingMessage
+        if (msgToForward != null) {
             ForwardMessageDialog(
-                message = forwardingMessage!!,
+                message = msgToForward,
                 channels = channels,
                 onForward = { text, channelId ->
                     onForward(text, channelId)
@@ -1847,9 +1850,10 @@ fun ChatArea(
         }
 
         // Image lightbox
-        if (lightboxImageUrl != null) {
+        val lbImgUrl = lightboxImageUrl
+        if (lbImgUrl != null) {
             ImageLightboxDialog(
-                imageUrl = lightboxImageUrl!!,
+                imageUrl = lbImgUrl,
                 onDismiss = { lightboxImageUrl = null }
             )
         }

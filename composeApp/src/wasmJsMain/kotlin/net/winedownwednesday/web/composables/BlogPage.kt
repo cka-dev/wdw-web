@@ -132,7 +132,8 @@ fun BlogPage(
         if (isLoading && blogPosts.isNullOrEmpty()) {
             LinearProgressBar()
         } else {
-            if (selectedPost != null) {
+            val post = selectedPost
+            if (post != null) {
                 // Detail View - Centered and constrained for reading
                 LazyColumn(
                     contentPadding = PaddingValues(top = padding, bottom = padding + 40.dp),
@@ -168,7 +169,7 @@ fun BlogPage(
                                 mutableStateOf(false)
                             }
                             val shareUrl = buildShareUrl(
-                                "blog", selectedPost!!.id
+                                "blog", post.id
                             )
                             Row(
                                 horizontalArrangement =
@@ -179,9 +180,9 @@ fun BlogPage(
                                     onClick = {
                                         val usedNative = shareOrCopy(
                                             url = shareUrl,
-                                            title = selectedPost!!.title,
+                                            title = post.title,
                                             text = "Check out: " +
-                                                selectedPost!!.title
+                                                post.title
                                         )
                                         shareConfirmation =
                                             if (usedNative) null
@@ -224,16 +225,16 @@ fun BlogPage(
                             if (showQrDialog) {
                                 QrCodeDialog(
                                     url = shareUrl,
-                                    title = selectedPost!!.title,
+                                    title = post.title,
                                     onDismiss = {
                                         showQrDialog = false
                                     }
                                 )
                             }
                             
-                            if (selectedPost!!.coverImageUrl.isNotBlank()) {
+                            if (post.coverImageUrl.isNotBlank()) {
                                 AsyncImage(
-                                    model = selectedPost!!.coverImageUrl,
+                                    model = post.coverImageUrl,
                                     contentDescription = "Cover image",
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
@@ -246,7 +247,7 @@ fun BlogPage(
                             Spacer(modifier = Modifier.height(32.dp))
                             
                             Text(
-                                text = selectedPost!!.title,
+                                text = post.title,
                                 style = MaterialTheme.typography.displayMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onBackground,
@@ -254,14 +255,14 @@ fun BlogPage(
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = "By ${selectedPost!!.author} • ${(selectedPost!!.publishedAt ?: selectedPost!!.createdAt).take(10)}",
+                                text = "By ${post.author} • ${(post.publishedAt ?: post.createdAt).take(10)}",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                             )
                             Spacer(modifier = Modifier.height(32.dp))
 
                              // ── TL;DR pill ───────────────────────────────────────────
-                             val postId = selectedPost!!.id
+                             val postId = post.id
                              val summary = summaries[postId]
                              val isSummarizing = summarizing.contains(postId)
 
@@ -335,7 +336,7 @@ fun BlogPage(
                                  }
                              }
 
-                             BlogPostContent(blocks = selectedPost!!.content)
+                             BlogPostContent(blocks = post.content)
                         }
                     }
                 }

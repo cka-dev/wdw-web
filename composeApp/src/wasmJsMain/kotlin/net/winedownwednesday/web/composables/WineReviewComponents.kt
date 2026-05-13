@@ -504,7 +504,8 @@ fun ReviewsSection(
     }
 
     // Flag dialog
-    if (flagTargetEmail != null) {
+    val emailToFlag = flagTargetEmail
+    if (emailToFlag != null) {
         FlagReviewDialog(
             isFlagging = isFlaggingReview,
             flagSuccess = flagSuccess,
@@ -514,7 +515,7 @@ fun ReviewsSection(
                 onClearFlagFeedback()
             },
             onSubmit = { reason ->
-                onFlagReview(flagTargetEmail!!, reason)
+                onFlagReview(emailToFlag, reason)
             }
         )
     }

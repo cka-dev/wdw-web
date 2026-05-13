@@ -578,13 +578,14 @@ class AuthPageViewModel(
                     val csv = blockedIds.joinToString(",")
                     val streamUsers = StreamBridge.queryUsersByIds(csv)
                         .await<JsArray<JsStreamUser>>()
-                    val resolved = (0 until streamUsers.length).map { i ->
-                        val u = streamUsers[i]!!
-                        BlockedUserInfo(
-                            id = u.id,
-                            name = u.name.ifBlank { u.id },
-                            image = u.image
-                        )
+                    val resolved = (0 until streamUsers.length).mapNotNull { i ->
+                        streamUsers[i]?.let { u ->
+                            BlockedUserInfo(
+                                id = u.id,
+                                name = u.name.ifBlank { u.id },
+                                image = u.image
+                            )
+                        }
                     }
                     _blockedUsers.value = resolved
                 } catch (_: Exception) {

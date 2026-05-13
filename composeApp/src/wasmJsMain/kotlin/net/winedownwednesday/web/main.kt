@@ -11,7 +11,8 @@ fun main() {
     startKoin {
         modules(appModule)
     }
-    ComposeViewport(document.body!!) {
+    val body = document.body ?: return
+    ComposeViewport(body) {
         App()
     }
 }

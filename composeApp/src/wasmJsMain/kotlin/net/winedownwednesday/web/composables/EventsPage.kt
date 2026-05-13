@@ -328,18 +328,19 @@ fun EventsPage(
         eventsContent()
     }
 
-    if (selectedEvent != null) {
+    val event = selectedEvent
+    if (event != null) {
         if (sizeInfo.useCompactNav) {
             CompactScreenEventDetailPopup(
-                event = selectedEvent!!,
+                event = event,
                 onDismissRequest = { viewModel.setSelectedEvent(null) },
-                onRsvpClick = { eventForRsvp = selectedEvent }
+                onRsvpClick = { eventForRsvp = event }
             )
         } else {
             LargeScreenEventDetailPopup(
-                selectedEvent = selectedEvent!!,
+                selectedEvent = event,
                 onDismissRequest = { viewModel.setSelectedEvent(null) },
-                onRsvpClick = { eventForRsvp = selectedEvent }
+                onRsvpClick = { eventForRsvp = event }
             )
         }
     }
@@ -1015,7 +1016,8 @@ fun GalleryViewer(
         onDispose { window.removeEventListener("keydown", listener) }
     }
 
-    CompositionLocalProvider(LocalLayerContainer provides document.body!!) {
+    val body = document.body ?: return
+    CompositionLocalProvider(LocalLayerContainer provides body) {
         Dialog(onDismissRequest = onDismissRequest) {
             Card {
                 Box(

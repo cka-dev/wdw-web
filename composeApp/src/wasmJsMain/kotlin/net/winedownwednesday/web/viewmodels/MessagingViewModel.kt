@@ -183,7 +183,7 @@ class MessagingViewModel(
                 val jsChannels = StreamBridge.queryChannels().await<JsArray<JsChatChannel>>()
                 val list = mutableListOf<JsChatChannel>()
                 for (i in 0 until jsChannels.length) {
-                    list.add(jsChannels[i]!!)
+                    jsChannels[i]?.let { list.add(it) }
                 }
                 _channels.value = list
             } catch (e: Exception) {
@@ -291,7 +291,7 @@ class MessagingViewModel(
                 }
                 val list = mutableListOf<JsStreamUser>()
                 for (i in 0 until jsUsers.length) {
-                    list.add(jsUsers[i]!!)
+                    jsUsers[i]?.let { list.add(it) }
                 }
                 _searchResults.value = list
             } catch (e: Exception) {
@@ -429,7 +429,7 @@ class MessagingViewModel(
                 .getMessages(channelId).await<JsArray<JsChatMessage>>()
             val list = mutableListOf<JsChatMessage>()
             for (i in 0 until jsMessages.length) {
-                list.add(jsMessages[i]!!)
+                jsMessages[i]?.let { list.add(it) }
             }
             _messages.value = list
             messageCache[channelId] = list
@@ -591,7 +591,7 @@ class MessagingViewModel(
                         // Reload thread replies
                         val replies = StreamBridge.getThreadReplies(channelId, parentId)
                             .await<JsArray<JsChatMessage>>()
-                        _threadReplies.value = (0 until replies.length).map { replies[it]!! }
+                        _threadReplies.value = (0 until replies.length).mapNotNull { replies[it] }
                         loadMessages(channelId)
                         
                         val wasParentVino = _threadParentMessage.value?.userId == "vino-bot"
@@ -660,7 +660,7 @@ class MessagingViewModel(
             try {
                 val replies = StreamBridge.getThreadReplies(channelId, parentMessage.id)
                     .await<JsArray<JsChatMessage>>()
-                _threadReplies.value = (0 until replies.length).map { replies[it]!! }
+                _threadReplies.value = (0 until replies.length).mapNotNull { replies[it] }
             } catch (e: Exception) {
             }
         }
@@ -700,7 +700,7 @@ class MessagingViewModel(
                 // Reload thread replies
                 val replies = StreamBridge.getThreadReplies(channelId, parentId)
                     .await<JsArray<JsChatMessage>>()
-                _threadReplies.value = (0 until replies.length).map { replies[it]!! }
+                _threadReplies.value = (0 until replies.length).mapNotNull { replies[it] }
                 // Also reload main messages to update reply count
                 loadMessages(channelId)
             } catch (e: Exception) {
@@ -796,7 +796,7 @@ class MessagingViewModel(
                         try {
                             val replies = StreamBridge.getThreadReplies(channelId, parentId)
                                 .await<JsArray<JsChatMessage>>()
-                            _threadReplies.value = (0 until replies.length).map { replies[it]!! }
+                            _threadReplies.value = (0 until replies.length).mapNotNull { replies[it] }
                         } catch (e: Exception) {}
                     }
                 }
@@ -877,7 +877,7 @@ class MessagingViewModel(
             val users = StreamBridge.queryUsersByIds(csv).await<JsArray<JsStreamUser>>()
             val result = mutableListOf<JsStreamUser>()
             for (i in 0 until users.length) {
-                result.add(users[i]!!)
+                users[i]?.let { result.add(it) }
             }
             _blockedUserProfiles.value = result
         }
