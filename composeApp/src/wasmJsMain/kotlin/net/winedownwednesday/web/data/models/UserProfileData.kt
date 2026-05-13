@@ -4,6 +4,14 @@ import kotlinx.serialization.Serializable
 import net.winedownwednesday.web.ImageBitmapSerializer
 import org.jetbrains.skia.Bitmap
 
+@Serializable
+data class NotificationPreferences(
+    val eventReminders: Boolean? = true,
+    val chatMessages: Boolean? = true,
+    val communityUpdates: Boolean? = true,
+    val rsvpConfirmations: Boolean? = true,
+    val marketing: Boolean? = true
+)
 
 @Serializable
 data class UserProfileData(
@@ -30,6 +38,7 @@ data class UserProfileData(
     val favoriteWines: List<String>? = null,
     // ── Onboarding ──
     val profileComplete: Boolean? = false,
+    val notificationPreferences: NotificationPreferences? = NotificationPreferences(),
 ) {
     /**
      * Whether this user has completed the minimum

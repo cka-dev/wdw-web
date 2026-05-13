@@ -636,6 +636,30 @@ class AuthPageViewModel(
         }
     }
 
+    fun updateNotificationPreference(key: String, value: Boolean) {
+        val oldProfile = _profileData.value ?: return
+        val currentPrefs = oldProfile.notificationPreferences ?: net.winedownwednesday.web.data.models.NotificationPreferences()
+        
+        val newPrefs = when (key) {
+            "eventReminders" -> currentPrefs.copy(eventReminders = value)
+            "chatMessages" -> currentPrefs.copy(chatMessages = value)
+            "communityUpdates" -> currentPrefs.copy(communityUpdates = value)
+            "rsvpConfirmations" -> currentPrefs.copy(rsvpConfirmations = value)
+            "marketing" -> currentPrefs.copy(marketing = value)
+            else -> currentPrefs
+        }
+        
+        val updatedProfile = oldProfile.copy(notificationPreferences = newPrefs)
+        _profileData.value = updatedProfile
+        
+        saveProfile(updatedProfile) { success ->
+            if (!success) {
+                // Revert on failure
+                _profileData.value = oldProfile
+            }
+        }
+    }
+
 }
 
 sealed class LoginUIState {

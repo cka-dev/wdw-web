@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -43,6 +44,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -61,8 +64,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.winedownwednesday.web.viewmodels.AuthPageViewModel
 import net.winedownwednesday.web.viewmodels.BlockedUserInfo
+import net.winedownwednesday.web.data.models.NotificationPreferences
+import net.winedownwednesday.web.composables.LocalFeatureFlags
 
 enum class SettingsCategory(val label: String, val icon: ImageVector) {
+    NOTIFICATIONS("Notifications", Icons.Default.Notifications),
     SECURITY("Security", Icons.Default.Lock),
     PRIVACY("Privacy & Moderation", Icons.Default.Shield),
     DANGER_ZONE("Danger Zone", Icons.Default.DeleteForever)
@@ -79,7 +85,22 @@ fun SettingsPage(
     val userProfile by viewModel.profileData.collectAsStateWithLifecycle()
     val blockedUsers by viewModel.blockedUsers.collectAsStateWithLifecycle()
     val isUnblocking by viewModel.isUnblocking.collectAsStateWithLifecycle()
-    var selectedCategory by remember { mutableStateOf(SettingsCategory.SECURITY) }
+    val isSavingProfile by viewModel.isSavingProfile.collectAsStateWithLifecycle()
+
+    val flags = LocalFeatureFlags.current
+    val visibleCategories = SettingsCategory.entries.filter {
+        if (it == SettingsCategory.NOTIFICATIONS) flags.notificationPreferences else true
+    }
+
+    // Default to the first visible category
+    var selectedCategory by remember { mutableStateOf(visibleCategories.firstOrNull() ?: SettingsCategory.SECURITY) }
+
+    // If selectedCategory is no longer visible, reset
+    LaunchedEffect(visibleCategories) {
+        if (!visibleCategories.contains(selectedCategory)) {
+            selectedCategory = visibleCategories.firstOrNull() ?: SettingsCategory.SECURITY
+        }
+    }
 
     val isDark = LocalIsDarkTheme.current
     val backgroundBrush = if (!isDark) Brush.verticalGradient(
@@ -138,6 +159,17 @@ fun SettingsPage(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         contentPadding = PaddingValues(bottom = 120.dp)
                     ) {
+                        if (flags.notificationPreferences) {
+                            item {
+                                NotificationsSection(
+                                    preferences = userProfile?.notificationPreferences,
+                                    isSaving = isSavingProfile,
+                                    onTogglePreference = { key, value ->
+                                        viewModel.updateNotificationPreference(key, value)
+                                    }
+                                )
+                            }
+                        }
                         item {
                             SecuritySection(
                                 hasPassword = userProfile?.hasPassword ?: false,
@@ -193,7 +225,7 @@ fun SettingsPage(
                                 .fillMaxHeight()
                         ) {
                             Column(modifier = Modifier.padding(8.dp)) {
-                                SettingsCategory.entries.forEach { category ->
+                                visibleCategories.forEach { category ->
                                     val isSelected = category == selectedCategory
                                     Row(
                                         modifier = Modifier
@@ -254,6 +286,13 @@ fun SettingsPage(
                                     verticalArrangement = Arrangement.spacedBy(16.dp)
                                 ) {
                                     when (selectedCategory) {
+                                        SettingsCategory.NOTIFICATIONS -> NotificationsSection(
+                                            preferences = userProfile?.notificationPreferences,
+                                            isSaving = isSavingProfile,
+                                            onTogglePreference = { key, value ->
+                                                viewModel.updateNotificationPreference(key, value)
+                                            }
+                                        )
                                         SettingsCategory.SECURITY -> SecuritySection(
                                             hasPassword = userProfile?.hasPassword ?: false,
                                             hasPasskey = userProfile?.hasPasskey ?: false,
@@ -279,6 +318,132 @@ fun SettingsPage(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+// ─── Notifications Section ─────────────────────────────────────────────────────
+
+@Composable
+private fun NotificationsSection(
+    preferences: NotificationPreferences?,
+    isSaving: Boolean,
+    onTogglePreference: (String, Boolean) -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A)),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                "Notification Preferences",
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+
+            HorizontalDivider(color = Color(0xFF444444))
+
+            Text(
+                "Choose which notifications you would like to receive. Note: these apply across all your devices.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.LightGray
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Event Reminders
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                    Text("Event Reminders", style = MaterialTheme.typography.titleMedium, color = Color.White)
+                    Text("Get notified when an event you RSVP'd to is coming up.", style = MaterialTheme.typography.bodySmall, color = Color.LightGray)
+                }
+                Switch(
+                    checked = preferences?.eventReminders ?: true,
+                    onCheckedChange = { onTogglePreference("eventReminders", it) },
+                    enabled = !isSaving,
+                    colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFFF7F33), checkedTrackColor = Color(0xFFFF7F33).copy(alpha = 0.5f))
+                )
+            }
+
+            // Chat Messages
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                    Text("Chat Messages", style = MaterialTheme.typography.titleMedium, color = Color.White)
+                    Text("Receive notifications for direct messages and mentions.", style = MaterialTheme.typography.bodySmall, color = Color.LightGray)
+                }
+                Switch(
+                    checked = preferences?.chatMessages ?: true,
+                    onCheckedChange = { onTogglePreference("chatMessages", it) },
+                    enabled = !isSaving,
+                    colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFFF7F33), checkedTrackColor = Color(0xFFFF7F33).copy(alpha = 0.5f))
+                )
+            }
+
+            // Community Updates
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                    Text("Community Updates", style = MaterialTheme.typography.titleMedium, color = Color.White)
+                    Text("Stay up to date with new announcements, blog posts, and community events.", style = MaterialTheme.typography.bodySmall, color = Color.LightGray)
+                }
+                Switch(
+                    checked = preferences?.communityUpdates ?: true,
+                    onCheckedChange = { onTogglePreference("communityUpdates", it) },
+                    enabled = !isSaving,
+                    colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFFF7F33), checkedTrackColor = Color(0xFFFF7F33).copy(alpha = 0.5f))
+                )
+            }
+
+            // RSVP Confirmations
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                    Text("RSVP Confirmations", style = MaterialTheme.typography.titleMedium, color = Color.White)
+                    Text("Get registration receipts and updates regarding events you're attending.", style = MaterialTheme.typography.bodySmall, color = Color.LightGray)
+                }
+                Switch(
+                    checked = preferences?.rsvpConfirmations ?: true,
+                    onCheckedChange = { onTogglePreference("rsvpConfirmations", it) },
+                    enabled = !isSaving,
+                    colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFFF7F33), checkedTrackColor = Color(0xFFFF7F33).copy(alpha = 0.5f))
+                )
+            }
+
+            // Marketing
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                    Text("Marketing & Offers", style = MaterialTheme.typography.titleMedium, color = Color.White)
+                    Text("Receive occasional offers and promotional updates from us.", style = MaterialTheme.typography.bodySmall, color = Color.LightGray)
+                }
+                Switch(
+                    checked = preferences?.marketing ?: true,
+                    onCheckedChange = { onTogglePreference("marketing", it) },
+                    enabled = !isSaving,
+                    colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFFF7F33), checkedTrackColor = Color(0xFFFF7F33).copy(alpha = 0.5f))
+                )
             }
         }
     }

@@ -46,4 +46,5 @@ data class FeatureFlags(
     // ── New / experimental (default OFF — hidden until ready) ──
     val vinoWelcomePosts: Boolean = false,
     val onboardingEnforcement: Boolean = false,
+    val notificationPreferences: Boolean = false,
 )
