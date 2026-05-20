@@ -596,7 +596,8 @@ window.wdwStreamBridge = {
             }
             const filter = {
                 id: { $ne: this.client.userID },
-                name: { $autocomplete: query }
+                name: { $autocomplete: query },
+                isTestUser: { $ne: true }
             };
             const response = await this.client.queryUsers(filter, { name: 1 }, { limit: 20 });
             return response.users.map(u => ({
@@ -640,7 +641,8 @@ window.wdwStreamBridge = {
         if (!this.client) return [];
         try {
             const filter = {
-                id: { $ne: this.client.userID }
+                id: { $ne: this.client.userID },
+                isTestUser: { $ne: true }
             };
             // limit to 100 for now, could be paginated later
             const response = await this.client.queryUsers(filter, { name: 1 }, { limit: 100 });

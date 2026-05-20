@@ -149,6 +149,7 @@ data class ChatAttachment(
 )
 
 val LocalMembers = androidx.compose.runtime.compositionLocalOf<List<Member?>> { emptyList() }
+val LocalChannelMembers = androidx.compose.runtime.compositionLocalOf<List<JsChannelMember>> { emptyList() }
 
 private data class MentionEntry(
     val id: String,
@@ -1301,9 +1302,20 @@ fun ChatArea(
         return
     }
 
+    var channelMembers by
+        remember { mutableStateOf<List<JsChannelMember>>(emptyList()) }
+
     // Setup drag & drop and poll for state changes
     LaunchedEffect(selectedChannelId) {
         setupDragDrop()
+        // Fetch channel members for @mention autocomplete
+        selectedChannelId?.let { chId ->
+            StreamBridge.getChannelMembers(chId).then { members ->
+                channelMembers = (0 until members.length)
+                    .mapNotNull { members[it] }
+                null
+            }
+        }
         while (true) {
             isDragging = isDraggingOver().toBoolean()
             val droppedFile = getDroppedFile()
@@ -1314,14 +1326,15 @@ fun ChatArea(
         }
     }
 
+    CompositionLocalProvider(
+        LocalChannelMembers provides channelMembers
+    ) {
     Box(modifier = modifier) {
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
             var isSearchVisible by remember { mutableStateOf(false) }
             var isChannelInfoOpen by remember { mutableStateOf(false) }
-            var channelMembers by
-            remember { mutableStateOf<List<JsChannelMember>>(emptyList()) }
             // Settings dialog state is hoisted to MessagingScreen
 
             // Chat Header
@@ -1887,6 +1900,7 @@ fun ChatArea(
             }
         }
     } // end Box
+    } // end CompositionLocalProvider
 }
 
 @Composable
@@ -3540,10 +3554,11 @@ fun MessageInput(
                 partial
             }
 
-            val members = LocalMembers.current
+            val chMembers = LocalChannelMembers.current
             val flagsForMentions = LocalFeatureFlags.current
             val mentionSuggestions = remember(
-                mentionQuery, members, flagsForMentions.mentionsAutocomplete
+                mentionQuery, chMembers,
+                flagsForMentions.mentionsAutocomplete
             ) {
                 if (!flagsForMentions.mentionsAutocomplete) emptyList()
                 else if (mentionQuery == null) emptyList()
@@ -3551,11 +3566,11 @@ fun MessageInput(
                     val vinoEntry = MentionEntry(
                         "vino-bot", "Vino", "", isBot = true
                     )
-                    val memberEntries = members.filterNotNull().map {
+                    val memberEntries = chMembers.map {
                         MentionEntry(
-                            it.email,
-                            it.name,
-                            it.profilePictureUrl ?: ""
+                            it.userId,
+                            it.userName,
+                            it.userImage
                         )
                     }
                     val all = listOf(vinoEntry) + memberEntries
