@@ -334,13 +334,15 @@ fun EventsPage(
             CompactScreenEventDetailPopup(
                 event = event,
                 onDismissRequest = { viewModel.setSelectedEvent(null) },
-                onRsvpClick = { eventForRsvp = event }
+                onRsvpClick = { eventForRsvp = event },
+                userHasRsvped = authPageViewModel.hasUserRsvped(event.id)
             )
         } else {
             LargeScreenEventDetailPopup(
                 selectedEvent = event,
                 onDismissRequest = { viewModel.setSelectedEvent(null) },
-                onRsvpClick = { eventForRsvp = event }
+                onRsvpClick = { eventForRsvp = event },
+                userHasRsvped = authPageViewModel.hasUserRsvped(event.id)
             )
         }
     }
@@ -374,6 +376,10 @@ fun EventCard(
 
     val showSuccessToast = remember { mutableStateOf(false) }
     val showErrorToast = remember { mutableStateOf(false) }
+    val successToastMessage = remember { mutableStateOf("RSVP submitted successfully!") }
+    val errorToastMessage = remember {
+        mutableStateOf("Failed to submit RSVP. Please try again.")
+    }
     val showProgressBar = remember { mutableStateOf(false) }
 
     val coroutineScope = rememberCoroutineScope()
@@ -462,6 +468,164 @@ fun EventCard(
             )
             {
                 val flags = LocalFeatureFlags.current
+
+                // Cancel RSVP button (only when RSVPd + flag on)
+                if (userHasRsvped && flags.rsvpCancellation && showUpcoming) {
+                    var showCancelConfirm by remember { mutableStateOf(false) }
+                    var isCancelling by remember { mutableStateOf(false) }
+
+                    Button(
+                        enabled = !isCancelling,
+                        onClick = { showCancelConfirm = true },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Transparent,
+                            contentColor = Color(0xFFE53935)
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp, Color(0xFFE53935)
+                        ),
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Text(
+                            text = if (isCancelling) "Cancelling…"
+                                   else "Cancel RSVP"
+                        )
+                    }
+
+                    if (showCancelConfirm) {
+                        Dialog(onDismissRequest = { showCancelConfirm = false }) {
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.surface,
+                                modifier = Modifier.padding(16.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(24.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "Cancel Registration?",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text(
+                                        text = "Are you sure you want to cancel " +
+                                            "your registration for " +
+                                            "\"${event.name}\"?",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                            .copy(alpha = 0.7f),
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Spacer(modifier = Modifier.height(20.dp))
+                                    Row(
+                                        horizontalArrangement =
+                                            Arrangement.spacedBy(12.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Button(
+                                            onClick = {
+                                                showCancelConfirm = false
+                                            },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme
+                                                    .colorScheme.surfaceVariant,
+                                                contentColor = MaterialTheme
+                                                    .colorScheme.onSurface
+                                            ),
+                                            shape = RoundedCornerShape(8.dp),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Text("Keep")
+                                        }
+                                        Button(
+                                            onClick = {
+                                                val email =
+                                                    userProfileData?.email
+                                                if (email.isNullOrBlank()) {
+                                                    showCancelConfirm = false
+                                                    errorToastMessage.value =
+                                                        "Unable to cancel. " +
+                                                        "Please try again."
+                                                    showErrorToast.value = true
+                                                    coroutineScope.launch {
+                                                        delay(2000)
+                                                        showErrorToast.value =
+                                                            false
+                                                    }
+                                                    return@Button
+                                                }
+                                                showCancelConfirm = false
+                                                isCancelling = true
+                                                // Server first, then profile
+                                                viewModel.cancelRsvpForEvent(
+                                                    event.id, email
+                                                ) { serverOk ->
+                                                    if (serverOk) {
+                                                        authPageViewModel
+                                                            .removeRsvpFromProfile(
+                                                                event.id
+                                                            ) { _ ->
+                                                            isCancelling = false
+                                                            hapticVibrate(
+                                                                HapticDuration
+                                                                    .MEDIUM,
+                                                                HapticCategory
+                                                                    .ALERTS
+                                                            )
+                                                            successToastMessage
+                                                                .value =
+                                                                "Registration " +
+                                                                "cancelled."
+                                                            showSuccessToast
+                                                                .value = true
+                                                            coroutineScope
+                                                                .launch {
+                                                                delay(2000)
+                                                                showSuccessToast
+                                                                    .value =
+                                                                    false
+                                                            }
+                                                        }
+                                                    } else {
+                                                        isCancelling = false
+                                                        hapticVibrate(
+                                                            HapticDuration.HEAVY,
+                                                            HapticCategory.ALERTS
+                                                        )
+                                                        errorToastMessage
+                                                            .value =
+                                                            "Failed to cancel. " +
+                                                            "Please try again."
+                                                        showErrorToast
+                                                            .value = true
+                                                        coroutineScope.launch {
+                                                            delay(2000)
+                                                            showErrorToast
+                                                                .value = false
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor =
+                                                    Color(0xFFE53935),
+                                                contentColor = Color.White
+                                            ),
+                                            shape = RoundedCornerShape(8.dp),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Text("Yes, Cancel")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Button(
                     enabled = showUpcoming,
                     onClick = {
@@ -512,6 +676,7 @@ fun EventCard(
                             showProgressBar.value = false
                             if (eventUpdateSuccess) {
                                 hapticVibrate(HapticDuration.MEDIUM, HapticCategory.ALERTS)
+                                successToastMessage.value = "RSVP submitted successfully!"
                                 showSuccessToast.value = true
                                 coroutineScope.launch {
                                     delay(2000)
@@ -520,6 +685,8 @@ fun EventCard(
                                 onDismissRequest()
                             } else {
                                 hapticVibrate(HapticDuration.HEAVY, HapticCategory.ALERTS)
+                                errorToastMessage.value =
+                                    "Failed to submit RSVP. Please try again."
                                 showErrorToast.value = true
                                 coroutineScope.launch {
                                     delay(2000)
@@ -530,6 +697,8 @@ fun EventCard(
                     } else {
                         showProgressBar.value = false
                         hapticVibrate(HapticDuration.HEAVY, HapticCategory.ALERTS)
+                        errorToastMessage.value =
+                            "Failed to submit RSVP. Please try again."
                         showErrorToast.value = true
                         coroutineScope.launch {
                             delay(2000)
@@ -539,18 +708,15 @@ fun EventCard(
                 }
             }
         )
-        if (showSuccessToast.value) {
-            Toast(
-                message = "RSVP submitted successfully!"
-            )
-        }
+    }
 
-        if (showErrorToast.value) {
-            Toast(
-                message = "Failed to submit RSVP. Please try again."
-            )
-        }
-
+    // Toasts — outside dialog block so they render for both
+    // RSVP submit and cancel flows
+    if (showSuccessToast.value) {
+        Toast(message = successToastMessage.value)
+    }
+    if (showErrorToast.value) {
+        Toast(message = errorToastMessage.value)
     }
 }
 
@@ -559,6 +725,7 @@ fun LargeScreenEventDetailPopup(
     selectedEvent: Event,
     onDismissRequest: () -> Unit,
     onRsvpClick: () -> Unit,
+    userHasRsvped: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -584,6 +751,7 @@ fun LargeScreenEventDetailPopup(
                 event = selectedEvent,
                 onCloseClick = onDismissRequest,
                 onRsvpClick = onRsvpClick,
+                userHasRsvped = userHasRsvped,
                 modifier = Modifier.fillMaxSize()
             )
         }
@@ -595,6 +763,7 @@ fun CompactScreenEventDetailPopup(
     event: Event,
     onDismissRequest: () -> Unit,
     onRsvpClick: () -> Unit,
+    userHasRsvped: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -620,6 +789,7 @@ fun CompactScreenEventDetailPopup(
                 event = event,
                 onCloseClick = onDismissRequest,
                 onRsvpClick = onRsvpClick,
+                userHasRsvped = userHasRsvped,
                 modifier = Modifier.fillMaxSize()
             )
         }
@@ -631,6 +801,7 @@ fun EventDetailContent(
     event: Event,
     onCloseClick: () -> Unit,
     onRsvpClick: () -> Unit,
+    userHasRsvped: Boolean = false,
     modifier: Modifier = Modifier
 ) {
 
@@ -869,19 +1040,20 @@ fun EventDetailContent(
             }
 
             val eventLocalDate = event.date.toEventLocalDate()
-            if (eventLocalDate != null && eventLocalDate > Clock.System.now()
+            if (eventLocalDate != null && eventLocalDate >= Clock.System.now()
                     .toLocalDateTime(
                         TimeZone.currentSystemDefault()
                     ).date
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
-                    onClick = {
-                        onRsvpClick()
-                    },
+                    onClick = { onRsvpClick() },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(text = "Register")
+                    Text(
+                        text = if (userHasRsvped) "Modify RSVP"
+                               else "Register"
+                    )
                 }
             }
 

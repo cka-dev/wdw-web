@@ -32,6 +32,7 @@ import net.winedownwednesday.web.data.models.FirebaseAuthResponse
 import net.winedownwednesday.web.data.models.InitialDataResponse
 import net.winedownwednesday.web.data.models.PublicKeyCredentialCreationOptions
 import net.winedownwednesday.web.data.models.PublicKeyCredentialRequestOptions
+import net.winedownwednesday.web.data.models.CancelRsvpRequest
 import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.data.models.RegistrationOptionsRequest
 import net.winedownwednesday.web.data.models.RegistrationResponse
@@ -419,6 +420,21 @@ class RemoteDataSource (
             response.status.isSuccess()
         } catch (e: Exception) {
             logError("addRsvpToEvent", e)
+            false
+        }
+    }
+
+    override suspend fun cancelRsvp(eventId: Long, email: String): Boolean {
+        return try {
+            val act = appCheckToken()
+            val response: HttpResponse = client.post("$SERVER_URL/cancelRsvp") {
+                act?.let { header(APP_CHECK_HEADER, it) }
+                contentType(ContentType.Application.Json)
+                setBody(CancelRsvpRequest(eventId = eventId, email = email))
+            }
+            response.status.isSuccess()
+        } catch (e: Exception) {
+            logError("cancelRsvp", e)
             false
         }
     }

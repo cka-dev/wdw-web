@@ -456,6 +456,29 @@ class AuthPageViewModel(
         }
     }
 
+    fun removeRsvpFromProfile(
+        eventId: Long,
+        onResult: (Boolean) -> Unit
+    ) {
+        val oldProfile = _profileData.value ?: return
+        val newMap = oldProfile.eventRsvps?.toMutableMap()?.apply {
+            remove(eventId)
+        }
+        val updatedProfile = oldProfile.copy(eventRsvps = newMap)
+        _profileData.value = updatedProfile
+        try {
+            saveProfile(updatedProfile) { success ->
+                if (!success) {
+                    _profileData.value = oldProfile
+                }
+                onResult(success)
+            }
+        } catch (e: Exception) {
+            _profileData.value = oldProfile
+            onResult(false)
+        }
+    }
+
     fun requestNotificationPermissionAndGetToken() {
         viewModelScope.launch {
             try {

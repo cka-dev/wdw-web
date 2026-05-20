@@ -123,8 +123,23 @@ class EventsPageViewModel(
         }
     }
 
-
-
+    fun cancelRsvpForEvent(
+        eventId: Long,
+        email: String,
+        onResult: (Boolean) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val success = repository.cancelRsvp(eventId, email)
+                onResult(success)
+                if (success) {
+                    repository.refreshAll()
+                }
+            } catch (_: Exception) {
+                onResult(false)
+            }
+        }
+    }
     // ─── Vino Event Suggestions ───────────────────────────────────────────────
 
     private val _vinoEventSuggestions =
