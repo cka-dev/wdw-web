@@ -47,4 +47,5 @@ data class FeatureFlags(
     val vinoWelcomePosts: Boolean = false,
     val onboardingEnforcement: Boolean = false,
     val notificationPreferences: Boolean = false,
+    val rsvpCancellation: Boolean = false,
 )

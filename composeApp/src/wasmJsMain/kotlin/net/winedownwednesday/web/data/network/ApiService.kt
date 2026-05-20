@@ -64,6 +64,8 @@ interface ApiService {
 
     suspend fun addRsvpToEvent(rsvp: RSVPRequest): Boolean
 
+    suspend fun cancelRsvp(eventId: Long, email: String): Boolean
+
     suspend fun registerFcmInstanceId(request: FcmInstanceRegistrationRequest): Boolean
 
     suspend fun unRegisterFcmInstanceId(request: FcmInstanceRegistrationRequest): Boolean

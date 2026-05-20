@@ -213,6 +213,10 @@ class AppRepository (
         return remoteDataSource.addRsvpToEvent(rsvp)
     }
 
+    suspend fun cancelRsvp(eventId: Long, email: String): Boolean {
+        return remoteDataSource.cancelRsvp(eventId, email)
+    }
+
     suspend fun registerFcmInstanceId(request: FcmInstanceRegistrationRequest): Boolean {
         return remoteDataSource.registerFcmInstanceId(request)
     }
