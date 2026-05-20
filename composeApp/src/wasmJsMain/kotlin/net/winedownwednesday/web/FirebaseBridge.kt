@@ -21,6 +21,9 @@ external object FirebaseBridge {
     fun sendEmailVerification(): Promise<JsAny?>
     fun getAppCheckToken(): Promise<JsString?>
 
+    fun getBrowserName(): String
+    fun getOsName(): String
+
 }
 
 external interface FbResponse: JsAny {
