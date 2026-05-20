@@ -5,8 +5,14 @@ import net.winedownwednesday.web.utils.toEventLocalDate
 /**
  * Utilities for "Add to Calendar" functionality.
  * Supports Google Calendar URLs and .ics file generation.
+ *
+ * All WDW events take place in Atlanta, GA.
+ * Times are interpreted in America/New_York (Eastern Time).
  */
 object CalendarUtils {
+
+    /** IANA timezone for all WDW events. */
+    private const val EVENT_TZ = "America/New_York"
 
     /**
      * Build a Google Calendar "add event" URL.
@@ -54,6 +60,8 @@ object CalendarUtils {
             append(urlEncode(location))
             append("&details=")
             append(urlEncode(description))
+            append("&ctz=")
+            append(EVENT_TZ)
         }
         return params
     }
@@ -85,7 +93,8 @@ object CalendarUtils {
                 val end = dateStr + "T" +
                     padInt(endHour, 2) +
                     padInt(minute, 2) + "00"
-                "DTSTART:$start" to "DTEND:$end"
+                "DTSTART;TZID=$EVENT_TZ:$start" to
+                    "DTEND;TZID=$EVENT_TZ:$end"
             } else {
                 "DTSTART;VALUE=DATE:$dateStr" to
                     "DTEND;VALUE=DATE:$dateStr"
@@ -104,6 +113,24 @@ object CalendarUtils {
             appendLine("BEGIN:VCALENDAR")
             appendLine("VERSION:2.0")
             appendLine("PRODID:-//Wine Down Wednesday//EN")
+            // VTIMEZONE block for Apple Calendar / Outlook
+            appendLine("BEGIN:VTIMEZONE")
+            appendLine("TZID:$EVENT_TZ")
+            appendLine("BEGIN:STANDARD")
+            appendLine("DTSTART:19701101T020000")
+            appendLine("RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU")
+            appendLine("TZOFFSETFROM:-0400")
+            appendLine("TZOFFSETTO:-0500")
+            appendLine("TZNAME:EST")
+            appendLine("END:STANDARD")
+            appendLine("BEGIN:DAYLIGHT")
+            appendLine("DTSTART:19700308T020000")
+            appendLine("RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU")
+            appendLine("TZOFFSETFROM:-0500")
+            appendLine("TZOFFSETTO:-0400")
+            appendLine("TZNAME:EDT")
+            appendLine("END:DAYLIGHT")
+            appendLine("END:VTIMEZONE")
             appendLine("BEGIN:VEVENT")
             appendLine(dtStart)
             appendLine(dtEnd)
