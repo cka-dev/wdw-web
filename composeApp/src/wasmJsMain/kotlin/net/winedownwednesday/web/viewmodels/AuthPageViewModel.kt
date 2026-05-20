@@ -18,6 +18,7 @@ import net.winedownwednesday.web.data.models.AuthenticationResponse
 import net.winedownwednesday.web.data.models.ChangePasswordRequest
 import net.winedownwednesday.web.data.models.EmailPasswordRequest
 import net.winedownwednesday.web.data.models.FcmInstanceRegistrationRequest
+import net.winedownwednesday.web.BuildConfig
 import net.winedownwednesday.web.data.models.FirebaseAuthResponse
 import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.data.models.RegistrationResponse
@@ -484,6 +485,7 @@ class AuthPageViewModel(
                         registerFcmInstanceId(tokenStr, currentEmail)
                     }
                 } catch (e: Exception) {
+                    println("[AuthVM] FCM token registration failed: ${e.message}")
                 }
             }
         }
@@ -493,10 +495,15 @@ class AuthPageViewModel(
         viewModelScope.launch {
             val requestBody = FcmInstanceRegistrationRequest(
                 instanceId = token,
-                email = emailAddr
+                email = emailAddr,
+                platform = "web",
+                appVersion = BuildConfig.VERSION,
+                deviceModel = try { FirebaseBridge.getBrowserName() } catch (_: Exception) { null },
+                osVersion = try { FirebaseBridge.getOsName() } catch (_: Exception) { null },
             )
             val request= repository.registerFcmInstanceId(requestBody)
             if (!request) {
+                println("[AuthVM] registerFcmInstanceId returned false")
             }
         }
     }
@@ -509,6 +516,7 @@ class AuthPageViewModel(
         )
         val request = repository.unRegisterFcmInstanceId(requestBody)
         if (!request) {
+            println("[AuthVM] unRegisterFcmInstanceId returned false")
         }
     }
 
