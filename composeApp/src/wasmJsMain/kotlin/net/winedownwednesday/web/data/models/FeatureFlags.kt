@@ -48,4 +48,5 @@ data class FeatureFlags(
     val onboardingEnforcement: Boolean = false,
     val notificationPreferences: Boolean = false,
     val rsvpCancellation: Boolean = false,
+    val whatsNew: Boolean = false,
 )

@@ -23,4 +23,5 @@ data class InitialDataResponse(
     val featuredWines: FeaturedWinesResponse? = null,
     val blogPosts: BlogPostsResponse? = null,
     val featureFlags: FeatureFlags = FeatureFlags(),
+    val whatsNew: WhatsNew? = null,
 )

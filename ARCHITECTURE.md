@@ -220,6 +220,17 @@ Enhanced profile picture management in `ProfilePage.kt`:
 - `ProfileEditSection` now carries `eventRsvps`, `blockedEmails`, and `profileImageUrl` through when constructing `updatedProfile`, preventing silent field drops on save.
 - Empty `phone` and `aboutMe` fields send `null` instead of `""` to avoid server-side fallback issues.
 
+### What's New (Release Highlights)
+Server-driven release highlights dialog shown once per version after deployment. Content is managed via the admin dashboard and delivered through `getInitialData`.
+
+- **Data Flow**: `getInitialData?platform=web` returns `whatsNew: { version, title, items[] }` (or `null`). Deserialized into `WhatsNew` / `WhatsNewItem` models. Stored in `AppRepository._whatsNew` StateFlow.
+- **Gating**: Two conditions: (1) `featureFlags.whatsNew == true`, (2) `whatsNew != null && items.isNotEmpty() && localStorage seen version != whatsNew.version`.
+- **Dialog**: `WhatsNewDialog.kt` — Material3 `BasicAlertDialog` with sparkle header, title, scrollable items list (emoji + title + description), and "Got it!" dismiss button. AccentOrange theme.
+- **Seen Tracking**: `localStorage` key `wdw_whats_new_seen_version`. Written on both button dismiss and backdrop dismiss. Once marked, dialog won't re-show until the server version changes.
+- **No version guard needed**: Unlike mobile, web always serves the latest deployed code, so the version in `whatsNew` always matches.
+- **Source**: `WhatsNewDialog.kt`, integration in `AppNavigation.kt`.
+
+
 ## 4. Technical Implementation Details
 
 ### Multi-Redundant API Requests

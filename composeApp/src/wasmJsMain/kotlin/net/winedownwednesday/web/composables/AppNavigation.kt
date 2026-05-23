@@ -133,6 +133,7 @@ fun AppNavigation(
     val blogViewModel: BlogPageViewModel = koinInject()
     val appRepository: AppRepository = koinInject()
     val featureFlags by appRepository.featureFlags.collectAsState()
+    val whatsNew by appRepository.whatsNew.collectAsState()
     // --- Nav 3 back stack ------------------------------------------------
     // SavedStateConfiguration is required by the API. An empty config is safe
     // because browser URL hash handles route restoration on reload.
@@ -306,6 +307,25 @@ fun AppNavigation(
     // --- Theme & layout --------------------------------------------------
     CompositionLocalProvider(LocalFeatureFlags provides featureFlags) {
     WdwTheme(isDark = isDarkTheme) {
+        // ── What's New dialog ─────────────────────────────
+        // Show once per version when feature flag is enabled.
+        var showWhatsNew by remember { mutableStateOf(false) }
+        LaunchedEffect(featureFlags.whatsNew, whatsNew) {
+            val wn = whatsNew
+            showWhatsNew = featureFlags.whatsNew &&
+                wn != null &&
+                wn.items.isNotEmpty() &&
+                getSeenWhatsNewVersion() != wn.version
+        }
+        if (showWhatsNew) {
+            whatsNew?.let { wn ->
+                WhatsNewDialog(
+                    whatsNew = wn,
+                    onDismiss = { showWhatsNew = false },
+                )
+            }
+        }
+
         val mainContent: @Composable () -> Unit = {
             Surface(modifier = Modifier.fillMaxSize()) {
                 Column(modifier = Modifier.fillMaxSize()) {

@@ -25,6 +25,7 @@ import net.winedownwednesday.web.data.models.PublicKeyCredentialRequestOptions
 import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.data.models.RegistrationResponse
 import net.winedownwednesday.web.data.models.UserProfileData
+import net.winedownwednesday.web.data.models.WhatsNew
 import net.winedownwednesday.web.data.network.ApiResult
 import net.winedownwednesday.web.data.network.RemoteDataSource
 
@@ -59,6 +60,9 @@ class AppRepository (
     private val _featureFlags = MutableStateFlow(FeatureFlags())
     val featureFlags = _featureFlags.asStateFlow()
 
+    private val _whatsNew = MutableStateFlow<WhatsNew?>(null)
+    val whatsNew = _whatsNew.asStateFlow()
+
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val _profileData = MutableStateFlow<UserProfileData?>(null)
@@ -89,6 +93,7 @@ class AppRepository (
                 ) initialData.blogPosts.posts
                 else emptyList()
             _featureFlags.value = initialData.featureFlags
+            _whatsNew.value = initialData.whatsNew
         } else {
             // Fallback: individual calls if batch fails
             fetchMembers()
