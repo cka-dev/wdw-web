@@ -17,7 +17,8 @@ data class Member(
     val business: String?,
     val interests: List<String>,
     val favoriteWines: List<String>,
-    val spotlightReason: String? = null
+    val spotlightReason: String? = null,
+    val isEmeritus: Boolean = false
 )
 
 enum class MembershipType{
