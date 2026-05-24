@@ -76,6 +76,7 @@ import net.winedownwednesday.web.viewmodels.MembersPageViewModel
 import net.winedownwednesday.web.viewmodels.matchesQuery
 import net.winedownwednesday.web.vibrate
 import org.koin.compose.koinInject
+import org.kodein.emoji.compose.m3.TextWithNotoImageEmoji
 
 // ---------------------------------------------------------------------------
 // MembersPage — adaptive list + detail
@@ -227,30 +228,35 @@ private fun MembersListDetailLayout(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         memberSections.forEach { section ->
-                            item(
-                                key  = "header_${section.title}",
-                                span = { GridItemSpan(maxLineSpan) }
-                            ) {
-                                MemberSectionHeader(section.title)
+                            val filtered = section.members.filter {
+                                it.matchesQuery(searchQuery)
                             }
-                            itemsIndexed(
-                                items = section.members.filter { it.matchesQuery(searchQuery) },
-                                key   = { _, member -> member.id }
-                            ) { index, member ->
-                                GridItemReveal(
-                                    index        = index,
-                                    animationKey = searchQuery,
-                                    modifier     = Modifier.animateItem(
-                                        placementSpec = tween(800),
-                                        fadeInSpec    = tween(800),
-                                        fadeOutSpec   = tween(800),
-                                    )
+                            if (filtered.isNotEmpty()) {
+                                item(
+                                    key  = "header_${section.title}",
+                                    span = { GridItemSpan(maxLineSpan) }
                                 ) {
-                                    MemberCard(
-                                        member     = member,
-                                        isSelected = member == selectedMember,
-                                        onClick    = { onMemberClick(member) },
-                                    )
+                                    MemberSectionHeader(section.title)
+                                }
+                                itemsIndexed(
+                                    items = filtered,
+                                    key   = { _, member -> member.id }
+                                ) { index, member ->
+                                    GridItemReveal(
+                                        index        = index,
+                                        animationKey = searchQuery,
+                                        modifier     = Modifier.animateItem(
+                                            placementSpec = tween(800),
+                                            fadeInSpec    = tween(800),
+                                            fadeOutSpec   = tween(800),
+                                        )
+                                    ) {
+                                        MemberCard(
+                                            member     = member,
+                                            isSelected = member == selectedMember,
+                                            onClick    = { onMemberClick(member) },
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -423,6 +429,21 @@ fun MemberCard(
                 overflow  = TextOverflow.Ellipsis,
                 color     = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
             )
+            if (member.isEmeritus) {
+                Spacer(Modifier.height(4.dp))
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = Color(0xFFFF7F33).copy(alpha = 0.15f),
+                ) {
+                    TextWithNotoImageEmoji(
+                        text     = "🎖 Emeritus",
+                        fontSize = 10.sp,
+                        color    = Color(0xFFFF7F33),
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                    )
+                }
+            }
         }
     }
 }
@@ -473,15 +494,34 @@ private fun MemberDetailPane(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment     = Alignment.CenterVertically,
         ) {
-            Text(
-                text      = member.name,
-                style     = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color     = MaterialTheme.colorScheme.onSurface,
-                maxLines  = 2,
-                overflow  = TextOverflow.Ellipsis,
-                modifier  = Modifier.weight(1f),
-            )
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text      = member.name,
+                    style     = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color     = MaterialTheme.colorScheme.onSurface,
+                    maxLines  = 2,
+                    overflow  = TextOverflow.Ellipsis,
+                )
+                if (member.isEmeritus) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = Color(0xFFFF7F33).copy(alpha = 0.15f),
+                    ) {
+                        TextWithNotoImageEmoji(
+                            text       = "🎖 Emeritus",
+                            fontSize   = 12.sp,
+                            color      = Color(0xFFFF7F33),
+                            fontWeight = FontWeight.Medium,
+                            modifier   = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        )
+                    }
+                }
+            }
             IconButton(onClick = onClose) {
                 Icon(
                     imageVector        = Icons.Default.Close,

@@ -50,12 +50,17 @@ private val _organizers = MutableStateFlow<List<Member>>(emptyList())
             val newOrganizers = mutableListOf<Member>()
             val newMembers = mutableListOf<Member>()
             val newGuests = mutableListOf<Member>()
+            val newEmeritus = mutableListOf<Member>()
 
             fetchedMembers.filterNotNull().forEach { member ->
-                when (member.memberType) {
-                    MembershipType.MEMBER -> newMembers.add(member)
-                    MembershipType.GUEST -> newGuests.add(member)
-                    MembershipType.LEADER -> newOrganizers.add(member)
+                if (member.isEmeritus) {
+                    newEmeritus.add(member)
+                } else {
+                    when (member.memberType) {
+                        MembershipType.MEMBER -> newMembers.add(member)
+                        MembershipType.GUEST -> newGuests.add(member)
+                        MembershipType.LEADER -> newOrganizers.add(member)
+                    }
                 }
             }
 
@@ -63,11 +68,20 @@ private val _organizers = MutableStateFlow<List<Member>>(emptyList())
             _members.value = newMembers
             _guests.value = newGuests
 
-            _allMemberSections.value = listOf(
-                MemberSection("Leadership", newOrganizers),
-                MemberSection("Members", newMembers),
-                MemberSection("Guests", newGuests)
-            )
+            val sections = mutableListOf<MemberSection>()
+            if (newOrganizers.isNotEmpty()) {
+                sections.add(MemberSection("Leadership", newOrganizers))
+            }
+            if (newMembers.isNotEmpty()) {
+                sections.add(MemberSection("Members", newMembers))
+            }
+            if (newGuests.isNotEmpty()) {
+                sections.add(MemberSection("Guests", newGuests))
+            }
+            if (newEmeritus.isNotEmpty()) {
+                sections.add(MemberSection("Emeritus", newEmeritus))
+            }
+            _allMemberSections.value = sections
         }
     }
 
