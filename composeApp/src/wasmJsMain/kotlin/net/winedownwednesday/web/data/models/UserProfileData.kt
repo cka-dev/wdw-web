@@ -29,6 +29,8 @@ data class UserProfileData(
     val isMember: Boolean? = false,
     val hasPassword: Boolean = false,
     val hasPasskey: Boolean = false,
+    val passkeyCount: Int = 0,
+    val passkeys: List<PasskeyInfo> = emptyList(),
     val eventRsvps: Map<Long, RSVPRequest>? = emptyMap(),
     val blockedEmails: List<String>? = emptyList(),
     // ── Profile parity with Member model ──

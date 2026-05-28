@@ -41,6 +41,10 @@ import net.winedownwednesday.web.data.models.UserProfileData
 import net.winedownwednesday.web.data.models.UserProfileRequest
 import net.winedownwednesday.web.data.models.VerifyAuthenticationRequest
 import net.winedownwednesday.web.data.models.VerifyRegistrationRequest
+import net.winedownwednesday.web.data.models.PasskeysResponse
+import net.winedownwednesday.web.data.models.DeletePasskeyResponse
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 @JsFun("(msg) => console.error(msg)")
 private external fun consoleError(msg: JsString)
@@ -279,19 +283,35 @@ class RemoteDataSource (
             ApiResult<PublicKeyCredentialCreationOptions> {
         return try {
             val act = appCheckToken()
+            // Include auth header if user is logged in
+            // (needed for adding additional passkeys)
+            val idToken = try {
+                FirebaseBridge.getIdToken()
+                    .await<JsAny?>()?.toString()
+            } catch (_: Exception) { null }
+
             val response: HttpResponse = client.post(
                 CloudFunctionUrls.GENERATE_PASSKEY_REGISTRATION) {
                 act?.let { header(APP_CHECK_HEADER, it) }
+                idToken?.let {
+                    header(
+                        HttpHeaders.Authorization,
+                        "Bearer $it"
+                    )
+                }
                 contentType(ContentType.Application.Json)
                 setBody(RegistrationOptionsRequest(email))
             }
             if (!response.status.isSuccess()) {
-                if (response.status == HttpStatusCode.Conflict) {
-                    ApiResult.Error("An account already exists with that email. " +
-                            "Please log in instead.")
-                } else {
-                    ApiResult.Error("Failed to generate registration options")
-                }
+                val msg = try {
+                    kotlinx.serialization.json.Json
+                        .decodeFromString<Map<String, String>>(
+                            response.bodyAsText()
+                        )["error"]
+                } catch (_: Exception) { null }
+                ApiResult.Error(
+                    msg ?: "Failed to generate registration options"
+                )
             } else {
                 val options: PublicKeyCredentialCreationOptions = response.body()
                 ApiResult.Success(options)
@@ -332,11 +352,29 @@ class RemoteDataSource (
             }
             if (!response.status.isSuccess()) {
                 if (response.status == HttpStatusCode.NotFound) {
-                    val errorMessage = "Email is not registered. Please double check for typos" +
-                            " or register a new account"
-                    ApiResult.Error(errorMessage)
+                    ApiResult.Error(
+                        "No account found for this email." +
+                        " Please check for typos or" +
+                        " register a new account."
+                    )
+                } else if (response.status == HttpStatusCode.Conflict) {
+                    val msg = try {
+                        kotlinx.serialization.json.Json
+                            .decodeFromString<Map<String, String>>(
+                                response.bodyAsText()
+                            )["message"]
+                    } catch (_: Exception) { null }
+                    ApiResult.Error(
+                        msg ?: "This account does not have" +
+                            " a passkey. Log in with your" +
+                            " password, then add a passkey" +
+                            " from Settings."
+                    )
                 } else {
-                    ApiResult.Error("Failed to generate authentication options")
+                    ApiResult.Error(
+                        "Failed to generate" +
+                        " authentication options"
+                    )
                 }
             } else {
                 val options: PublicKeyCredentialRequestOptions = response.body()
@@ -496,18 +534,56 @@ class RemoteDataSource (
         credential: RegistrationResponse, email: String): ApiResult<FirebaseAuthResponse> {
         return try {
             val act = appCheckToken()
+            // Optionally attach the Firebase ID token.
+            // Required when the user is already logged in and is
+            // adding an additional passkey (server requiresToken=true).
+            // Safe to omit for the very first passkey registration
+            // (server createToken internally in that path).
+            val idToken = try {
+                FirebaseBridge.getIdToken()
+                    .await<JsAny?>()?.toString()
+                    ?.takeIf { it.isNotBlank() }
+            } catch (_: Exception) { null }
+
             val response: HttpResponse = client.post(
-                "https://verifypasskeyregistrationwithfirebaseauth-iktff5ztia-uc.a.run.app"
+                CloudFunctionUrls.VERIFY_PASSKEY_REGISTRATION_WITH_TOKEN
             ) {
                 act?.let { header(APP_CHECK_HEADER, it) }
+                idToken?.let {
+                    header(HttpHeaders.Authorization, "Bearer $it")
+                }
                 contentType(ContentType.Application.Json)
-                setBody(VerifyRegistrationRequest(credential, email))
+                setBody(buildJsonObject {
+                    put(
+                        "credential",
+                        kotlinx.serialization.json.Json
+                            .encodeToJsonElement(
+                                RegistrationResponse
+                                    .serializer(),
+                                credential,
+                            )
+                    )
+                    put("email", email)
+                    val browserLabel = try {
+                        FirebaseBridge.getBrowserName()
+                    } catch (_: Exception) { "Passkey" }
+                    put("label", browserLabel)
+                    put("platform", "web")
+                })
             }
             if (response.status.isSuccess()) {
                 val authResponse: FirebaseAuthResponse = response.body()
                 ApiResult.Success(authResponse)
             } else {
-                ApiResult.Error("Passkey registration failed")
+                val errorMsg = try {
+                    kotlinx.serialization.json.Json
+                        .decodeFromString<Map<String, String>>(
+                            response.bodyAsText()
+                        )["error"]
+                } catch (_: Exception) { null }
+                ApiResult.Error(
+                    errorMsg ?: "Passkey registration failed"
+                )
             }
         } catch (e: Exception) {
             logError("verifyPasskeyRegistrationWithToken", e)
@@ -913,6 +989,119 @@ class RemoteDataSource (
             throw Exception(msg ?: "Failed to flag review (${response.status.value})")
         }
         return true
+    }
+
+    // ─── Passkey Management ─────────────────────────────────────────────
+
+    override suspend fun getPasskeys():
+            ApiResult<PasskeysResponse> {
+        return try {
+            val act = appCheckToken()
+            val idToken = FirebaseBridge.getIdToken()
+                .await<JsAny?>().toString()
+            val response: HttpResponse = client.get(
+                CloudFunctionUrls.GET_PASSKEYS
+            ) {
+                act?.let { header(APP_CHECK_HEADER, it) }
+                header(
+                    HttpHeaders.Authorization,
+                    "Bearer $idToken"
+                )
+            }
+            if (response.status.isSuccess()) {
+                ApiResult.Success(response.body())
+            } else {
+                val msg = try {
+                    kotlinx.serialization.json.Json
+                        .decodeFromString<Map<String, String>>(
+                            response.bodyAsText()
+                        )["error"]
+                } catch (_: Exception) { null }
+                ApiResult.Error(
+                    msg ?: "Failed to fetch passkeys"
+                )
+            }
+        } catch (e: Exception) {
+            logError("getPasskeys", e)
+            ApiResult.Error("Unknown error")
+        }
+    }
+
+    override suspend fun deletePasskey(
+        credentialId: String
+    ): ApiResult<DeletePasskeyResponse> {
+        return try {
+            val act = appCheckToken()
+            val idToken = FirebaseBridge.getIdToken()
+                .await<JsAny?>().toString()
+            val response: HttpResponse = client.post(
+                CloudFunctionUrls.DELETE_PASSKEY
+            ) {
+                act?.let { header(APP_CHECK_HEADER, it) }
+                header(
+                    HttpHeaders.Authorization,
+                    "Bearer $idToken"
+                )
+                contentType(ContentType.Application.Json)
+                setBody(mapOf("credentialId" to credentialId))
+            }
+            if (response.status.isSuccess()) {
+                ApiResult.Success(response.body())
+            } else {
+                val msg = try {
+                    kotlinx.serialization.json.Json
+                        .decodeFromString<Map<String, String>>(
+                            response.bodyAsText()
+                        )["error"]
+                } catch (_: Exception) { null }
+                ApiResult.Error(
+                    msg ?: "Failed to delete passkey"
+                )
+            }
+        } catch (e: Exception) {
+            logError("deletePasskey", e)
+            ApiResult.Error("Unknown error")
+        }
+    }
+
+    override suspend fun renamePasskey(
+        credentialId: String, label: String
+    ): ApiResult<Unit> {
+        return try {
+            val act = appCheckToken()
+            val idToken = FirebaseBridge.getIdToken()
+                .await<JsAny?>().toString()
+            val response: HttpResponse = client.post(
+                CloudFunctionUrls.RENAME_PASSKEY
+            ) {
+                act?.let { header(APP_CHECK_HEADER, it) }
+                header(
+                    HttpHeaders.Authorization,
+                    "Bearer $idToken"
+                )
+                contentType(ContentType.Application.Json)
+                setBody(mapOf(
+                    "credentialId" to credentialId,
+                    "label" to label,
+                ))
+            }
+            if (response.status.isSuccess()) {
+                ApiResult.Success(Unit)
+            } else {
+                val msg = try {
+                    kotlinx.serialization.json.Json
+                        .decodeFromString<Map<String, String>>(
+                            response.bodyAsText()
+                        )["error"]
+                } catch (_: Exception) { null }
+                ApiResult.Error(
+                    msg ?: "Failed to rename passkey"
+                )
+            }
+        } catch (e: Exception) {
+            logError("renamePasskey", e)
+            ApiResult.Error("Unknown error")
+        }
     }
 
 }

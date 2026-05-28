@@ -49,4 +49,6 @@ data class FeatureFlags(
     val notificationPreferences: Boolean = false,
     val rsvpCancellation: Boolean = false,
     val whatsNew: Boolean = false,
+    val passkeyEnhancements: Boolean = false,
+    val autoPasskeyPrompt: Boolean = false,
 )

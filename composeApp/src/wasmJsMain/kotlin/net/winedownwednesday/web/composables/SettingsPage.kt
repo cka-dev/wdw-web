@@ -65,7 +65,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.winedownwednesday.web.viewmodels.AuthPageViewModel
 import net.winedownwednesday.web.viewmodels.BlockedUserInfo
 import net.winedownwednesday.web.data.models.NotificationPreferences
+import net.winedownwednesday.web.data.models.PasskeyInfo
 import net.winedownwednesday.web.composables.LocalFeatureFlags
+import androidx.compose.material.icons.filled.Computer
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.PhoneIphone
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.OutlinedTextFieldDefaults
 
 enum class SettingsCategory(val label: String, val icon: ImageVector) {
     NOTIFICATIONS("Notifications", Icons.Default.Notifications),
@@ -86,6 +95,7 @@ fun SettingsPage(
     val blockedUsers by viewModel.blockedUsers.collectAsStateWithLifecycle()
     val isUnblocking by viewModel.isUnblocking.collectAsStateWithLifecycle()
     val isSavingProfile by viewModel.isSavingProfile.collectAsStateWithLifecycle()
+    val passkeys by viewModel.passkeys.collectAsStateWithLifecycle()
 
     val flags = LocalFeatureFlags.current
     val visibleCategories = SettingsCategory.entries.filter {
@@ -174,10 +184,17 @@ fun SettingsPage(
                             SecuritySection(
                                 hasPassword = userProfile?.hasPassword ?: false,
                                 hasPasskey = userProfile?.hasPasskey ?: false,
+                                passkeyCount = userProfile?.passkeyCount ?: 0,
+                                passkeys = passkeys,
                                 userEmail = userProfile?.email ?: "",
+                                isPasskeyEnhancementsEnabled = flags.passkeyEnhancements,
                                 onRegisterPasskey = { viewModel.registerPasskeyV2(it) },
                                 onLinkPassword = { pw, cb -> viewModel.linkPasswordToAccount(pw, cb) },
-                                onChangePassword = { cur, new, cb -> viewModel.changePassword(cur, new, cb) }
+                                onChangePassword = { cur, new, cb -> viewModel.changePassword(cur, new, cb) },
+                                onDeletePasskey = { id, cb -> viewModel.deletePasskey(id, cb) },
+                                onRenamePasskey = { id, lbl, cb -> viewModel.renamePasskey(id, lbl, cb) },
+                                onAddPasskey = { viewModel.addAdditionalPasskey() },
+                                onFetchPasskeys = { viewModel.fetchPasskeys() },
                             )
                         }
                         item {
@@ -296,10 +313,17 @@ fun SettingsPage(
                                         SettingsCategory.SECURITY -> SecuritySection(
                                             hasPassword = userProfile?.hasPassword ?: false,
                                             hasPasskey = userProfile?.hasPasskey ?: false,
+                                            passkeyCount = userProfile?.passkeyCount ?: 0,
+                                            passkeys = passkeys,
                                             userEmail = userProfile?.email ?: "",
+                                            isPasskeyEnhancementsEnabled = flags.passkeyEnhancements,
                                             onRegisterPasskey = { viewModel.registerPasskeyV2(it) },
                                             onLinkPassword = { pw, cb -> viewModel.linkPasswordToAccount(pw, cb) },
-                                            onChangePassword = { cur, new, cb -> viewModel.changePassword(cur, new, cb) }
+                                            onChangePassword = { cur, new, cb -> viewModel.changePassword(cur, new, cb) },
+                                            onDeletePasskey = { id, cb -> viewModel.deletePasskey(id, cb) },
+                                            onRenamePasskey = { id, lbl, cb -> viewModel.renamePasskey(id, lbl, cb) },
+                                            onAddPasskey = { viewModel.addAdditionalPasskey() },
+                                            onFetchPasskeys = { viewModel.fetchPasskeys() },
                                         )
                                         SettingsCategory.PRIVACY -> PrivacySection(
                                             blockedUsers = blockedUsers,
@@ -455,13 +479,27 @@ private fun NotificationsSection(
 private fun SecuritySection(
     hasPassword: Boolean,
     hasPasskey: Boolean,
+    passkeyCount: Int,
+    passkeys: List<PasskeyInfo>,
     userEmail: String,
+    isPasskeyEnhancementsEnabled: Boolean,
     onRegisterPasskey: (String) -> Unit,
     onLinkPassword: (String, (Boolean) -> Unit) -> Unit,
-    onChangePassword: (String, String, (Boolean) -> Unit) -> Unit
+    onChangePassword: (String, String, (Boolean) -> Unit) -> Unit,
+    onDeletePasskey: (String, (Boolean) -> Unit) -> Unit,
+    onRenamePasskey: (String, String, (Boolean) -> Unit) -> Unit,
+    onAddPasskey: () -> Unit,
+    onFetchPasskeys: () -> Unit,
 ) {
     var showLinkPasswordDialog by remember { mutableStateOf(false) }
     var showChangePasswordDialog by remember { mutableStateOf(false) }
+
+    // Auto-fetch passkeys when enhanced mode is on.
+    // Keyed on passkeyCount so it re-fetches after
+    // profile changes (add/delete passkey).
+    if (isPasskeyEnhancementsEnabled && hasPasskey) {
+        LaunchedEffect(passkeyCount) { onFetchPasskeys() }
+    }
 
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A)),
@@ -510,7 +548,142 @@ private fun SecuritySection(
                 }
             }
 
-            // Passkey status
+            // ── Passkey section ──
+            if (isPasskeyEnhancementsEnabled) {
+                HorizontalDivider(color = Color(0xFF444444))
+
+                // Prefer the live list size for immediate
+                // optimistic updates; fall back to profile count
+                // while the list is still loading.
+                val displayCount = if (passkeys.isNotEmpty())
+                    passkeys.size else passkeyCount
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Passkeys ($displayCount/8)",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                if (passkeys.isEmpty() && !hasPasskey) {
+                    Text(
+                        "No passkeys registered. Add one for faster, more secure login.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                    TextButton(onClick = { onRegisterPasskey(userEmail) }) {
+                        Icon(Icons.Default.Add, null, Modifier.size(18.dp), tint = Color(0xFFFF7F33))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Add Passkey", color = Color(0xFFFF7F33))
+                    }
+                } else {
+                    passkeys.forEach { passkey ->
+                        PasskeyCard(
+                            passkey = passkey,
+                            isLastPasskey = displayCount <= 1,
+                            onDelete = onDeletePasskey,
+                            onRename = onRenamePasskey,
+                        )
+                    }
+
+                    if (displayCount < 8) {
+                        TextButton(onClick = onAddPasskey) {
+                            Icon(Icons.Default.Add, null, Modifier.size(18.dp), tint = Color(0xFFFF7F33))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Add Another Passkey", color = Color(0xFFFF7F33))
+                        }
+                        Text(
+                            "You can register up to 8 passkeys",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.Gray
+                        )
+                    } else {
+                        Text(
+                            "Maximum passkeys reached (8/8)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFFFF7F33)
+                        )
+                    }
+                }
+            } else {
+                // Legacy single-row passkey status
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Passkey", color = Color.White, modifier = Modifier.width(80.dp))
+                        Icon(
+                            if (hasPasskey) Icons.Default.Check else Icons.Default.Cancel,
+                            contentDescription = if (hasPasskey) "Registered" else "Not registered",
+                            tint = if (hasPasskey) Color(0xFF4CAF50) else Color(0xFFFF5252),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    if (!hasPasskey) {
+                        TextButton(onClick = { onRegisterPasskey(userEmail) }) {
+                            Text("Add Passkey", color = Color(0xFFFF7F33))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showLinkPasswordDialog) {
+        LinkPasswordDialog(
+            onLinkPassword = onLinkPassword,
+            onDismiss = { showLinkPasswordDialog = false }
+        )
+    }
+
+    if (showChangePasswordDialog) {
+        ChangePasswordDialog(
+            onChangePassword = onChangePassword,
+            onDismiss = { showChangePasswordDialog = false }
+        )
+    }
+}
+
+// ─── Passkey Card ────────────────────────────────────────────────────────────
+
+private fun platformIcon(platform: String): ImageVector =
+    when (platform) {
+        "android" -> Icons.Default.PhoneAndroid
+        "ios" -> Icons.Default.PhoneIphone
+        "web" -> Icons.Default.Computer
+        else -> Icons.Default.Key
+    }
+
+@Composable
+private fun PasskeyCard(
+    passkey: PasskeyInfo,
+    isLastPasskey: Boolean,
+    onDelete: (String, (Boolean) -> Unit) -> Unit,
+    onRename: (String, String, (Boolean) -> Unit) -> Unit,
+) {
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF363636)),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -520,40 +693,170 @@ private fun SecuritySection(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Passkey", color = Color.White, modifier = Modifier.width(80.dp))
                     Icon(
-                        if (hasPasskey) Icons.Default.Check else Icons.Default.Cancel,
-                        contentDescription = if (hasPasskey) "Registered" else "Not registered",
-                        tint = if (hasPasskey) Color(0xFF4CAF50) else Color(0xFFFF5252),
-                        modifier = Modifier.size(18.dp)
+                        platformIcon(passkey.platform),
+                        contentDescription = passkey.platform,
+                        tint = Color(0xFFFF7F33),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        passkey.label,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White,
+                        fontWeight = FontWeight.Medium
                     )
                 }
-                if (!hasPasskey) {
-                    TextButton(
-                        onClick = { onRegisterPasskey(userEmail) }
+                Row {
+                    IconButton(
+                        onClick = { showRenameDialog = true },
+                        modifier = Modifier.size(32.dp)
                     ) {
-                        Text("Add Passkey", color = Color(0xFFFF7F33))
+                        Icon(
+                            Icons.Default.Edit, "Rename",
+                            tint = Color.Gray,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick = { showDeleteDialog = true },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Delete, "Delete",
+                            tint = Color(0xFFFF5252),
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                 }
+            }
+
+            val metaParts = mutableListOf<String>()
+            passkey.createdAt?.let { metaParts.add("Created $it") }
+            passkey.lastUsedAt?.let { metaParts.add("Last used $it") }
+            if (metaParts.isNotEmpty()) {
+                Text(
+                    metaParts.joinToString(" · "),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.Gray
+                )
             }
         }
     }
 
-    // Link Password Dialog
-    if (showLinkPasswordDialog) {
-        LinkPasswordDialog(
-            onLinkPassword = onLinkPassword,
-            onDismiss = { showLinkPasswordDialog = false }
+    if (showRenameDialog) {
+        RenamePasskeyDialog(
+            currentLabel = passkey.label,
+            onRename = { newLabel ->
+                onRename(passkey.id, newLabel) { success ->
+                    if (success) showRenameDialog = false
+                }
+            },
+            onDismiss = { showRenameDialog = false }
         )
     }
 
-    // Change Password Dialog
-    if (showChangePasswordDialog) {
-        ChangePasswordDialog(
-            onChangePassword = onChangePassword,
-            onDismiss = { showChangePasswordDialog = false }
+    if (showDeleteDialog) {
+        ConfirmDeletePasskeyDialog(
+            passkeyLabel = passkey.label,
+            isLastPasskey = isLastPasskey,
+            onConfirm = {
+                onDelete(passkey.id) { success ->
+                    if (success) showDeleteDialog = false
+                }
+            },
+            onDismiss = { showDeleteDialog = false }
         )
     }
+}
+
+// ─── Rename Passkey Dialog ───────────────────────────────────────────────────
+
+@Composable
+private fun RenamePasskeyDialog(
+    currentLabel: String,
+    onRename: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var label by remember { mutableStateOf(currentLabel) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Rename Passkey", color = Color.White) },
+        text = {
+            OutlinedTextField(
+                value = label,
+                onValueChange = { if (it.length <= 50) label = it },
+                label = { Text("Label") },
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFFFF7F33),
+                    unfocusedBorderColor = Color(0xFF666666),
+                    focusedLabelColor = Color(0xFFFF7F33),
+                    unfocusedLabelColor = Color.Gray,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    cursorColor = Color(0xFFFF7F33),
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onRename(label.trim()) },
+                enabled = label.isNotBlank() && label.trim() != currentLabel
+            ) {
+                Text("Save", color = Color(0xFFFF7F33))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color.Gray)
+            }
+        },
+        containerColor = Color(0xFF2A2A2A),
+    )
+}
+
+// ─── Confirm Delete Passkey Dialog ───────────────────────────────────────────
+
+@Composable
+private fun ConfirmDeletePasskeyDialog(
+    passkeyLabel: String,
+    isLastPasskey: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Delete Passkey", color = Color.White) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Are you sure you want to delete \"$passkeyLabel\"?",
+                    color = Color.White
+                )
+                if (isLastPasskey) {
+                    Text(
+                        "⚠️ This is your last passkey. " +
+                            "You will lose the ability to log in with a passkey.",
+                        color = Color(0xFFFF9800),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Delete", color = Color(0xFFFF5252))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color.Gray)
+            }
+        },
+        containerColor = Color(0xFF2A2A2A),
+    )
 }
 
 @Composable

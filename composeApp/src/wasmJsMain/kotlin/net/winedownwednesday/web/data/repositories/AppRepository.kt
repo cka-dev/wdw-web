@@ -330,4 +330,16 @@ class AppRepository (
         return remoteDataSource.flagWineReview(request)
     }
 
+    // ─── Passkey Management ─────────────────────────────────────────────
+
+    suspend fun getPasskeys() =
+        remoteDataSource.getPasskeys()
+
+    suspend fun deletePasskey(credentialId: String) =
+        remoteDataSource.deletePasskey(credentialId)
+
+    suspend fun renamePasskey(
+        credentialId: String, label: String
+    ) = remoteDataSource.renamePasskey(credentialId, label)
+
 }
