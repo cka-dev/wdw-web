@@ -23,6 +23,7 @@ import net.winedownwednesday.web.data.models.FirebaseAuthResponse
 import net.winedownwednesday.web.data.models.RSVPRequest
 import net.winedownwednesday.web.data.models.RegistrationResponse
 import net.winedownwednesday.web.data.models.UserProfileData
+import net.winedownwednesday.web.data.models.PasskeyInfo
 import net.winedownwednesday.web.data.network.ApiResult
 import net.winedownwednesday.web.data.repositories.AppRepository
 import net.winedownwednesday.web.myWebAuthnBridge
@@ -64,6 +65,17 @@ class AuthPageViewModel(
 
     private val _isUnblocking = MutableStateFlow(false)
     val isUnblocking: StateFlow<Boolean> = _isUnblocking.asStateFlow()
+
+    // Passkey promotion: shown after password login
+    // when the user has no passkeys.
+    private val _showPasskeyPromotion =
+        MutableStateFlow(false)
+    val showPasskeyPromotion: StateFlow<Boolean> =
+        _showPasskeyPromotion.asStateFlow()
+
+    fun dismissPasskeyPromotion() {
+        _showPasskeyPromotion.value = false
+    }
 
 
     init {
@@ -295,6 +307,15 @@ class AuthPageViewModel(
             when (result) {
                 is ApiResult.Success -> {
                     signInWithCustomToken(result.data.token, email)
+                    // After profile loaded, check if
+                    // user has no passkeys → promote
+                    val profile = _profileData.value
+                    if (profile != null &&
+                        profile.passkeyCount == 0 &&
+                        !profile.hasPasskey
+                    ) {
+                        _showPasskeyPromotion.value = true
+                    }
                 }
                 is ApiResult.Error -> {
                     _uiState.value = LoginUIState.Error(result.message)
@@ -688,6 +709,152 @@ class AuthPageViewModel(
             if (!success) {
                 // Revert on failure
                 _profileData.value = oldProfile
+            }
+        }
+    }
+
+    // ─── Passkey Management ─────────────────────────────────────────────
+
+    private val _passkeys =
+        MutableStateFlow<List<PasskeyInfo>>(emptyList())
+    val passkeys: StateFlow<List<PasskeyInfo>> =
+        _passkeys.asStateFlow()
+
+    private val _isLoadingPasskeys =
+        MutableStateFlow(false)
+    val isLoadingPasskeys: StateFlow<Boolean> =
+        _isLoadingPasskeys.asStateFlow()
+
+    fun fetchPasskeys() {
+        viewModelScope.launch {
+            _isLoadingPasskeys.value = true
+            when (val result = repository.getPasskeys()) {
+                is ApiResult.Success -> {
+                    _passkeys.value = result.data.passkeys
+                }
+                is ApiResult.Error -> { /* silent */ }
+            }
+            _isLoadingPasskeys.value = false
+        }
+    }
+
+    fun deletePasskey(
+        credentialId: String,
+        onResult: (Boolean) -> Unit
+    ) {
+        viewModelScope.launch {
+            when (val result =
+                repository.deletePasskey(credentialId)) {
+                is ApiResult.Success -> {
+                    _passkeys.update { list ->
+                        list.filter { it.id != credentialId }
+                    }
+                    // Refresh profile to update
+                    // hasPasskey/passkeyCount
+                    _email.value.let { fetchProfile(it) }
+                    onResult(true)
+                }
+                is ApiResult.Error -> {
+                    _uiState.value = LoginUIState.Error(
+                        result.message
+                    )
+                    onResult(false)
+                }
+            }
+        }
+    }
+
+    fun renamePasskey(
+        credentialId: String,
+        newLabel: String,
+        onResult: (Boolean) -> Unit
+    ) {
+        viewModelScope.launch {
+            when (val result = repository.renamePasskey(
+                credentialId, newLabel)) {
+                is ApiResult.Success -> {
+                    _passkeys.update { list ->
+                        list.map { pk ->
+                            if (pk.id == credentialId)
+                                pk.copy(label = newLabel)
+                            else pk
+                        }
+                    }
+                    onResult(true)
+                }
+                is ApiResult.Error -> {
+                    _uiState.value = LoginUIState.Error(
+                        result.message
+                    )
+                    onResult(false)
+                }
+            }
+        }
+    }
+
+    /**
+     * Register an additional passkey (from Settings or post-login dialog).
+     * Does NOT update the global _uiState to Loading so the user remains logged in.
+     * After success, refreshes the profile and passkey list, and notifies the caller.
+     */
+    fun addAdditionalPasskey(
+        onResult: (Boolean, String?) -> Unit = { _, _ -> }
+    ) {
+        val userEmail = _email.value
+        if (userEmail.isBlank()) {
+            onResult(false, "Email is required")
+            return
+        }
+        viewModelScope.launch {
+            _isLoadingPasskeys.value = true
+            when (val result = repository.generatePasskeyRegistrationOptions(userEmail)) {
+                is ApiResult.Error -> {
+                    onResult(false, result.message)
+                    _isLoadingPasskeys.value = false
+                }
+                is ApiResult.Success -> {
+                    val options = result.data
+                    try {
+                        val credential = myWebAuthnBridge.startRegistration(
+                            challenge = options.challenge,
+                            rpId = options.rp.id,
+                            rpName = options.rp.name,
+                            userId = options.user.id,
+                            userName = options.user.name,
+                            userDisplayName = options.user.displayName,
+                            timeout = options.timeout ?: 60000,
+                            attestationType = options.attestation,
+                            authenticatorAttachment =
+                            options.authenticatorSelection.authenticatorAttachment,
+                            residentKey = options.authenticatorSelection.residentKey,
+                            requireResidentKey = options.authenticatorSelection.requireResidentKey,
+                            userVerification = options.authenticatorSelection.userVerification
+                        ).await<PublicKeyCredential>()
+
+                        val registrationResponse = credential.toRegistrationResponse()
+
+                        val verificationResponse =
+                            repository.verifyPasskeyRegistrationWithToken(
+                                registrationResponse,
+                                userEmail
+                            )
+                        when (verificationResponse) {
+                            is ApiResult.Success -> {
+                                // Refresh profile and passkey list
+                                fetchProfile(userEmail)
+                                fetchPasskeys()
+                                onResult(true, null)
+                            }
+                            is ApiResult.Error -> {
+                                onResult(false, verificationResponse.message)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        onResult(false, e.message ?: "Unknown registration error")
+                    } finally {
+                        _isLoadingPasskeys.value = false
+                    }
+                }
             }
         }
     }

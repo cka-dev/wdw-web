@@ -106,4 +106,9 @@ interface ApiService {
     suspend fun deleteMyWineReview(wineId: Long): Boolean
     suspend fun flagWineReview(request: net.winedownwednesday.web.data.models.FlagReviewRequest): Boolean
 
+    // Passkey Management
+    suspend fun getPasskeys(): ApiResult<net.winedownwednesday.web.data.models.PasskeysResponse>
+    suspend fun deletePasskey(credentialId: String): ApiResult<net.winedownwednesday.web.data.models.DeletePasskeyResponse>
+    suspend fun renamePasskey(credentialId: String, label: String): ApiResult<Unit>
+
 }

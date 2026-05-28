@@ -31,4 +31,15 @@ object CloudFunctionUrls {
         "https://generatepasskeyauthenticationoptions-iktff5ztia-uc.a.run.app"
     const val VERIFY_PASSKEY_AUTH =
         "https://verifypasskeyauthentication-iktff5ztia-uc.a.run.app"
+    const val VERIFY_PASSKEY_REGISTRATION_WITH_TOKEN =
+        "https://verifypasskeyregistrationwithfirebaseauth-iktff5ztia-uc.a.run.app"
+
+    // ─── Passkey Management endpoints ──────────────────────────────────
+
+    const val GET_PASSKEYS =
+        "$SERVER_URL/getPasskeys"
+    const val DELETE_PASSKEY =
+        "$SERVER_URL/deletePasskey"
+    const val RENAME_PASSKEY =
+        "$SERVER_URL/renamePasskey"
 }

@@ -2,18 +2,39 @@ package net.winedownwednesday.web.composables
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -29,8 +50,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
@@ -326,6 +350,22 @@ fun AppNavigation(
             }
         }
 
+        // ── Passkey promotion dialog ──────────────────────
+        val showPasskeyPromo by authViewModel
+            .showPasskeyPromotion.collectAsState()
+        if (featureFlags.autoPasskeyPrompt &&
+            showPasskeyPromo && isLoggedIn
+        ) {
+            PasskeyPromotionDialog(
+                onSetUp = { onResult ->
+                    authViewModel.addAdditionalPasskey(onResult = onResult)
+                },
+                onDismiss = {
+                    authViewModel.dismissPasskeyPromotion()
+                },
+            )
+        }
+
         val mainContent: @Composable () -> Unit = {
             Surface(modifier = Modifier.fillMaxSize()) {
                 Column(modifier = Modifier.fillMaxSize()) {
@@ -347,7 +387,7 @@ fun AppNavigation(
                         }
                     )
 
-                    // ── Onboarding enforcement banner ──
+                     // ── Onboarding enforcement banner ──
                     if (featureFlags.onboardingEnforcement && isLoggedIn) {
                         val profileComplete =
                             userProfileData?.isOnboardingComplete == true
@@ -379,6 +419,8 @@ fun AppNavigation(
                             }
                         }
                     }
+
+
 
                     Box(modifier = Modifier.weight(1f)) {
                         NavDisplay(
@@ -559,4 +601,260 @@ fun AppNavigation(
         }
     }
     } // CompositionLocalProvider(LocalFeatureFlags)
+}
+
+// ── Passkey promotion dialog ──────────────────────
+
+private enum class PromoState {
+    IDLE,
+    LOADING,
+    SUCCESS,
+    ERROR
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PasskeyPromotionDialog(
+    onSetUp: (onResult: (Boolean, String?) -> Unit) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    var promoState by remember { mutableStateOf(PromoState.IDLE) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    BasicAlertDialog(onDismissRequest = {
+        if (promoState != PromoState.LOADING && promoState != PromoState.SUCCESS) {
+            onDismiss()
+        }
+    }) {
+        Box(
+            modifier = Modifier
+                .widthIn(max = 420.dp)
+                .fillMaxWidth()
+                .background(
+                    MaterialTheme.colorScheme.surface,
+                    RoundedCornerShape(20.dp),
+                )
+                .padding(28.dp),
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                // Hero icon container
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .background(
+                            when (promoState) {
+                                PromoState.SUCCESS -> Color(0xFF4CAF50).copy(alpha = 0.12f)
+                                PromoState.ERROR -> Color(0xFFFF5252).copy(alpha = 0.12f)
+                                else -> WdwOrange.copy(alpha = 0.12f)
+                            },
+                            RoundedCornerShape(16.dp),
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    when (promoState) {
+                        PromoState.LOADING -> {
+                            CircularProgressIndicator(
+                                color = WdwOrange,
+                                modifier = Modifier.size(34.dp),
+                                strokeWidth = 3.dp,
+                            )
+                        }
+                        PromoState.SUCCESS -> {
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = null,
+                                tint = Color(0xFF4CAF50),
+                                modifier = Modifier.size(34.dp),
+                            )
+                        }
+                        PromoState.ERROR -> {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = null,
+                                tint = Color(0xFFFF5252),
+                                modifier = Modifier.size(34.dp),
+                            )
+                        }
+                        else -> {
+                            Icon(
+                                Icons.Default.Fingerprint,
+                                contentDescription = null,
+                                tint = WdwOrange,
+                                modifier = Modifier.size(34.dp),
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(20.dp))
+
+                // Title
+                Text(
+                    text = when (promoState) {
+                        PromoState.LOADING -> "Creating your passkey..."
+                        PromoState.SUCCESS -> "Passkey Created!"
+                        PromoState.ERROR -> "Setup Failed"
+                        else -> "Use a passkey for stronger security"
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                // Description
+                Text(
+                    text = when (promoState) {
+                        PromoState.LOADING -> "Please follow the instructions on your device to create your passkey."
+                        PromoState.SUCCESS -> "Your passkey has been saved successfully. You can now use it for instant, secure sign-ins."
+                        PromoState.ERROR -> errorMessage ?: "An unexpected error occurred during setup. Please try again."
+                        else -> "Passkeys are a simpler, safer alternative to passwords. They can't be guessed, stolen, or leaked."
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    textAlign = TextAlign.Center,
+                    lineHeight = 20.sp,
+                )
+
+                Spacer(Modifier.height(20.dp))
+
+                // Benefits / Controls (Only shown in IDLE or ERROR states)
+                if (promoState == PromoState.IDLE || promoState == PromoState.ERROR) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        PasskeyBenefitRow(
+                            icon = Icons.Default.Speed,
+                            title = "Faster",
+                            desc = "Sign in with a quick fingerprint, face scan, or screen lock",
+                        )
+                        PasskeyBenefitRow(
+                            icon = Icons.Default.Shield,
+                            title = "Safer",
+                            desc = "Protected by your device — nothing to remember or type",
+                        )
+                        PasskeyBenefitRow(
+                            icon = Icons.Default.Devices,
+                            title = "Works everywhere",
+                            desc = "Synced across your devices via your Google or Apple account",
+                        )
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // Learn more link
+                    TextButton(
+                        onClick = {
+                            window.open(
+                                "https://developers.google.com/identity/passkeys",
+                                "_blank",
+                            )
+                        },
+                        enabled = promoState != PromoState.LOADING,
+                    ) {
+                        Text(
+                            "Learn more about passkeys",
+                            color = WdwOrange,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // Primary CTA
+                    Button(
+                        onClick = {
+                            promoState = PromoState.LOADING
+                            onSetUp { success, err ->
+                                if (success) {
+                                    promoState = PromoState.SUCCESS
+                                    scope.launch {
+                                        kotlinx.coroutines.delay(1500)
+                                        onDismiss()
+                                    }
+                                } else {
+                                    promoState = PromoState.ERROR
+                                    errorMessage = err
+                                }
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = WdwOrange,
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = promoState != PromoState.LOADING,
+                    ) {
+                        Text(
+                            "Set Up Passkey",
+                            color = Color.White,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(vertical = 4.dp),
+                        )
+                    }
+
+                    Spacer(Modifier.height(4.dp))
+
+                    // Dismiss
+                    TextButton(
+                        onClick = onDismiss,
+                        enabled = promoState != PromoState.LOADING,
+                    ) {
+                        Text(
+                            "Not now",
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                } else {
+                    // Spacer to prevent layout collapse in Loading / Success states
+                    Spacer(Modifier.height(120.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PasskeyBenefitRow(
+    icon: ImageVector,
+    title: String,
+    desc: String,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = WdwOrange,
+            modifier = Modifier
+                .size(20.dp)
+                .padding(top = 2.dp),
+        )
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = desc,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                lineHeight = 16.sp,
+            )
+        }
+    }
 }
