@@ -28,6 +28,7 @@ import net.winedownwednesday.web.data.network.ApiResult
 import net.winedownwednesday.web.data.repositories.AppRepository
 import net.winedownwednesday.web.myWebAuthnBridge
 import net.winedownwednesday.web.toBase64Url
+import kotlinx.browser.localStorage
 import kotlin.coroutines.resumeWithException
 
 data class BlockedUserInfo(
@@ -75,6 +76,7 @@ class AuthPageViewModel(
 
     fun dismissPasskeyPromotion() {
         _showPasskeyPromotion.value = false
+        markPasskeyPromoDismissed()  // M1: persist "Not now" across sessions
     }
 
 
@@ -121,8 +123,7 @@ class AuthPageViewModel(
                     }
                 } else {
                     if (_uiState.value is LoginUIState.Authenticated) {
-                        _uiState.value = LoginUIState.Idle
-                        _profileData.value = null
+                        clearSessionState()
                     }
                 }
             }
@@ -154,7 +155,6 @@ class AuthPageViewModel(
                 onResult(success)
             } catch (e: Exception) {
                 onResult(false)
-                _isSavingProfile.value = false
             } finally {
                 _isSavingProfile.value = false
             }
@@ -307,14 +307,17 @@ class AuthPageViewModel(
             when (result) {
                 is ApiResult.Success -> {
                     signInWithCustomToken(result.data.token, email)
-                    // After profile loaded, check if
-                    // user has no passkeys → promote
-                    val profile = _profileData.value
-                    if (profile != null &&
-                        profile.passkeyCount == 0 &&
-                        !profile.hasPasskey
-                    ) {
-                        _showPasskeyPromotion.value = true
+                    // M3: guard — only promote when sign-in fully succeeded
+                    // M1: skip when user has already dismissed the dialog
+                    if (_uiState.value is LoginUIState.Authenticated) {
+                        val profile = _profileData.value
+                        if (!hasPasskeyPromoDismissed() &&
+                            profile != null &&
+                            profile.passkeyCount == 0 &&
+                            !profile.hasPasskey
+                        ) {
+                            _showPasskeyPromotion.value = true
+                        }
                     }
                 }
                 is ApiResult.Error -> {
@@ -436,8 +439,7 @@ class AuthPageViewModel(
             } catch (e: Exception) {
             }
 
-            _uiState.value = LoginUIState.Idle
-            _profileData.value = null
+            clearSessionState()
     }
 
     fun setEmail(email: String) {
@@ -676,6 +678,23 @@ class AuthPageViewModel(
         // only an explicit call to logout() should end the session.
     }
 
+    /**
+     * Resets all user-specific state to defaults.
+     * Called on explicit logout and when Firebase Auth
+     * detects the user signed out externally.
+     */
+    private fun clearSessionState() {
+        _uiState.value = LoginUIState.Idle
+        _email.value = ""
+        _profileData.value = null
+        _blockedUsers.value = emptyList()
+        _fcmToken.value = null
+        _passkeys.value = emptyList()
+        _passkeyError.value = null
+        _showPasskeyPromotion.value = false
+        _isLoadingPasskeys.value = false
+    }
+
     fun deleteAccount(
         confirmPhrase: String,
         onComplete: (Boolean) -> Unit
@@ -725,14 +744,27 @@ class AuthPageViewModel(
     val isLoadingPasskeys: StateFlow<Boolean> =
         _isLoadingPasskeys.asStateFlow()
 
+    // Q2: surface passkey management errors to the UI
+    private val _passkeyError = MutableStateFlow<String?>(null)
+    val passkeyError: StateFlow<String?> = _passkeyError.asStateFlow()
+
+    /** Clears any outstanding passkey operation error. */
+    fun clearPasskeyError() { _passkeyError.value = null }
+
     fun fetchPasskeys() {
+        // Q3: deduplicate — skip if a fetch is already in flight
+        if (_isLoadingPasskeys.value) return
         viewModelScope.launch {
             _isLoadingPasskeys.value = true
+            _passkeyError.value = null
             when (val result = repository.getPasskeys()) {
                 is ApiResult.Success -> {
                     _passkeys.value = result.data.passkeys
                 }
-                is ApiResult.Error -> { /* silent */ }
+                is ApiResult.Error -> {
+                    // Q2: surface instead of silently dropping
+                    _passkeyError.value = result.message
+                }
             }
             _isLoadingPasskeys.value = false
         }
@@ -749,15 +781,24 @@ class AuthPageViewModel(
                     _passkeys.update { list ->
                         list.filter { it.id != credentialId }
                     }
-                    // Refresh profile to update
-                    // hasPasskey/passkeyCount
+                    // Use the authoritative server-returned count
+                    // instead of computing locally (handles stale
+                    // profile edge case).
+                    val serverCount = result.data.passkeyCount
+                    _profileData.update { profile ->
+                        profile?.copy(
+                            passkeyCount = serverCount,
+                            hasPasskey = serverCount > 0,
+                        )
+                    }
+                    // Full server refresh in the background
                     _email.value.let { fetchProfile(it) }
                     onResult(true)
                 }
                 is ApiResult.Error -> {
-                    _uiState.value = LoginUIState.Error(
-                        result.message
-                    )
+                    // H1: don't clobber the global login state
+                    // machine for a management-layer failure
+                    _passkeyError.value = result.message
                     onResult(false)
                 }
             }
@@ -783,9 +824,9 @@ class AuthPageViewModel(
                     onResult(true)
                 }
                 is ApiResult.Error -> {
-                    _uiState.value = LoginUIState.Error(
-                        result.message
-                    )
+                    // H1: don't clobber the global login state
+                    // machine for a management-layer failure
+                    _passkeyError.value = result.message
                     onResult(false)
                 }
             }
@@ -809,6 +850,8 @@ class AuthPageViewModel(
             _isLoadingPasskeys.value = true
             when (val result = repository.generatePasskeyRegistrationOptions(userEmail)) {
                 is ApiResult.Error -> {
+                    // Q2: surface via passkeyError
+                    _passkeyError.value = result.message
                     onResult(false, result.message)
                     _isLoadingPasskeys.value = false
                 }
@@ -840,23 +883,56 @@ class AuthPageViewModel(
                             )
                         when (verificationResponse) {
                             is ApiResult.Success -> {
-                                // Refresh profile and passkey list
+                                // Refresh profile — the LaunchedEffect
+                                // in SecuritySection auto-fetches passkeys
+                                // when passkeyCount changes.
                                 fetchProfile(userEmail)
-                                fetchPasskeys()
                                 onResult(true, null)
                             }
                             is ApiResult.Error -> {
+                                _passkeyError.value =
+                                    verificationResponse.message
                                 onResult(false, verificationResponse.message)
                             }
                         }
                     } catch (e: Exception) {
-                        onResult(false, e.message ?: "Unknown registration error")
+                        val msg = e.message ?: "Unknown registration error"
+                        _passkeyError.value = msg  // Q2: surface error
+                        onResult(false, msg)
                     } finally {
                         _isLoadingPasskeys.value = false
                     }
                 }
             }
         }
+    }
+
+    // ─── Passkey promo localStorage helpers ─────────────────────────────
+
+    /**
+     * Returns true if the user has previously tapped "Not now" on the
+     * passkey promotion dialog (persisted in localStorage).
+     */
+    private fun hasPasskeyPromoDismissed(): Boolean =
+        try {
+            localStorage.getItem(PASSKEY_PROMO_DISMISSED_KEY) == "true"
+        } catch (_: Exception) { false }
+
+    /**
+     * Persists the dismissal choice to localStorage so the dialog
+     * does not appear again on future sign-ins.
+     */
+    private fun markPasskeyPromoDismissed() {
+        try {
+            localStorage.setItem(
+                PASSKEY_PROMO_DISMISSED_KEY, "true"
+            )
+        } catch (_: Exception) { /* non-critical; ignore */ }
+    }
+
+    companion object {
+        private const val PASSKEY_PROMO_DISMISSED_KEY =
+            "wdw_passkey_promo_dismissed"
     }
 
 }
