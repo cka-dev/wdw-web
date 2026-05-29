@@ -773,6 +773,7 @@ private fun PasskeyPromotionDialog(
                     Button(
                         onClick = {
                             promoState = PromoState.LOADING
+                            errorMessage = null
                             onSetUp { success, err ->
                                 if (success) {
                                     promoState = PromoState.SUCCESS
@@ -815,7 +816,10 @@ private fun PasskeyPromotionDialog(
                         )
                     }
                 } else {
-                    // Spacer to prevent layout collapse in Loading / Success states
+                    // Maintain minimum height during Loading/Success
+                    // to prevent dialog layout collapse. The 120dp
+                    // approximates the IDLE-state benefits list +
+                    // buttons block (~3 rows × 40dp).
                     Spacer(Modifier.height(120.dp))
                 }
             }
