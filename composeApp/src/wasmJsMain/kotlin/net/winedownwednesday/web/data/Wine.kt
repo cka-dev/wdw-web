@@ -8,7 +8,7 @@ data class Wine(
     val id: Long,                       // Long: Date.now() timestamps overflow Int
     val name: String,
     val type: String,
-    val year: Int,
+    val year: String,
     val country: String,
     val region: String,
     val imageUrl: String,
