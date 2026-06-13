@@ -450,8 +450,16 @@ class RemoteDataSource (
     override suspend fun addRsvpToEvent(rsvp: RSVPRequest): Boolean {
         return try {
             val act = appCheckToken()
+            val idToken = try {
+                FirebaseBridge.getIdToken()
+                    .await<JsAny?>()?.toString()
+                    ?.takeIf { it.isNotBlank() }
+            } catch (_: Exception) { null }
             val response: HttpResponse = client.post("$SERVER_URL/addRsvpToEvent") {
                 act?.let { header(APP_CHECK_HEADER, it) }
+                idToken?.let {
+                    header(HttpHeaders.Authorization, "Bearer $it")
+                }
                 contentType(ContentType.Application.Json)
                 setBody(rsvp)
             }
@@ -465,8 +473,16 @@ class RemoteDataSource (
     override suspend fun cancelRsvp(eventId: Long, email: String): Boolean {
         return try {
             val act = appCheckToken()
+            val idToken = try {
+                FirebaseBridge.getIdToken()
+                    .await<JsAny?>()?.toString()
+                    ?.takeIf { it.isNotBlank() }
+            } catch (_: Exception) { null }
             val response: HttpResponse = client.post("$SERVER_URL/cancelRsvp") {
                 act?.let { header(APP_CHECK_HEADER, it) }
+                idToken?.let {
+                    header(HttpHeaders.Authorization, "Bearer $it")
+                }
                 contentType(ContentType.Application.Json)
                 setBody(CancelRsvpRequest(eventId = eventId, email = email))
             }
