@@ -51,4 +51,6 @@ data class FeatureFlags(
     val whatsNew: Boolean = false,
     val passkeyEnhancements: Boolean = false,
     val autoPasskeyPrompt: Boolean = false,
+    val chatTimestamps: Boolean = false,
+    val mentionAll: Boolean = false,
 )

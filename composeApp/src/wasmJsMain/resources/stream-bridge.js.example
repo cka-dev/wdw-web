@@ -12,6 +12,7 @@ window.wdwStreamBridge = {
     client: null,
     currentChannel: null,
     messageCallbacks: [],
+    mentionAllEnabled: false,
 
     /**
      * Connects a user to Stream Chat
@@ -129,7 +130,8 @@ window.wdwStreamBridge = {
 
     /**
      * Helper to extract mentioned users from text by matching @username
-     * against members in the channel.
+     * against members in the channel. Handles @all by expanding to all
+     * channel member IDs.
      */
     _extractMentions: function(text, channel) {
         if (!text || !channel || !channel.state.members) return [];
@@ -143,7 +145,18 @@ window.wdwStreamBridge = {
 
         mentionMatches.forEach(match => {
             const username = match.substring(1).toLowerCase().trim();
-            // Look for a member with this name or id
+
+            // @all — expand to every channel member (only when flag enabled)
+            if (username === 'all' && this.mentionAllEnabled) {
+                members.forEach(m => {
+                    if (m.user && !mentionedUserIds.includes(m.user_id)) {
+                        mentionedUserIds.push(m.user_id);
+                    }
+                });
+                return;
+            }
+
+            // Individual member match
             const member = members.find(m => {
                 if (!m.user) return false;
                 const nameMatch = m.user.name && m.user.name.toLowerCase() === username;
@@ -339,15 +352,20 @@ window.wdwStreamBridge = {
             const channel = this.client.channel('messaging', channelId);
             const response = await channel.sendImage(file);
             const imageUrl = response.file;
+            const mentionedUsers = text ? this._extractMentions(text, channel) : [];
             
-            const msgResponse = await channel.sendMessage({
+            const payload = {
                 text: text || '',
                 attachments: [{
                     type: 'image',
                     image_url: imageUrl,
                     fallback: file.name
                 }]
-            });
+            };
+            if (mentionedUsers.length > 0) {
+                payload.mentioned_users = mentionedUsers;
+            }
+            const msgResponse = await channel.sendMessage(payload);
             return this._mapMessage(msgResponse.message, channel);
         } catch(error) {
             console.error("StreamBridge: Error sending image message:", error);
@@ -364,8 +382,9 @@ window.wdwStreamBridge = {
             const channel = this.client.channel('messaging', channelId);
             const response = await channel.sendFile(file);
             const fileUrl = response.file;
+            const mentionedUsers = text ? this._extractMentions(text, channel) : [];
             
-            const msgResponse = await channel.sendMessage({
+            const payload = {
                 text: text || '',
                 attachments: [{
                     type: 'file',
@@ -374,7 +393,11 @@ window.wdwStreamBridge = {
                     file_size: file.size,
                     mime_type: file.type || 'application/octet-stream'
                 }]
-            });
+            };
+            if (mentionedUsers.length > 0) {
+                payload.mentioned_users = mentionedUsers;
+            }
+            const msgResponse = await channel.sendMessage(payload);
             return this._mapMessage(msgResponse.message, channel);
         } catch(error) {
             console.error("StreamBridge: Error sending file message:", error);
@@ -453,11 +476,19 @@ window.wdwStreamBridge = {
                     existingAttachments = existing.attachments;
                 }
             }
-            await this.client.updateMessage({
+            // Re-extract mentions from the new text
+            const mentionedUsers = this.currentChannel
+                ? this._extractMentions(newText, this.currentChannel)
+                : [];
+            const updatePayload = {
                 id: messageId,
                 text: newText,
                 attachments: existingAttachments
-            });
+            };
+            if (mentionedUsers.length > 0) {
+                updatePayload.mentioned_users = mentionedUsers;
+            }
+            await this.client.updateMessage(updatePayload);
             return true;
         } catch (error) {
             console.error("StreamBridge: Error editing message:", error);

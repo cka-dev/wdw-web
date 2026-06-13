@@ -66,6 +66,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
+import net.winedownwednesday.web.StreamBridge
 import net.winedownwednesday.web.loadThemePreference
 import net.winedownwednesday.web.saveThemePreference
 import net.winedownwednesday.web.viewmodels.AuthPageViewModel
@@ -334,6 +335,13 @@ fun AppNavigation(
         // ── What's New dialog ─────────────────────────────
         // Show once per version when feature flag is enabled.
         var showWhatsNew by remember { mutableStateOf(false) }
+
+        // Sync @all flag to the JS bridge so _extractMentions
+        // only expands @all when the server flag is enabled.
+        LaunchedEffect(featureFlags.mentionAll) {
+            StreamBridge.mentionAllEnabled = featureFlags.mentionAll
+        }
+
         LaunchedEffect(featureFlags.whatsNew, whatsNew) {
             val wn = whatsNew
             showWhatsNew = featureFlags.whatsNew &&

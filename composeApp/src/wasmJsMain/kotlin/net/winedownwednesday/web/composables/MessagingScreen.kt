@@ -156,6 +156,7 @@ private data class MentionEntry(
     val name: String,
     val imageUrl: String,
     val isBot: Boolean = false,
+    val isAll: Boolean = false,
 )
 
 data class ModerationCallbacks(
@@ -474,6 +475,7 @@ fun MessagingScreen(
                                 onSendGif = { url, title -> viewModel.sendGiphyMessage(url, title, parentMsg.id) },
                                 onSendSmartReply = { viewModel.sendThreadSmartReply(it) },
                                 onClearSmartReplies = { viewModel.clearThreadSmartReplies() },
+                                isGroupChannel = channels.find { it.id == selectedChannelId }?.isDirectMessage == false,
                                 modifier = Modifier
                                     .weight(0.35f)
                                     .fillMaxHeight()
@@ -499,6 +501,7 @@ fun MessagingScreen(
                                 onSendGif = { url, title -> viewModel.sendGiphyMessage(url, title, parentMsgCompact.id) },
                                 onSendSmartReply = { viewModel.sendThreadSmartReply(it) },
                                 onClearSmartReplies = { viewModel.clearThreadSmartReplies() },
+                                isGroupChannel = channels.find { it.id == selectedChannelId }?.isDirectMessage == false,
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
@@ -1824,6 +1827,9 @@ fun ChatArea(
             }
 
             // Input Area
+            val selectedIsGroup = channels.find {
+                it.id == selectedChannelId
+            }?.isDirectMessage == false
             MessageInput(
                 replyingToUser = replyingTo?.userName,
                 editingMessage = editingMessage,
@@ -1844,7 +1850,8 @@ fun ChatArea(
                 isGifPanelOpen = isGifPanelOpen,
                 onToggleGifPanel = {
                     isGifPanelOpen = !isGifPanelOpen
-                }
+                },
+                isGroupChannel = selectedIsGroup
             )
         }
 
@@ -2507,12 +2514,16 @@ fun MessageBubble(
                 }
 
                 // Timestamp + action row
+                val chatTsFlags = LocalFeatureFlags.current
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 2.dp)
                 ) {
                     Text(
-                        text = formatMessageTime(message.createdAt),
+                        text = formatMessageTime(
+                            message.createdAt,
+                            smartTimestamp = chatTsFlags.chatTimestamps
+                        ),
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                         fontSize = 9.sp
                     )
@@ -3178,12 +3189,24 @@ private fun formatVinoCardDate(raw: String): String {
 private external fun jsFormatCardDate(raw: String): String
 
 /**
- * Parses an ISO 8601 timestamp and returns a short time string (e.g., "2:30 PM").
+ * Parses an ISO 8601 timestamp and returns a time string.
+ * When [smartTimestamp] is true (chatTimestamps flag ON):
+ *   - Today: "3:45 PM"
+ *   - Yesterday: "Yesterday, 3:45 PM"
+ *   - Older: "Jun 13, 3:45 PM"
+ * When false: always "3:45 PM" (legacy).
  */
-private fun formatMessageTime(isoString: String): String {
+private fun formatMessageTime(
+    isoString: String,
+    smartTimestamp: Boolean = false
+): String {
     return try {
         if (isoString.isBlank()) return ""
-        jsFormatLocalTime(isoString)
+        if (smartTimestamp) {
+            jsFormatSmartTime(isoString)
+        } else {
+            jsFormatLocalTime(isoString)
+        }
     } catch (e: Exception) {
         ""
     }
@@ -3197,6 +3220,27 @@ private fun formatMessageTime(isoString: String): String {
     }
 """)
 private external fun jsFormatLocalTime(isoString: String): String
+
+@JsFun("""
+    (isoString) => {
+        const d = new Date(isoString);
+        if (isNaN(d.getTime())) return '';
+        const now = new Date();
+        const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+        const sameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+        if (sameDay) return time;
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const isYesterday = d.getFullYear() === yesterday.getFullYear() && d.getMonth() === yesterday.getMonth() && d.getDate() === yesterday.getDate();
+        if (isYesterday) return 'Yesterday, ' + time;
+        const month = d.toLocaleString('default', { month: 'short' });
+        if (d.getFullYear() !== now.getFullYear()) {
+            return month + ' ' + d.getDate() + ', ' + d.getFullYear() + ', ' + time;
+        }
+        return month + ' ' + d.getDate() + ', ' + time;
+    }
+""")
+private external fun jsFormatSmartTime(isoString: String): String
 
 /**
  * Extracts the date portion (YYYY-MM-DD) from an ISO 8601 timestamp.
@@ -3393,7 +3437,8 @@ fun MessageInput(
     onToggleEmojiPicker: () -> Unit,
     onClosePickers: () -> Unit,
     isGifPanelOpen: Boolean = false,
-    onToggleGifPanel: () -> Unit = {}
+    onToggleGifPanel: () -> Unit = {},
+    isGroupChannel: Boolean = false
 ) {
     var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
     var selectedFile by remember { mutableStateOf<org.w3c.files.File?>(null) }
@@ -3558,11 +3603,22 @@ fun MessageInput(
             val flagsForMentions = LocalFeatureFlags.current
             val mentionSuggestions = remember(
                 mentionQuery, chMembers,
-                flagsForMentions.mentionsAutocomplete
+                flagsForMentions.mentionsAutocomplete,
+                flagsForMentions.mentionAll,
+                isGroupChannel
             ) {
                 if (!flagsForMentions.mentionsAutocomplete) emptyList()
                 else if (mentionQuery == null) emptyList()
                 else {
+                    val allEntry = if (
+                        flagsForMentions.mentionAll &&
+                        isGroupChannel
+                    ) {
+                        MentionEntry(
+                            "all", "all", "",
+                            isAll = true
+                        )
+                    } else null
                     val vinoEntry = MentionEntry(
                         "vino-bot", "Vino", "", isBot = true
                     )
@@ -3573,9 +3629,10 @@ fun MessageInput(
                             it.userImage
                         )
                     }
-                    val all = listOf(vinoEntry) + memberEntries
-                    if (mentionQuery.isBlank()) all.take(8)
-                    else all.filter {
+                    val entries = listOfNotNull(allEntry) +
+                        listOf(vinoEntry) + memberEntries
+                    if (mentionQuery.isBlank()) entries.take(8)
+                    else entries.filter {
                         it.name.contains(
                             mentionQuery, ignoreCase = true
                         )
@@ -3628,7 +3685,12 @@ fun MessageInput(
                                     ),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                if (entry.isBot) {
+                                if (entry.isAll) {
+                                    TextWithNotoImageEmoji(
+                                        "\uD83D\uDCE2",
+                                        fontSize = 20.sp
+                                    )
+                                } else if (entry.isBot) {
                                     TextWithNotoImageEmoji(
                                         "\uD83E\uDD16",
                                         fontSize = 20.sp
@@ -3643,14 +3705,26 @@ fun MessageInput(
                                 }
                                 Spacer(Modifier.width(8.dp))
                                 Text(
-                                    entry.name,
-                                    color = if (entry.isBot)
+                                    if (entry.isAll) "@all"
+                                    else entry.name,
+                                    color = if (entry.isAll)
+                                        Color(0xFFFF7F33)
+                                    else if (entry.isBot)
                                         Color(0xFF9C6ADE)
                                     else
                                         MaterialTheme.colorScheme.onSurface,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Medium
                                 )
+                                if (entry.isAll) {
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        "— Notify everyone",
+                                        color = MaterialTheme.colorScheme
+                                            .onSurface.copy(alpha = 0.5f),
+                                        fontSize = 11.sp
+                                    )
+                                }
                                 if (entry.isBot) {
                                     Spacer(Modifier.width(6.dp))
                                     Text(
@@ -4655,10 +4729,12 @@ fun ThreadPanel(
     onSendGif: (String, String) -> Unit,
     onSendSmartReply: (String) -> Unit = {},
     onClearSmartReplies: () -> Unit = {},
+    isGroupChannel: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var isThreadEmojiPickerOpen by remember { mutableStateOf(false) }
     var isThreadGifPanelOpen by remember { mutableStateOf(false) }
+    val threadFlags = LocalFeatureFlags.current
     val closePickers = {
         isThreadEmojiPickerOpen = false
         isThreadGifPanelOpen = false
@@ -4707,7 +4783,10 @@ fun ThreadPanel(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        formatMessageTime(parentMessage.createdAt),
+                        formatMessageTime(
+                            parentMessage.createdAt,
+                            smartTimestamp = threadFlags.chatTimestamps
+                        ),
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                         fontSize = 10.sp,
                         modifier = Modifier.padding(top = 4.dp)
@@ -4791,7 +4870,10 @@ fun ThreadPanel(
                                 )
                             }
                             Text(
-                                formatMessageTime(reply.createdAt),
+                                formatMessageTime(
+                                    reply.createdAt,
+                                    smartTimestamp = threadFlags.chatTimestamps
+                                ),
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                                 fontSize = 9.sp,
                                 modifier = Modifier.padding(top = 2.dp, start = 4.dp, end = 4.dp)
@@ -4845,7 +4927,8 @@ fun ThreadPanel(
                         isGifPanelOpen = isThreadGifPanelOpen,
                         onToggleGifPanel = {
                             isThreadGifPanelOpen = !isThreadGifPanelOpen
-                        }
+                        },
+                        isGroupChannel = isGroupChannel
                     )
                 }
             }

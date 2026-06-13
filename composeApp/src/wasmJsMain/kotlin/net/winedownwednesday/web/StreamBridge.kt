@@ -59,6 +59,9 @@ external object StreamBridge {
     fun truncateChannel(channelId: String): Promise<JsBoolean>
     fun hideChannel(channelId: String): Promise<JsBoolean>
     fun disconnectUser(): Promise<JsAny?>
+
+    /** Controls whether @all expansion is active in _extractMentions. */
+    var mentionAllEnabled: Boolean
 }
 
 external interface JsChatEvent : JsAny {
